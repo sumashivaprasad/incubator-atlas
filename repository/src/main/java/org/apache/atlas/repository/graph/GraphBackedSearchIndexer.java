@@ -320,6 +320,9 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
                 management.buildIndex(propertyName, Vertex.class).addKey(propertyKey).buildCompositeIndex();
                 LOG.debug("Created composite index for property {} of type {} ", propertyName, propertyClass.getName());
             } else {
+                if(propertyClass == Date.class) {
+                    propertyClass = String.class;
+                }
                 //Use backing index
                 LOG.debug("Creating backing index for property {} of type {} ", propertyName, propertyClass.getName());
                 TitanGraphIndex vertexIndex = management.getGraphIndex(Constants.VERTEX_INDEX);
@@ -334,8 +337,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
 
     private boolean checkIfMixedIndexApplicable(Class propertyClass) {
         //TODO - Check why date types are failing in ES/Solr
-        if (propertyClass == Boolean.class || propertyClass == BigDecimal.class || propertyClass == BigInteger.class
-                || propertyClass == Date.class) {
+        if (propertyClass == Boolean.class || propertyClass == BigDecimal.class || propertyClass == BigInteger.class) {
             return false;
         }
         return true;

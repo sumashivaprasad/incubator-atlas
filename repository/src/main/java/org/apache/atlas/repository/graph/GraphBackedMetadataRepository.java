@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,6 +57,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -256,7 +257,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     /**
      * Deletes a given trait from an existing entity represented by a guid.
      *
-     * @param guid      globally unique identifier for the entity
+     * @param guid                 globally unique identifier for the entity
      * @param traitNameToBeDeleted name of the trait
      * @throws RepositoryException
      */
@@ -449,7 +450,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void addFullTextProperty(EntityProcessor entityProcessor,
-                List<ITypedReferenceableInstance> newTypedInstances) throws AtlasException {
+                                         List<ITypedReferenceableInstance> newTypedInstances) throws AtlasException {
 
             for (ITypedReferenceableInstance typedInstance : newTypedInstances) { // Traverse
                 Id id = typedInstance.getId();
@@ -477,69 +478,69 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private String getFullTextForAttribute(IDataType type, Object value, boolean followReferences)
-        throws AtlasException {
+                throws AtlasException {
             switch (type.getTypeCategory()) {
-            case PRIMITIVE:
-                return String.valueOf(value);
+                case PRIMITIVE:
+                    return String.valueOf(value);
 
-            case ENUM:
-                return ((EnumValue) value).value;
+                case ENUM:
+                    return ((EnumValue) value).value;
 
-            case ARRAY:
-                StringBuilder fullText = new StringBuilder();
-                IDataType elemType = ((DataTypes.ArrayType) type).getElemType();
-                List list = (List) value;
+                case ARRAY:
+                    StringBuilder fullText = new StringBuilder();
+                    IDataType elemType = ((DataTypes.ArrayType) type).getElemType();
+                    List list = (List) value;
 
-                for (Object element : list) {
-                    String elemFullText = getFullTextForAttribute(elemType, element, false);
-                    if (StringUtils.isNotEmpty(elemFullText)) {
-                        fullText = fullText.append(FULL_TEXT_DELIMITER).append(elemFullText);
+                    for (Object element : list) {
+                        String elemFullText = getFullTextForAttribute(elemType, element, false);
+                        if (StringUtils.isNotEmpty(elemFullText)) {
+                            fullText = fullText.append(FULL_TEXT_DELIMITER).append(elemFullText);
+                        }
                     }
-                }
-                return fullText.toString();
+                    return fullText.toString();
 
-            case MAP:
-                fullText = new StringBuilder();
-                IDataType keyType = ((DataTypes.MapType) type).getKeyType();
-                IDataType valueType = ((DataTypes.MapType) type).getValueType();
-                Map map = (Map) value;
+                case MAP:
+                    fullText = new StringBuilder();
+                    IDataType keyType = ((DataTypes.MapType) type).getKeyType();
+                    IDataType valueType = ((DataTypes.MapType) type).getValueType();
+                    Map map = (Map) value;
 
-                for (Object entryObj : map.entrySet()) {
-                    Map.Entry entry = (Map.Entry) entryObj;
-                    String keyFullText = getFullTextForAttribute(keyType, entry.getKey(), false);
-                    if (StringUtils.isNotEmpty(keyFullText)) {
-                        fullText = fullText.append(FULL_TEXT_DELIMITER).append(keyFullText);
+                    for (Object entryObj : map.entrySet()) {
+                        Map.Entry entry = (Map.Entry) entryObj;
+                        String keyFullText = getFullTextForAttribute(keyType, entry.getKey(), false);
+                        if (StringUtils.isNotEmpty(keyFullText)) {
+                            fullText = fullText.append(FULL_TEXT_DELIMITER).append(keyFullText);
+                        }
+                        String valueFullText = getFullTextForAttribute(valueType, entry.getValue(), false);
+                        if (StringUtils.isNotEmpty(valueFullText)) {
+                            fullText = fullText.append(FULL_TEXT_DELIMITER).append(valueFullText);
+                        }
                     }
-                    String valueFullText = getFullTextForAttribute(valueType, entry.getValue(), false);
-                    if (StringUtils.isNotEmpty(valueFullText)) {
-                        fullText = fullText.append(FULL_TEXT_DELIMITER).append(valueFullText);
+                    return fullText.toString();
+
+                case CLASS:
+                    if (followReferences) {
+                        String refGuid = ((ITypedReferenceableInstance) value).getId()._getId();
+                        Vertex refVertex = getVertexForGUID(refGuid);
+                        return getFullTextForVertex(refVertex, false);
                     }
-                }
-                return fullText.toString();
+                    break;
 
-            case CLASS:
-                if (followReferences) {
-                    String refGuid = ((ITypedReferenceableInstance) value).getId()._getId();
-                    Vertex refVertex = getVertexForGUID(refGuid);
-                    return getFullTextForVertex(refVertex, false);
-                }
-                break;
+                case STRUCT:
+                    if (followReferences) {
+                        return getFullTextForInstance((ITypedInstance) value, false);
+                    }
+                    break;
 
-            case STRUCT:
-                if (followReferences) {
-                    return getFullTextForInstance((ITypedInstance) value, false);
-                }
-                break;
-
-            default:
-                throw new IllegalStateException("Unhandled type category " + type.getTypeCategory());
+                default:
+                    throw new IllegalStateException("Unhandled type category " + type.getTypeCategory());
 
             }
             return null;
         }
 
         private String getFullTextForInstance(ITypedInstance typedInstance, boolean followReferences)
-        throws AtlasException {
+                throws AtlasException {
             StringBuilder fullText = new StringBuilder();
             for (AttributeInfo attributeInfo : typedInstance.fieldMapping().fields.values()) {
                 Object attrValue = typedInstance.get(attributeInfo.name);
@@ -560,8 +561,8 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         /**
          * Step 2: Traverse oldIdToInstance map create newInstances :
          * List[ITypedReferenceableInstance]
-         *  - create a ITypedReferenceableInstance.
-         *   replace any old References ( ids or object references) with new Ids.
+         * - create a ITypedReferenceableInstance.
+         * replace any old References ( ids or object references) with new Ids.
          */
         private List<ITypedReferenceableInstance> discoverInstances(EntityProcessor entityProcessor)
                 throws RepositoryException {
@@ -587,7 +588,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private String addDiscoveredInstances(IReferenceableInstance entity, EntityProcessor entityProcessor,
-                List<ITypedReferenceableInstance> newTypedInstances) throws AtlasException {
+                                              List<ITypedReferenceableInstance> newTypedInstances) throws AtlasException {
 
             String typedInstanceGUID = null;
             for (ITypedReferenceableInstance typedInstance : newTypedInstances) { // Traverse over newInstances
@@ -625,7 +626,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapInstanceToVertex(Id id, ITypedInstance typedInstance, Vertex instanceVertex,
-                Map<String, AttributeInfo> fields, Map<Id, Vertex> idToVertexMap) throws AtlasException {
+                                         Map<String, AttributeInfo> fields, Map<Id, Vertex> idToVertexMap) throws AtlasException {
             LOG.debug("Mapping instance {} of {} to vertex {}", typedInstance, typedInstance.getTypeName(),
                     instanceVertex);
             for (AttributeInfo attributeInfo : fields.values()) {
@@ -635,7 +636,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapAttributesToVertex(Id id, ITypedInstance typedInstance, Vertex instanceVertex,
-                Map<Id, Vertex> idToVertexMap, AttributeInfo attributeInfo, IDataType dataType) throws AtlasException {
+                                           Map<Id, Vertex> idToVertexMap, AttributeInfo attributeInfo, IDataType dataType) throws AtlasException {
             Object attrValue = typedInstance.get(attributeInfo.name);
             LOG.debug("mapping attribute {} = {}", attributeInfo.name, attrValue);
             final String propertyName = getQualifiedName(typedInstance, attributeInfo);
@@ -645,49 +646,49 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             }
 
             switch (dataType.getTypeCategory()) {
-            case PRIMITIVE:
-                mapPrimitiveToVertex(typedInstance, instanceVertex, attributeInfo);
-                break;
+                case PRIMITIVE:
+                    mapPrimitiveToVertex(typedInstance, instanceVertex, attributeInfo);
+                    break;
 
-            case ENUM:
-                //handles both int and string for enum
-                EnumValue enumValue =
-                        (EnumValue) dataType.convert(typedInstance.get(attributeInfo.name), Multiplicity.REQUIRED);
-                addProperty(instanceVertex, propertyName, enumValue.value);
-                break;
+                case ENUM:
+                    //handles both int and string for enum
+                    EnumValue enumValue =
+                            (EnumValue) dataType.convert(typedInstance.get(attributeInfo.name), Multiplicity.REQUIRED);
+                    addProperty(instanceVertex, propertyName, enumValue.value);
+                    break;
 
-            case ARRAY:
-                mapArrayCollectionToVertex(id, typedInstance, instanceVertex, attributeInfo, idToVertexMap);
-                break;
+                case ARRAY:
+                    mapArrayCollectionToVertex(id, typedInstance, instanceVertex, attributeInfo, idToVertexMap);
+                    break;
 
-            case MAP:
-                mapMapCollectionToVertex(id, typedInstance, instanceVertex, attributeInfo, idToVertexMap);
-                break;
+                case MAP:
+                    mapMapCollectionToVertex(id, typedInstance, instanceVertex, attributeInfo, idToVertexMap);
+                    break;
 
-            case STRUCT:
-                Vertex structInstanceVertex =
-                        mapStructInstanceToVertex(id, (ITypedStruct) typedInstance.get(attributeInfo.name),
-                                attributeInfo, idToVertexMap);
-                // add an edge to the newly created vertex from the parent
-                GraphHelper.addEdge(titanGraph, instanceVertex, structInstanceVertex, edgeLabel);
-                break;
+                case STRUCT:
+                    Vertex structInstanceVertex =
+                            mapStructInstanceToVertex(id, (ITypedStruct) typedInstance.get(attributeInfo.name),
+                                    attributeInfo, idToVertexMap);
+                    // add an edge to the newly created vertex from the parent
+                    GraphHelper.addEdge(titanGraph, instanceVertex, structInstanceVertex, edgeLabel);
+                    break;
 
-            case TRAIT:
-                // do NOTHING - this is taken care of earlier
-                break;
+                case TRAIT:
+                    // do NOTHING - this is taken care of earlier
+                    break;
 
-            case CLASS:
-                Id referenceId = (Id) typedInstance.get(attributeInfo.name);
-                mapClassReferenceAsEdge(instanceVertex, idToVertexMap, edgeLabel, referenceId);
-                break;
+                case CLASS:
+                    Id referenceId = (Id) typedInstance.get(attributeInfo.name);
+                    mapClassReferenceAsEdge(instanceVertex, idToVertexMap, edgeLabel, referenceId);
+                    break;
 
-            default:
-                throw new IllegalArgumentException("Unknown type category: " + dataType.getTypeCategory());
+                default:
+                    throw new IllegalArgumentException("Unknown type category: " + dataType.getTypeCategory());
             }
         }
 
         private void mapArrayCollectionToVertex(Id id, ITypedInstance typedInstance, Vertex instanceVertex,
-                AttributeInfo attributeInfo, Map<Id, Vertex> idToVertexMap) throws AtlasException {
+                                                AttributeInfo attributeInfo, Map<Id, Vertex> idToVertexMap) throws AtlasException {
             LOG.debug("Mapping instance {} to vertex {} for name {}", typedInstance.getTypeName(), instanceVertex,
                     attributeInfo.name);
             List list = (List) typedInstance.get(attributeInfo.name);
@@ -711,7 +712,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapMapCollectionToVertex(Id id, ITypedInstance typedInstance, Vertex instanceVertex,
-                AttributeInfo attributeInfo, Map<Id, Vertex> idToVertexMap) throws AtlasException {
+                                              AttributeInfo attributeInfo, Map<Id, Vertex> idToVertexMap) throws AtlasException {
             LOG.debug("Mapping instance {} to vertex {} for name {}", typedInstance.getTypeName(), instanceVertex,
                     attributeInfo.name);
             @SuppressWarnings("unchecked") Map<Object, Object> collection =
@@ -734,39 +735,39 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private String mapCollectionEntryToVertex(Id id, Vertex instanceVertex, AttributeInfo attributeInfo,
-                Map<Id, Vertex> idToVertexMap, IDataType elementType, Object value, String propertyName)
-        throws AtlasException {
+                                                  Map<Id, Vertex> idToVertexMap, IDataType elementType, Object value, String propertyName)
+                throws AtlasException {
             final String edgeLabel = EDGE_LABEL_PREFIX + propertyName;
             switch (elementType.getTypeCategory()) {
-            case PRIMITIVE:
-            case ENUM:
-                return value.toString();
+                case PRIMITIVE:
+                case ENUM:
+                    return value.toString();
 
-            case ARRAY:
-            case MAP:
-            case TRAIT:
-                // do nothing
-                return null;
+                case ARRAY:
+                case MAP:
+                case TRAIT:
+                    // do nothing
+                    return null;
 
-            case STRUCT:
-                Vertex structInstanceVertex =
-                        mapStructInstanceToVertex(id, (ITypedStruct) value, attributeInfo, idToVertexMap);
-                // add an edge to the newly created vertex from the parent
-                Edge structElementEdge =
-                        GraphHelper.addEdge(titanGraph, instanceVertex, structInstanceVertex, edgeLabel);
-                return structElementEdge.getId().toString();
+                case STRUCT:
+                    Vertex structInstanceVertex =
+                            mapStructInstanceToVertex(id, (ITypedStruct) value, attributeInfo, idToVertexMap);
+                    // add an edge to the newly created vertex from the parent
+                    Edge structElementEdge =
+                            GraphHelper.addEdge(titanGraph, instanceVertex, structInstanceVertex, edgeLabel);
+                    return structElementEdge.getId().toString();
 
-            case CLASS:
-                Id referenceId = (Id) value;
-                return mapClassReferenceAsEdge(instanceVertex, idToVertexMap, edgeLabel, referenceId);
+                case CLASS:
+                    Id referenceId = (Id) value;
+                    return mapClassReferenceAsEdge(instanceVertex, idToVertexMap, edgeLabel, referenceId);
 
-            default:
-                throw new IllegalArgumentException("Unknown type category: " + elementType.getTypeCategory());
+                default:
+                    throw new IllegalArgumentException("Unknown type category: " + elementType.getTypeCategory());
             }
         }
 
         private String mapClassReferenceAsEdge(Vertex instanceVertex, Map<Id, Vertex> idToVertexMap, String propertyKey,
-                Id id) throws AtlasException {
+                                               Id id) throws AtlasException {
             if (id != null) {
                 Vertex referenceVertex;
                 if (id.isAssigned()) {
@@ -786,7 +787,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private Vertex mapStructInstanceToVertex(Id id, ITypedStruct structInstance, AttributeInfo attributeInfo,
-                Map<Id, Vertex> idToVertexMap) throws AtlasException {
+                                                 Map<Id, Vertex> idToVertexMap) throws AtlasException {
             // add a new vertex for the struct or trait instance
             Vertex structInstanceVertex = GraphHelper
                     .createVertexWithoutIdentity(titanGraph, structInstance.getTypeName(), id,
@@ -802,15 +803,15 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapTraitInstanceToVertex(ITypedStruct traitInstance, ITypedReferenceableInstance typedInstance,
-                Vertex parentInstanceVertex, Map<Id, Vertex> idToVertexMap) throws AtlasException {
+                                              Vertex parentInstanceVertex, Map<Id, Vertex> idToVertexMap) throws AtlasException {
             // add a new vertex for the struct or trait instance
             mapTraitInstanceToVertex(traitInstance, typedInstance.getId(), typedInstance.getTypeName(),
                     parentInstanceVertex, idToVertexMap);
         }
 
         private void mapTraitInstanceToVertex(ITypedStruct traitInstance, Id typedInstanceId,
-                String typedInstanceTypeName, Vertex parentInstanceVertex, Map<Id, Vertex> idToVertexMap)
-        throws AtlasException {
+                                              String typedInstanceTypeName, Vertex parentInstanceVertex, Map<Id, Vertex> idToVertexMap)
+                throws AtlasException {
             // add a new vertex for the struct or trait instance
             final String traitName = traitInstance.getTypeName();
             Vertex traitInstanceVertex = GraphHelper
@@ -828,7 +829,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapPrimitiveToVertex(ITypedInstance typedInstance, Vertex instanceVertex,
-                AttributeInfo attributeInfo) throws AtlasException {
+                                          AttributeInfo attributeInfo) throws AtlasException {
             Object attrValue = typedInstance.get(attributeInfo.name);
             if (attrValue == null) {
                 return; // add only if instance has this attribute
@@ -858,6 +859,8 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 propertyValue = typedInstance.getBigDecimal(attributeInfo.name);
             } else if (attributeInfo.dataType() == DataTypes.DATE_TYPE) {
                 propertyValue = typedInstance.getDate(attributeInfo.name);
+                //Convert Property value to String  while persisting
+                propertyValue = TypeSystem.getInstance().getDateFormat().format(propertyValue);
             }
             addProperty(instanceVertex, vertexPropertyName, propertyValue);
         }
@@ -871,7 +874,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     public final class GraphToTypedInstanceMapper {
 
         public ITypedReferenceableInstance mapGraphToTypedInstance(String guid, Vertex instanceVertex)
-        throws AtlasException {
+                throws AtlasException {
 
             LOG.debug("Mapping graph root vertex {} to typed instance for guid {}", instanceVertex, guid);
             String typeName = instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
@@ -891,7 +894,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapVertexToInstanceTraits(Vertex instanceVertex, ITypedReferenceableInstance typedInstance,
-                List<String> traits) throws AtlasException {
+                                               List<String> traits) throws AtlasException {
             for (String traitName : traits) {
                 LOG.debug("mapping trait {} to instance", traitName);
                 TraitType traitType = typeSystem.getDataType(TraitType.class, traitName);
@@ -900,7 +903,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         public void mapVertexToInstance(Vertex instanceVertex, ITypedInstance typedInstance,
-                Map<String, AttributeInfo> fields) throws AtlasException {
+                                        Map<String, AttributeInfo> fields) throws AtlasException {
 
             LOG.debug("Mapping vertex {} to instance {} for fields", instanceVertex, typedInstance.getTypeName(),
                     fields);
@@ -911,56 +914,56 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
 
         private void mapVertexToAttribute(Vertex instanceVertex, ITypedInstance typedInstance,
-                AttributeInfo attributeInfo) throws AtlasException {
+                                          AttributeInfo attributeInfo) throws AtlasException {
             LOG.debug("Mapping attributeInfo {}", attributeInfo.name);
             final IDataType dataType = attributeInfo.dataType();
             final String vertexPropertyName = getQualifiedName(typedInstance, attributeInfo);
 
             switch (dataType.getTypeCategory()) {
-            case PRIMITIVE:
-                mapVertexToPrimitive(instanceVertex, typedInstance, attributeInfo);
-                break;  // add only if vertex has this attribute
+                case PRIMITIVE:
+                    mapVertexToPrimitive(instanceVertex, typedInstance, attributeInfo);
+                    break;  // add only if vertex has this attribute
 
-            case ENUM:
-                if (instanceVertex.getProperty(vertexPropertyName) == null) {
-                    return;
-                }
+                case ENUM:
+                    if (instanceVertex.getProperty(vertexPropertyName) == null) {
+                        return;
+                    }
 
-                typedInstance.set(attributeInfo.name,
-                        dataType.convert(instanceVertex.<String>getProperty(vertexPropertyName),
-                                Multiplicity.REQUIRED));
-                break;
+                    typedInstance.set(attributeInfo.name,
+                            dataType.convert(instanceVertex.<String>getProperty(vertexPropertyName),
+                                    Multiplicity.REQUIRED));
+                    break;
 
-            case ARRAY:
-                mapVertexToArrayInstance(instanceVertex, typedInstance, attributeInfo, vertexPropertyName);
-                break;
+                case ARRAY:
+                    mapVertexToArrayInstance(instanceVertex, typedInstance, attributeInfo, vertexPropertyName);
+                    break;
 
-            case MAP:
-                mapVertexToMapInstance(instanceVertex, typedInstance, attributeInfo, vertexPropertyName);
-                break;
+                case MAP:
+                    mapVertexToMapInstance(instanceVertex, typedInstance, attributeInfo, vertexPropertyName);
+                    break;
 
-            case STRUCT:
-                mapVertexToStructInstance(instanceVertex, typedInstance, attributeInfo);
-                break;
+                case STRUCT:
+                    mapVertexToStructInstance(instanceVertex, typedInstance, attributeInfo);
+                    break;
 
-            case TRAIT:
-                // do NOTHING - handled in class
-                break;
+                case TRAIT:
+                    // do NOTHING - handled in class
+                    break;
 
-            case CLASS:
-                String relationshipLabel = getEdgeLabel(typedInstance, attributeInfo);
-                Object idOrInstance = mapClassReferenceToVertex(instanceVertex, attributeInfo, relationshipLabel,
-                        attributeInfo.dataType());
-                typedInstance.set(attributeInfo.name, idOrInstance);
-                break;
+                case CLASS:
+                    String relationshipLabel = getEdgeLabel(typedInstance, attributeInfo);
+                    Object idOrInstance = mapClassReferenceToVertex(instanceVertex, attributeInfo, relationshipLabel,
+                            attributeInfo.dataType());
+                    typedInstance.set(attributeInfo.name, idOrInstance);
+                    break;
 
-            default:
-                break;
+                default:
+                    break;
             }
         }
 
         private Object mapClassReferenceToVertex(Vertex instanceVertex, AttributeInfo attributeInfo,
-                String relationshipLabel, IDataType dataType) throws AtlasException {
+                                                 String relationshipLabel, IDataType dataType) throws AtlasException {
             LOG.debug("Finding edge for {} -> label {} ", instanceVertex, relationshipLabel);
             Iterator<Edge> results = instanceVertex.getEdges(Direction.OUT, relationshipLabel).iterator();
             if (results.hasNext()) {
@@ -986,7 +989,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
         @SuppressWarnings("unchecked")
         private void mapVertexToArrayInstance(Vertex instanceVertex, ITypedInstance typedInstance,
-                AttributeInfo attributeInfo, String propertyName) throws AtlasException {
+                                              AttributeInfo attributeInfo, String propertyName) throws AtlasException {
             LOG.debug("mapping vertex {} to array {}", instanceVertex, attributeInfo.name);
             List list = instanceVertex.getProperty(propertyName);
             if (list == null || list.size() == 0) {
@@ -1005,28 +1008,28 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private Object mapVertexToCollectionEntry(Vertex instanceVertex, AttributeInfo attributeInfo,
-                IDataType elementType, Object value, String propertyName) throws AtlasException {
+                                                  IDataType elementType, Object value, String propertyName) throws AtlasException {
             String edgeLabel = EDGE_LABEL_PREFIX + propertyName;
             switch (elementType.getTypeCategory()) {
-            case PRIMITIVE:
-            case ENUM:
-                return value;
+                case PRIMITIVE:
+                case ENUM:
+                    return value;
 
-            case ARRAY:
-            case MAP:
-            case TRAIT:
-                // do nothing
-                break;
+                case ARRAY:
+                case MAP:
+                case TRAIT:
+                    // do nothing
+                    break;
 
-            case STRUCT:
-                return getStructInstanceFromVertex(instanceVertex, elementType, attributeInfo.name, edgeLabel,
-                        (String) value);
+                case STRUCT:
+                    return getStructInstanceFromVertex(instanceVertex, elementType, attributeInfo.name, edgeLabel,
+                            (String) value);
 
-            case CLASS:
-                return mapClassReferenceToVertex(instanceVertex, attributeInfo, edgeLabel, elementType, (String) value);
+                case CLASS:
+                    return mapClassReferenceToVertex(instanceVertex, attributeInfo, edgeLabel, elementType, (String) value);
 
-            default:
-                break;
+                default:
+                    break;
             }
 
             throw new IllegalArgumentException();
@@ -1034,7 +1037,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
         @SuppressWarnings("unchecked")
         private void mapVertexToMapInstance(Vertex instanceVertex, ITypedInstance typedInstance,
-                AttributeInfo attributeInfo, final String propertyName) throws AtlasException {
+                                            AttributeInfo attributeInfo, final String propertyName) throws AtlasException {
             LOG.debug("mapping vertex {} to array {}", instanceVertex, attributeInfo.name);
             List<String> keys = instanceVertex.getProperty(propertyName);
             if (keys == null || keys.size() == 0) {
@@ -1055,7 +1058,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private ITypedStruct getStructInstanceFromVertex(Vertex instanceVertex, IDataType elemType,
-                String attributeName, String relationshipLabel, String edgeId) throws AtlasException {
+                                                         String attributeName, String relationshipLabel, String edgeId) throws AtlasException {
             LOG.debug("Finding edge for {} -> label {} ", instanceVertex, relationshipLabel);
             for (Edge edge : instanceVertex.getEdges(Direction.OUT, relationshipLabel)) {
                 if (edgeId.equals(String.valueOf(edge.getId()))) {
@@ -1080,7 +1083,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private Object mapClassReferenceToVertex(Vertex instanceVertex, AttributeInfo attributeInfo,
-                String relationshipLabel, IDataType dataType, String edgeId) throws AtlasException {
+                                                 String relationshipLabel, IDataType dataType, String edgeId) throws AtlasException {
             LOG.debug("Finding edge for {} -> label {} ", instanceVertex, relationshipLabel);
             for (Edge edge : instanceVertex.getEdges(Direction.OUT, relationshipLabel)) {
                 if (edgeId.equals(String.valueOf(edge.getId()))) {
@@ -1109,7 +1112,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapVertexToStructInstance(Vertex instanceVertex, ITypedInstance typedInstance,
-                AttributeInfo attributeInfo) throws AtlasException {
+                                               AttributeInfo attributeInfo) throws AtlasException {
             LOG.debug("mapping vertex {} to struct {}", instanceVertex, attributeInfo.name);
             StructType structType = typeSystem.getDataType(StructType.class, attributeInfo.dataType().getName());
             ITypedStruct structInstance = structType.createInstance();
@@ -1129,14 +1132,14 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapVertexToTraitInstance(Vertex instanceVertex, ITypedReferenceableInstance typedInstance,
-                String traitName, TraitType traitType) throws AtlasException {
+                                              String traitName, TraitType traitType) throws AtlasException {
             ITypedStruct traitInstance = (ITypedStruct) typedInstance.getTrait(traitName);
 
             mapVertexToTraitInstance(instanceVertex, typedInstance.getTypeName(), traitName, traitType, traitInstance);
         }
 
         private void mapVertexToTraitInstance(Vertex instanceVertex, String typedInstanceTypeName, String traitName,
-                TraitType traitType, ITypedStruct traitInstance) throws AtlasException {
+                                              TraitType traitType, ITypedStruct traitInstance) throws AtlasException {
             String relationshipLabel = getEdgeLabel(typedInstanceTypeName, traitName);
             LOG.debug("Finding edge for {} -> label {} ", instanceVertex, relationshipLabel);
             for (Edge edge : instanceVertex.getEdges(Direction.OUT, relationshipLabel)) {
@@ -1151,7 +1154,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
 
         private void mapVertexToPrimitive(Vertex instanceVertex, ITypedInstance typedInstance,
-                AttributeInfo attributeInfo) throws AtlasException {
+                                          AttributeInfo attributeInfo) throws AtlasException {
             LOG.debug("Adding primitive {} from vertex {}", attributeInfo, instanceVertex);
             final String vertexPropertyName = getQualifiedName(typedInstance, attributeInfo);
             if (instanceVertex.getProperty(vertexPropertyName) == null) {
@@ -1180,8 +1183,14 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 typedInstance
                         .setBigDecimal(attributeInfo.name, instanceVertex.<BigDecimal>getProperty(vertexPropertyName));
             } else if (attributeInfo.dataType() == DataTypes.DATE_TYPE) {
-                typedInstance.setDate(attributeInfo.name, instanceVertex.<Date>getProperty(vertexPropertyName));
+                String isoFormatdateVal = instanceVertex.<String>getProperty(vertexPropertyName);
+                try {
+                    typedInstance.setDate(attributeInfo.name, TypeSystem.getInstance().getDateFormat().parse(isoFormatdateVal));
+                } catch (ParseException e) {
+                    throw new AtlasException("Could not parse date string to Date object ", e);
+                }
             }
         }
     }
 }
+
