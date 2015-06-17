@@ -32,7 +32,7 @@ You would need the following installed:
 Building Atlas from the source repository
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* git clone git@github.com:hortonworks/atlas.git atlas
+* git clone https://git-wip-us.apache.org/repos/asf/incubator-atlas.git atlas
 * cd atlas
 * export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=256m" && mvn clean install
 
@@ -42,18 +42,22 @@ Building Atlas from the source repository
 
 Once the build successfully completes, artifacts can be packaged for deployment.
 
-* mvn clean assembly:assembly -DskipTests -DskipITs
+* mvn clean verify assembly:assembly -DskipTests
 
-Tar can be found in {project dir}/target/apache-atlas-${project.version}-bin.tar.gz
+Tar can be found in atlas/target/apache-atlas-${project.version}-bin.tar.gz
 
 Tar is structured as follows
 
 |- bin
-   |- atlas-start.sh
-   |- atlas-stop.sh
+   |- atlas_start.py
+   |- atlas_stop.py
+   |- atlas_config.py
+   |- quick_start.py
+   |- cputil.py
 |- conf
    |- application.properties
-   |- graph.properties
+   |- client.properties
+   |- atlas-env.sh
    |- log4j.xml
 |- docs
 |- server
