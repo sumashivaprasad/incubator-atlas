@@ -257,7 +257,8 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
         } else if (dataType == DataTypes.BIGDECIMAL_TYPE) {
             return BigDecimal.class;
         } else if (dataType == DataTypes.DATE_TYPE) {
-            return Date.class;
+            //Indexing with string formatted dates as of now since Titan is yet to add support for Date with mixed indexes
+            return String.class;
         }
 
 
@@ -320,9 +321,6 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
                 management.buildIndex(propertyName, Vertex.class).addKey(propertyKey).buildCompositeIndex();
                 LOG.debug("Created composite index for property {} of type {} ", propertyName, propertyClass.getName());
             } else {
-                if(propertyClass == Date.class) {
-                    propertyClass = String.class;
-                }
                 //Use backing index
                 LOG.debug("Creating backing index for property {} of type {} ", propertyName, propertyClass.getName());
                 TitanGraphIndex vertexIndex = management.getGraphIndex(Constants.VERTEX_INDEX);

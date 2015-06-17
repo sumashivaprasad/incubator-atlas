@@ -59,121 +59,138 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
     test("testInputTables") {
         val r = QueryProcessor.evaluate(_class("LoadProcess").field("inputTables"), g)
         val x = r.toJson
-        validateJson(r, """{
-  "query":"LoadProcess inputTables",
-  "dataType":{
-    "superTypes":[
-
-    ],
-    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
-    "typeName":"Table",
-    "attributeDefinitions":[
-      {
-        "name":"name",
-        "dataTypeName":"string",
-        "multiplicity":{
-          "lower":0,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      },
-      {
-        "name":"db",
-        "dataTypeName":"DB",
-        "multiplicity":{
-          "lower":1,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      },
-      {
-        "name":"sd",
-        "dataTypeName":"StorageDesc",
-        "multiplicity":{
-          "lower":1,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      }
-    ]
-  },
-  "rows":[
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"2048",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"512",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"256",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"4864",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"3840",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"256",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"time_dim",
-      "$traits$":{
-        "Dimension":{
-          "$typeName$":"Dimension"
-        }
-      }
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"8960",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"7424",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_daily_mv"
-    }
-  ]
-}""")
+        validateJson(r,"""{
+                         |  "query":"LoadProcess inputTables",
+                         |  "dataType":{
+                         |    "superTypes":[
+                         |
+                         |    ],
+                         |    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
+                         |    "typeName":"Table",
+                         |    "attributeDefinitions":[
+                         |      {
+                         |        "name":"name",
+                         |        "dataTypeName":"string",
+                         |        "multiplicity":{
+                         |          "lower":0,
+                         |          "upper":1,
+                         |          "isUnique":false
+                         |        },
+                         |        "isComposite":false,
+                         |        "isUnique":false,
+                         |        "isIndexable":true,
+                         |        "reverseAttributeName":null
+                         |      },
+                         |      {
+                         |        "name":"db",
+                         |        "dataTypeName":"DB",
+                         |        "multiplicity":{
+                         |          "lower":1,
+                         |          "upper":1,
+                         |          "isUnique":false
+                         |        },
+                         |        "isComposite":false,
+                         |        "isUnique":false,
+                         |        "isIndexable":true,
+                         |        "reverseAttributeName":null
+                         |      },
+                         |      {
+                         |        "name":"sd",
+                         |        "dataTypeName":"StorageDesc",
+                         |        "multiplicity":{
+                         |          "lower":1,
+                         |          "upper":1,
+                         |          "isUnique":false
+                         |        },
+                         |        "isComposite":false,
+                         |        "isUnique":false,
+                         |        "isIndexable":true,
+                         |        "reverseAttributeName":null
+                         |      },
+                         |      {
+                         |        "name":"created",
+                         |        "dataTypeName":"date",
+                         |        "multiplicity":{
+                         |          "lower":0,
+                         |          "upper":1,
+                         |          "isUnique":false
+                         |        },
+                         |        "isComposite":false,
+                         |        "isUnique":false,
+                         |        "isIndexable":true,
+                         |        "reverseAttributeName":null
+                         |      }
+                         |    ]
+                         |  },
+                         |  "rows":[
+                         |    {
+                         |      "$typeName$":"Table",
+                         |      "$id$":{
+                         |        "id":"2304",
+                         |        "$typeName$":"Table",
+                         |        "version":0
+                         |      },
+                         |      "created":"2014-12-11T02:35:58.440Z",
+                         |      "sd":{
+                         |        "id":"512",
+                         |        "$typeName$":"StorageDesc",
+                         |        "version":0
+                         |      },
+                         |      "db":{
+                         |        "id":"256",
+                         |        "$typeName$":"DB",
+                         |        "version":0
+                         |      },
+                         |      "name":"sales_fact"
+                         |    },
+                         |    {
+                         |      "$typeName$":"Table",
+                         |      "$id$":{
+                         |        "id":"5120",
+                         |        "$typeName$":"Table",
+                         |        "version":0
+                         |      },
+                         |      "created":"2014-12-11T02:35:58.440Z",
+                         |      "sd":{
+                         |        "id":"4096",
+                         |        "$typeName$":"StorageDesc",
+                         |        "version":0
+                         |      },
+                         |      "db":{
+                         |        "id":"256",
+                         |        "$typeName$":"DB",
+                         |        "version":0
+                         |      },
+                         |      "name":"time_dim",
+                         |      "$traits$":{
+                         |        "Dimension":{
+                         |          "$typeName$":"Dimension"
+                         |        }
+                         |      }
+                         |    },
+                         |    {
+                         |      "$typeName$":"Table",
+                         |      "$id$":{
+                         |        "id":"9216",
+                         |        "$typeName$":"Table",
+                         |        "version":0
+                         |      },
+                         |      "created":"2014-12-11T02:35:58.440Z",
+                         |      "sd":{
+                         |        "id":"7680",
+                         |        "$typeName$":"StorageDesc",
+                         |        "version":0
+                         |      },
+                         |      "db":{
+                         |        "id":"7424",
+                         |        "$typeName$":"DB",
+                         |        "version":0
+                         |      },
+                         |      "name":"sales_fact_daily_mv"
+                         |    }
+                         |  ]
+                         |}
+          """.stripMargin)
     }
 
     test("testLoadProcessOut") {
@@ -184,153 +201,171 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
     test("testLineageAll") {
         val r = QueryProcessor.evaluate(_class("Table").loop(id("LoadProcess").field("outputTable")), g)
         validateJson(r, """{
-  "query":"Table as _loop0 loop (LoadProcess outputTable)",
-  "dataType":{
-    "superTypes":[
-
-    ],
-    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
-    "typeName":"Table",
-    "attributeDefinitions":[
-      {
-        "name":"name",
-        "dataTypeName":"string",
-        "multiplicity":{
-          "lower":0,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      },
-      {
-        "name":"db",
-        "dataTypeName":"DB",
-        "multiplicity":{
-          "lower":1,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      },
-      {
-        "name":"sd",
-        "dataTypeName":"StorageDesc",
-        "multiplicity":{
-          "lower":1,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      }
-    ]
-  },
-  "rows":[
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"8960",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"7424",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_daily_mv"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"12800",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"11264",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_monthly_mv"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"8960",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"7424",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_daily_mv"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"12800",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"11264",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_monthly_mv"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"12800",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"11264",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_monthly_mv"
-    }
-  ]
-}""")
+                          |  "query":"Table as _loop0 loop (LoadProcess outputTable)",
+                          |  "dataType":{
+                          |    "superTypes":[
+                          |
+                          |    ],
+                          |    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
+                          |    "typeName":"Table",
+                          |    "attributeDefinitions":[
+                          |      {
+                          |        "name":"name",
+                          |        "dataTypeName":"string",
+                          |        "multiplicity":{
+                          |          "lower":0,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      },
+                          |      {
+                          |        "name":"db",
+                          |        "dataTypeName":"DB",
+                          |        "multiplicity":{
+                          |          "lower":1,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      },
+                          |      {
+                          |        "name":"sd",
+                          |        "dataTypeName":"StorageDesc",
+                          |        "multiplicity":{
+                          |          "lower":1,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      },
+                          |      {
+                          |        "name":"created",
+                          |        "dataTypeName":"date",
+                          |        "multiplicity":{
+                          |          "lower":0,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      }
+                          |    ]
+                          |  },
+                          |  "rows":[
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"9216",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"7680",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_daily_mv"
+                          |    },
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"13056",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"11520",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_monthly_mv"
+                          |    },
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"9216",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"7680",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_daily_mv"
+                          |    },
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"13056",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"11520",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_monthly_mv"
+                          |    },
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"13056",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"11520",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_monthly_mv"
+                          |    }
+                          |  ]
+                          |}""".stripMargin)
     }
 
     test("testLineageAllSelect") {
@@ -396,120 +431,136 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
       "destTable":"sales_fact_monthly_mv"
     }
   ]
-}""")
+}""".stripMargin)
     }
 
     test("testLineageFixedDepth") {
         val r = QueryProcessor.evaluate(_class("Table").loop(id("LoadProcess").field("outputTable"), int(1)), g)
         validateJson(r, """{
-  "query":"Table as _loop0 loop (LoadProcess outputTable) times 1",
-  "dataType":{
-    "superTypes":[
-
-    ],
-    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
-    "typeName":"Table",
-    "attributeDefinitions":[
-      {
-        "name":"name",
-        "dataTypeName":"string",
-        "multiplicity":{
-          "lower":0,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      },
-      {
-        "name":"db",
-        "dataTypeName":"DB",
-        "multiplicity":{
-          "lower":1,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      },
-      {
-        "name":"sd",
-        "dataTypeName":"StorageDesc",
-        "multiplicity":{
-          "lower":1,
-          "upper":1,
-          "isUnique":false
-        },
-        "isComposite":false,
-        "isUnique":false,
-        "isIndexable":true,
-        "reverseAttributeName":null
-      }
-    ]
-  },
-  "rows":[
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"8960",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"7424",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_daily_mv"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"8960",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"7424",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_daily_mv"
-    },
-    {
-      "$typeName$":"Table",
-      "$id$":{
-        "id":"12800",
-        "$typeName$":"Table",
-        "version":0
-      },
-      "sd":{
-        "id":"11264",
-        "$typeName$":"StorageDesc",
-        "version":0
-      },
-      "db":{
-        "id":"7168",
-        "$typeName$":"DB",
-        "version":0
-      },
-      "name":"sales_fact_monthly_mv"
-    }
-  ]
-}""")
+                          |  "query":"Table as _loop0 loop (LoadProcess outputTable) times 1",
+                          |  "dataType":{
+                          |    "superTypes":[
+                          |
+                          |    ],
+                          |    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
+                          |    "typeName":"Table",
+                          |    "attributeDefinitions":[
+                          |      {
+                          |        "name":"name",
+                          |        "dataTypeName":"string",
+                          |        "multiplicity":{
+                          |          "lower":0,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      },
+                          |      {
+                          |        "name":"db",
+                          |        "dataTypeName":"DB",
+                          |        "multiplicity":{
+                          |          "lower":1,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      },
+                          |      {
+                          |        "name":"sd",
+                          |        "dataTypeName":"StorageDesc",
+                          |        "multiplicity":{
+                          |          "lower":1,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      },
+                          |      {
+                          |        "name":"created",
+                          |        "dataTypeName":"date",
+                          |        "multiplicity":{
+                          |          "lower":0,
+                          |          "upper":1,
+                          |          "isUnique":false
+                          |        },
+                          |        "isComposite":false,
+                          |        "isUnique":false,
+                          |        "isIndexable":true,
+                          |        "reverseAttributeName":null
+                          |      }
+                          |    ]
+                          |  },
+                          |  "rows":[
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"9216",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"7680",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_daily_mv"
+                          |    },
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"9216",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"7680",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_daily_mv"
+                          |    },
+                          |    {
+                          |      "$typeName$":"Table",
+                          |      "$id$":{
+                          |        "id":"13056",
+                          |        "$typeName$":"Table",
+                          |        "version":0
+                          |      },
+                          |      "created":"2014-12-11T02:35:58.440Z",
+                          |      "sd":{
+                          |        "id":"11520",
+                          |        "$typeName$":"StorageDesc",
+                          |        "version":0
+                          |      },
+                          |      "db":{
+                          |        "id":"7424",
+                          |        "$typeName$":"DB",
+                          |        "version":0
+                          |      },
+                          |      "name":"sales_fact_monthly_mv"
+                          |    }
+                          |  ]
+                          |}""".stripMargin)
     }
 }

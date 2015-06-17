@@ -598,7 +598,10 @@ object Expressions {
                 throw new UnresolvedException(this,
                     s"datatype. Can not resolve due to unresolved children")
             }
-            if (left.dataType != DataTypes.STRING_TYPE || right.dataType != DataTypes.STRING_TYPE) {
+
+            if(left.dataType == DataTypes.DATE_TYPE) {
+                DataTypes.DATE_TYPE
+            } else if (left.dataType != DataTypes.STRING_TYPE || right.dataType != DataTypes.STRING_TYPE) {
                 TypeUtils.combinedType(left.dataType, right.dataType)
             }
             DataTypes.BOOLEAN_TYPE
