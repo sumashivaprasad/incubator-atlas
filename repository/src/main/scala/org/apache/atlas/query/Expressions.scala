@@ -490,6 +490,8 @@ object Expressions {
 
     def string(rawValue: Any) = literal(DataTypes.STRING_TYPE, rawValue)
 
+    def date(rawValue: Any) = literal(DataTypes.DATE_TYPE, rawValue)
+
     case class ArithmeticExpression(symbol: String,
                                     left: Expression,
                                     right: Expression)
