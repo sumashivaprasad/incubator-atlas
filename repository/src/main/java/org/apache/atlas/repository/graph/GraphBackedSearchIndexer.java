@@ -333,7 +333,6 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
     }
 
     private boolean checkIfMixedIndexApplicable(Class propertyClass) {
-        //TODO - Check why date types are failing in ES/Solr
         if (propertyClass == Boolean.class || propertyClass == BigDecimal.class || propertyClass == BigInteger.class) {
             return false;
         }

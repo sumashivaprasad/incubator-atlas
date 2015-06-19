@@ -21,6 +21,7 @@ package org.apache.atlas.query
 import org.apache.atlas.query.Expressions._
 import org.apache.atlas.typesystem.types.{TypeSystem, DataTypes}
 import org.apache.atlas.typesystem.types.DataTypes.TypeCategory
+import org.joda.time.format.ISODateTimeFormat
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -237,7 +238,8 @@ class GremlinTranslator(expr: Expression,
                 case None => {
                     if (fInfo.attrInfo.dataType == DataTypes.DATE_TYPE) {
                         try {
-                            s"""has("$fieldGremlinExpr", ${gPersistenceBehavior.gremlinCompOp(c)},${TypeSystem.getInstance.getDateFormat.parse(l.toString.stripPrefix(QUOTE).stripSuffix(QUOTE)).getTime})"""
+                            //Accepts both date, datetime formats
+                            s"""has("$fieldGremlinExpr", ${gPersistenceBehavior.gremlinCompOp(c)},${ISODateTimeFormat.dateOptionalTimeParser().parseDateTime(l.toString.stripPrefix(QUOTE).stripSuffix(QUOTE)).getMillis})"""
                         } catch {
                             case pe: java.text.ParseException =>
                                 throw new GremlinTranslationException(c,

@@ -187,7 +187,7 @@ public class GraphBackedDiscoveryServiceTest {
                 {"DB where DB is JdbcAccess"}, {"DB where DB has name"}, {"DB Table"}, {"DB where DB has name"},
                 {"DB as db1 Table where (db1.name = \"Reporting\")"},
                 {"DB where (name = \"Reporting\") select name as _col_0, (createTime + 1) as _col_1 "},
-                {"Table where (name = \"sales_fact\" and created > \"2014-01-01T00:00:00.000Z\" ) select name as _col_0, created as _col_1 "},
+                {"Table where (name = \"sales_fact\" and created > \"2014-01-01\" ) select name as _col_0, created as _col_1 "},
                 {"Table where (name = \"sales_fact\" and created > \"2014-12-11T02:35:58.440Z\" ) select name as _col_0, created as _col_1 "},
             /*
             todo: does not work
