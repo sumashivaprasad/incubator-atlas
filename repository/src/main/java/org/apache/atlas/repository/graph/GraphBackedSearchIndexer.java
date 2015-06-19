@@ -65,7 +65,6 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
         this.titanGraph = graphProvider.get();
 
         /* Create the transaction for indexing.
-         * Commit/rollback is expected to be called from the caller.
          */
         management = titanGraph.getManagementSystem();
         initialize();
@@ -257,8 +256,8 @@ public class GraphBackedSearchIndexer implements SearchIndexer {
         } else if (dataType == DataTypes.BIGDECIMAL_TYPE) {
             return BigDecimal.class;
         } else if (dataType == DataTypes.DATE_TYPE) {
-            //Indexing with string formatted dates as of now since Titan is yet to add support for Date with mixed indexes
-            return String.class;
+            //Indexing with date converted to long as of now since Titan is yet to add support for Date type with mixed indexes
+            return Long.class;
         }
 
 
