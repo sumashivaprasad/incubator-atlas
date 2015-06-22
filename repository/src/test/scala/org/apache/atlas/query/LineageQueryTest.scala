@@ -26,7 +26,7 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.{Assertions, BeforeAndAfterAll, FunSuite}
 
 @RunWith(classOf[JUnitRunner])
-class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
+class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
 
     var g: TitanGraph = null
 
@@ -40,21 +40,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
         g.shutdown()
     }
 
-    val STRUCT_NAME_REGEX = (TypeUtils.TEMP_STRUCT_NAME_PREFIX + "\\d+").r
     val PREFIX_SPACES_REGEX = ("\\n\\s*").r
-
-    def validateJson(r: GremlinQueryResult, expected: String = null): Unit = {
-        val rJ = r.toJson
-        if (expected != null) {
-            var a = STRUCT_NAME_REGEX.replaceAllIn(rJ, "")
-            a = PREFIX_SPACES_REGEX.replaceAllIn(a, "")
-            var b = STRUCT_NAME_REGEX.replaceAllIn(expected, "")
-            b = PREFIX_SPACES_REGEX.replaceAllIn(b, "")
-            Assertions.assert(a == b)
-        } else {
-            println(rJ)
-        }
-    }
 
     test("testInputTables") {
         val r = QueryProcessor.evaluate(_class("LoadProcess").field("inputTables"), g)
@@ -126,18 +112,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                          |    {
                          |      "$typeName$":"Table",
                          |      "$id$":{
-                         |        "id":"2304",
                          |        "$typeName$":"Table",
                          |        "version":0
                          |      },
                          |      "created":"2014-12-11T02:35:58.440Z",
                          |      "sd":{
-                         |        "id":"512",
                          |        "$typeName$":"StorageDesc",
                          |        "version":0
                          |      },
                          |      "db":{
-                         |        "id":"256",
                          |        "$typeName$":"DB",
                          |        "version":0
                          |      },
@@ -146,18 +129,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                          |    {
                          |      "$typeName$":"Table",
                          |      "$id$":{
-                         |        "id":"5120",
                          |        "$typeName$":"Table",
                          |        "version":0
                          |      },
                          |      "created":"2014-12-11T02:35:58.440Z",
                          |      "sd":{
-                         |        "id":"4096",
                          |        "$typeName$":"StorageDesc",
                          |        "version":0
                          |      },
                          |      "db":{
-                         |        "id":"256",
                          |        "$typeName$":"DB",
                          |        "version":0
                          |      },
@@ -171,18 +151,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                          |    {
                          |      "$typeName$":"Table",
                          |      "$id$":{
-                         |        "id":"9216",
                          |        "$typeName$":"Table",
                          |        "version":0
                          |      },
                          |      "created":"2014-12-11T02:35:58.440Z",
                          |      "sd":{
-                         |        "id":"7680",
                          |        "$typeName$":"StorageDesc",
                          |        "version":0
                          |      },
                          |      "db":{
-                         |        "id":"7424",
                          |        "$typeName$":"DB",
                          |        "version":0
                          |      },
@@ -273,12 +250,10 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"7680",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -287,18 +262,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"13056",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"11520",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -307,18 +279,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"9216",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"7680",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -327,18 +296,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"13056",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"11520",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -347,18 +313,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"13056",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"11520",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -503,18 +466,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"9216",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"7680",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -523,18 +483,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"9216",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"7680",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -543,18 +500,15 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"13056",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"11520",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },

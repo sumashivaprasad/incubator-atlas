@@ -56,19 +56,19 @@ object HiveTitanSample {
 
             this.getClass.getDeclaredFields filter (_.getName != "traits") foreach { f =>
                 f.setAccessible(true)
-                var fV = f.get(this)
-                fV = fV match {
+                val fV = f.get(this)
+                val convertedVal = fV match {
                     case _: String => s""""$fV""""
-                    case _: Date => s""""${TypeSystem.getInstance().getDateFormat.format(fV)}""""
+                    case d: Date => d.getTime
                     case _ => fV
                 }
 
-                fV match {
+                convertedVal match {
                     case x: Vertex => addEdge(x, s"${this.getClass.getSimpleName}.${f.getName}", edges)
                     case l: List[_] => l.foreach(x => addEdge(x.asInstanceOf[Vertex],
                         s"${this.getClass.getSimpleName}.${f.getName}", edges))
-                    case _ => sb.append( s""", "${f.getName}" : $fV""")
-                        sb.append( s""", "${this.getClass.getSimpleName}.${f.getName}" : $fV""")
+                    case _ => sb.append( s""", "${f.getName}" : $convertedVal""")
+                        sb.append( s""", "${this.getClass.getSimpleName}.${f.getName}" : $convertedVal""")
                 }
             }
 
@@ -278,6 +278,7 @@ object HiveTitanSample {
     def writeGson(fileName: String): Unit = {
         FileUtils.writeStringToFile(new File(fileName), toGSon())
     }
+
 
     val GremlinQueries = List(
         // 1. List all DBs

@@ -18,6 +18,8 @@
 
 package org.apache.atlas.query
 
+import java.util.Date
+
 import com.thinkaurelius.titan.core.TitanVertex
 import com.tinkerpop.blueprints.Direction
 import org.apache.atlas.query.Expressions.{ComparisonExpression, ExpressionException}
@@ -305,8 +307,8 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
             case x: DoubleType => i.setDouble(aInfo.name, v.getProperty[java.lang.Double](fName))
             case x: StringType => i.setString(aInfo.name, v.getProperty[java.lang.String](fName))
             case x: DateType => {
-                                  val dateStr = v.getProperty[java.lang.String](fName)
-                                  i.setDate(aInfo.name, TypeSystem.getInstance().getDateFormat().parse(dateStr))
+                                  val dateVal = v.getProperty[java.lang.Long](fName)
+                                  i.setDate(aInfo.name, new Date(dateVal))
                                 }
             case _ => throw new UnsupportedOperationException(s"load for ${aInfo.dataType()} not supported")
         }

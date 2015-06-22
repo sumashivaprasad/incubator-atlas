@@ -137,18 +137,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"3584",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"2560",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -162,18 +159,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"5120",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"4096",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -187,18 +181,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"6912",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"5632",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -269,7 +260,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"DB",
                           |      "$id$":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -280,7 +270,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"DB",
                           |      "$id$":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -359,18 +348,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"2304",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"512",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -379,18 +365,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"3584",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"2560",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -404,18 +387,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"5120",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"4096",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -429,18 +409,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"6912",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"5632",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"256",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -454,18 +431,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"9216",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"7680",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
@@ -474,18 +448,15 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"13056",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "id":"11520",
                           |        "$typeName$":"StorageDesc",
                           |        "version":0
                           |      },
                           |      "db":{
-                          |        "id":"7424",
                           |        "$typeName$":"DB",
                           |        "version":0
                           |      },
