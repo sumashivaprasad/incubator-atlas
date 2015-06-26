@@ -21,6 +21,9 @@ package org.apache.atlas.repository.graph;
 import com.google.inject.Provides;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.diskstorage.configuration.ReadConfiguration;
+import com.thinkaurelius.titan.diskstorage.configuration.backend.CommonsConfiguration;
+import com.thinkaurelius.titan.graphdb.configuration.GraphDatabaseConfiguration;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.PropertiesUtil;
 import org.apache.commons.configuration.Configuration;
@@ -43,10 +46,10 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
      */
     private static final String ATLAS_PREFIX = "atlas.graph.";
 
-    private static Configuration getConfiguration() throws AtlasException {
+    private static ReadConfiguration getConfiguration() throws AtlasException {
         PropertiesConfiguration configProperties = PropertiesUtil.getApplicationProperties();
 
-        Configuration graphConfig = new PropertiesConfiguration();
+        CommonsConfiguration config = new CommonsConfiguration();
 
         final Iterator<String> iterator = configProperties.getKeys();
         while (iterator.hasNext()) {
@@ -54,19 +57,19 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
             if (key.startsWith(ATLAS_PREFIX)) {
                 String value = (String) configProperties.getProperty(key);
                 key = key.substring(ATLAS_PREFIX.length());
-                graphConfig.setProperty(key, value);
+                config.set(key, value);
                 LOG.info("Using graph property {}={}", key, value);
             }
         }
 
-        return graphConfig;
+        return config;
     }
 
     @Override
     @Singleton
     @Provides
     public TitanGraph get() {
-        Configuration config;
+        ReadConfiguration config;
         try {
             config = getConfiguration();
         } catch (AtlasException e) {
