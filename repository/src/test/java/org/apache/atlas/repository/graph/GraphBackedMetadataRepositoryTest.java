@@ -20,6 +20,7 @@ package org.apache.atlas.repository.graph;
 
 import com.google.common.collect.ImmutableList;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.util.TitanCleanup;
 import com.tinkerpop.blueprints.Compare;
 import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;
@@ -51,6 +52,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -105,12 +107,13 @@ public class GraphBackedMetadataRepositoryTest {
         createHiveTypes();
     }
 
-/*
-    @AfterMethod
+
+    @AfterClass
     public void tearDown() throws Exception {
-         TestUtils.dumpGraph(graphProvider.get());
+        graphProvider.get().shutdown();
+        TitanCleanup.clear(graphProvider.get());
     }
-*/
+
 
     @Test
     public void testSubmitEntity() throws Exception {
