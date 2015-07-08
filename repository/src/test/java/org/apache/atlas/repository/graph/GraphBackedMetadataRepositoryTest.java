@@ -110,8 +110,13 @@ public class GraphBackedMetadataRepositoryTest {
 
     @AfterClass
     public void tearDown() throws Exception {
+        TypeSystem.getInstance().reset();
         graphProvider.get().shutdown();
-        TitanCleanup.clear(graphProvider.get());
+        try {
+            TitanCleanup.clear(graphProvider.get());
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
 

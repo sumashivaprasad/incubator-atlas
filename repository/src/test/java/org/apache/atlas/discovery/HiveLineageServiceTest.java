@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,41 +65,6 @@ import java.util.List;
 @Guice(modules = RepositoryMetadataModule.class)
 public class HiveLineageServiceTest {
 
-//    private GraphProvider<TitanGraph> graphProvider = new GraphProvider<TitanGraph>() {
-//
-//        private TitanGraph graph = null;
-
-//        //Ensure separate directory for graph provider to avoid graph setup issues
-//        @Override
-//        public TitanGraph get() {
-//            if (graph == null) {
-//                synchronized (HiveLineageServiceTest.class) {
-//                    if (graph == null) {
-//                        ReadConfiguration config = new CommonsConfiguration() {{
-//                            set("storage.backend", "hbase");
-//                            set("storage.hostname", "localhost");
-//
-//                            set("index.search.backend", "solr");
-////                            set("index.search.solr.mode", "http");
-////                            set("index.search.solr.http-urls", "http://localhost:8983/solr");
-//                            set("index.search.solr.mode", "cloud");
-//                            set("index.search.solr.zookeeper-url", "localhost:9983/solr");
-//                        }};
-//                        GraphDatabaseConfiguration graphconfig = new GraphDatabaseConfiguration(config);
-////                        try {
-////                            graphconfig.getBackend().clearStorage();
-////                        } catch (BackendException e) {
-////                            e.printStackTrace();
-////                        }
-//                        graph = TitanFactory.open(config);
-//                    }
-//                }
-//            }
-//
-//            return graph;
-//        }
-//    };
-
     @Inject
     private GraphBackedDiscoveryService discoveryService;
 
@@ -115,13 +80,6 @@ public class HiveLineageServiceTest {
 
     @BeforeClass
     public void setUp() throws Exception {
-        GraphBackedMetadataRepository repo = new GraphBackedMetadataRepository(graphProvider);
-
-        GraphBackedTypeStore ts = new GraphBackedTypeStore(graphProvider);
-        discoveryService = new GraphBackedDiscoveryService(graphProvider, repo);
-        metadataService = new DefaultMetadataService(repo, ts, new HashSet<Provider<TypesChangeListener>>());
-        hiveLineageService = new HiveLineageService(graphProvider, repo, discoveryService);
-
         setUpTypes();
         setupInstances();
         // TestUtils.dumpGraph(graphProvider.get());
@@ -131,7 +89,11 @@ public class HiveLineageServiceTest {
     public void tearDown() throws Exception {
         TypeSystem.getInstance().reset();
         graphProvider.get().shutdown();
-        TitanCleanup.clear(graphProvider.get());
+        try {
+            TitanCleanup.clear(graphProvider.get());
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @DataProvider(name = "dslQueriesProvider")

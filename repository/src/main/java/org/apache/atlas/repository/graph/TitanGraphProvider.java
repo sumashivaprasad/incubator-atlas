@@ -46,10 +46,10 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
      */
     private static final String ATLAS_PREFIX = "atlas.graph.";
 
-    private static ReadConfiguration getConfiguration() throws AtlasException {
+    private static Configuration getConfiguration() throws AtlasException {
         PropertiesConfiguration configProperties = PropertiesUtil.getApplicationProperties();
 
-        CommonsConfiguration config = new CommonsConfiguration();
+        Configuration graphConfig = new PropertiesConfiguration();
 
         final Iterator<String> iterator = configProperties.getKeys();
         while (iterator.hasNext()) {
@@ -57,19 +57,19 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
             if (key.startsWith(ATLAS_PREFIX)) {
                 String value = (String) configProperties.getProperty(key);
                 key = key.substring(ATLAS_PREFIX.length());
-                config.set(key, value);
+                graphConfig.setProperty(key, value);
                 LOG.info("Using graph property {}={}", key, value);
             }
         }
 
-        return config;
+        return graphConfig;
     }
 
     @Override
     @Singleton
     @Provides
     public TitanGraph get() {
-        ReadConfiguration config;
+        Configuration config;
         try {
             config = getConfiguration();
         } catch (AtlasException e) {

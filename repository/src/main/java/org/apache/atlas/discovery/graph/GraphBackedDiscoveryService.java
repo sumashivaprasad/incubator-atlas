@@ -71,7 +71,7 @@ public class GraphBackedDiscoveryService implements DiscoveryService {
     public final static String SCORE = "score";
 
     @Inject
-    public GraphBackedDiscoveryService(GraphProvider<TitanGraph> graphProvider, MetadataRepository metadataRepository)
+    GraphBackedDiscoveryService(GraphProvider<TitanGraph> graphProvider, MetadataRepository metadataRepository)
     throws DiscoveryException {
         this.titanGraph = graphProvider.get();
         this.graphPersistenceStrategy = new DefaultGraphPersistenceStrategy(metadataRepository);
