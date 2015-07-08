@@ -39,6 +39,7 @@ import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -55,25 +56,29 @@ import java.util.Set;
  */
 public class HiveMetaStoreBridge {
     private static final String DEFAULT_DGI_URL = "http://localhost:21000/";
-    public static final String HIVE_CLUSTER_NAME = "hive.cluster.name";
+    public static final String HIVE_CLUSTER_NAME = "atlas.cluster.name";
     public static final String DEFAULT_CLUSTER_NAME = "primary";
     private final String clusterName;
 
-    public static final String DGI_URL_PROPERTY = "hive.hook.dgi.url";
+    public static final String ATLAS_ENDPOINT = "atlas.rest.address";
 
     private static final Logger LOG = LoggerFactory.getLogger(HiveMetaStoreBridge.class);
 
     private final Hive hiveClient;
     private final AtlasClient atlasClient;
 
+    public HiveMetaStoreBridge(HiveConf hiveConf) throws Exception {
+        this(hiveConf, null, null);
+    }
+
     /**
      * Construct a HiveMetaStoreBridge.
      * @param hiveConf hive conf
      */
-    public HiveMetaStoreBridge(HiveConf hiveConf) throws Exception {
+    public HiveMetaStoreBridge(HiveConf hiveConf, String doAsUser, UserGroupInformation ugi) throws Exception {
         clusterName = hiveConf.get(HIVE_CLUSTER_NAME, DEFAULT_CLUSTER_NAME);
         hiveClient = Hive.get(hiveConf);
-        atlasClient = new AtlasClient(hiveConf.get(DGI_URL_PROPERTY, DEFAULT_DGI_URL));
+        atlasClient = new AtlasClient(hiveConf.get(ATLAS_ENDPOINT, DEFAULT_DGI_URL), ugi, doAsUser);
     }
 
     public AtlasClient getAtlasClient() {
