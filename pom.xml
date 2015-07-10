@@ -459,6 +459,12 @@
                 <groupId>org.mortbay.jetty</groupId>
                 <artifactId>jsp-2.1</artifactId>
                 <version>6.0.0</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+               </exclusions>
             </dependency>
 
             <!-- Logging -->
@@ -508,7 +514,34 @@
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-common</artifactId>
                 <version>${hadoop.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>tomcat</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
+
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-hdfs</artifactId>
+                <version>${hadoop.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>tomcat</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
 
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
@@ -745,7 +778,6 @@
                 <groupId>org.apache.hbase</groupId>
                 <artifactId>hbase-client</artifactId>
                 <version>${hbase.version}</version>
-                <optional>true</optional>
                 <exclusions>
                     <exclusion>
                         <artifactId>avro</artifactId>
@@ -758,6 +790,10 @@
                     <exclusion>
                         <artifactId>asm</artifactId>
                         <groupId>asm</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.apache.hadoop</groupId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -772,6 +808,30 @@
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-solr</artifactId>
                 <version>${titan.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.eclipse.jetty</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>javax.servlet</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.jruby.joni</groupId>
+                    </exclusion>
+
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.restlet.jee</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.ow2.asm</groupId>
+                    </exclusion>
+                </exclusions>
+
             </dependency>
 
             <dependency>

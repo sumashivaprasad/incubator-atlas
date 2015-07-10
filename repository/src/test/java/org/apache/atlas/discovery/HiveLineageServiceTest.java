@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,21 +20,12 @@ package org.apache.atlas.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Provider;
-import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
-import com.thinkaurelius.titan.diskstorage.BackendException;
-import com.thinkaurelius.titan.diskstorage.configuration.ReadConfiguration;
-import com.thinkaurelius.titan.diskstorage.configuration.backend.CommonsConfiguration;
-import com.thinkaurelius.titan.graphdb.configuration.GraphDatabaseConfiguration;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
-import org.apache.atlas.listener.TypesChangeListener;
 import org.apache.atlas.repository.EntityNotFoundException;
-import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
 import org.apache.atlas.repository.graph.GraphProvider;
-import org.apache.atlas.repository.typestore.GraphBackedTypeStore;
 import org.apache.atlas.services.DefaultMetadataService;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
@@ -43,7 +34,6 @@ import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.*;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
-import org.apache.commons.io.FileUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
@@ -91,7 +81,7 @@ public class HiveLineageServiceTest {
         graphProvider.get().shutdown();
         try {
             TitanCleanup.clear(graphProvider.get());
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -381,7 +371,7 @@ public class HiveLineageServiceTest {
     }
 
     AttributeDefinition attrDef(String name, IDataType dT, Multiplicity m, boolean isComposite,
-                                String reverseAttributeName) {
+        String reverseAttributeName) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(dT);
         return new AttributeDefinition(name, dT.getName(), m, isComposite, reverseAttributeName);
@@ -478,7 +468,7 @@ public class HiveLineageServiceTest {
     }
 
     Id table(String name, String description, Id dbId, Referenceable sd, String owner, String tableType,
-             List<Referenceable> columns, String... traitNames) throws Exception {
+        List<Referenceable> columns, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(HIVE_TABLE_TYPE, traitNames);
         referenceable.set("name", name);
         referenceable.set("description", description);
@@ -498,7 +488,7 @@ public class HiveLineageServiceTest {
     }
 
     Id loadProcess(String name, String description, String user, List<Id> inputTables, List<Id> outputTables,
-                   String queryText, String queryPlan, String queryId, String queryGraph, String... traitNames)
+        String queryText, String queryPlan, String queryId, String queryGraph, String... traitNames)
         throws Exception {
         Referenceable referenceable = new Referenceable(HIVE_PROCESS_TYPE, traitNames);
         referenceable.set("name", name);

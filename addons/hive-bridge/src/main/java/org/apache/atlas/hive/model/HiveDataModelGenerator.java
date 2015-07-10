@@ -19,13 +19,8 @@
 package org.apache.atlas.hive.model;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.RepositoryMetadataModule;
-import org.apache.atlas.services.DefaultMetadataService;
-import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
@@ -43,8 +38,6 @@ import org.apache.atlas.typesystem.types.TypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.text.ParseException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -401,40 +394,25 @@ public class HiveDataModelGenerator {
     }
 
     public static void main(String[] args) throws Exception {
-//        HiveDataModelGenerator hiveDataModelGenerator = new HiveDataModelGenerator();
-//        System.out.println("hiveDataModelAsJSON = " + hiveDataModelGenerator.getModelAsJson());
-//
-//        TypesDef typesDef = hiveDataModelGenerator.getTypesDef();
-//        for (EnumTypeDefinition enumType : typesDef.enumTypesAsJavaList()) {
-//            System.out.println(String.format("%s(%s) - %s", enumType.name, EnumType.class.getSimpleName(),
-//                    Arrays.toString(enumType.enumValues)));
-//        }
-//        for (StructTypeDefinition structType : typesDef.structTypesAsJavaList()) {
-//            System.out.println(String.format("%s(%s) - %s", structType.typeName, StructType.class.getSimpleName(),
-//                    Arrays.toString(structType.attributeDefinitions)));
-//        }
-//        for (HierarchicalTypeDefinition<ClassType> classType : typesDef.classTypesAsJavaList()) {
-//            System.out.println(String.format("%s(%s) - %s", classType.typeName, ClassType.class.getSimpleName(),
-//                    Arrays.toString(classType.attributeDefinitions)));
-//        }
-//        for (HierarchicalTypeDefinition<TraitType> traitType : typesDef.traitTypesAsJavaList()) {
-//            System.out.println(String.format("%s(%s) - %s", traitType.typeName, TraitType.class.getSimpleName(),
-//                    Arrays.toString(traitType.attributeDefinitions)));
-//        }
+        HiveDataModelGenerator hiveDataModelGenerator = new HiveDataModelGenerator();
+        System.out.println("hiveDataModelAsJSON = " + hiveDataModelGenerator.getModelAsJson());
 
-//        public static void main(String[] args) throws AtlasException, ParseException, IOException {
-
-            String typeDefinition = new HiveDataModelGenerator().getModelAsJson();
-
-            Injector injector = Guice.createInjector(new RepositoryMetadataModule());
-            MetadataService startClass = injector.getInstance(DefaultMetadataService.class);
-
-            startClass.createType(typeDefinition);
-
-            String entityDefinition = "{\n  \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Reference\",\n  \"id\":{\n    \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Id\",\n    \"id\":\"-1435825433984544000\",\n    \"version\":0,\n    \"typeName\":\"hive_table\"\n  },\n  \"typeName\":\"hive_table\",\n  \"values\":{\n    \"tableType\":\"Sqoop generated table\",\n    \"name\":\"default.nicetable@atlasdemo\",\n    \"viewExpandedText\":\"Expanded Text\",\n    \"createTime\":1435825433985,\n    \"temporary\":\"false\",\n    \"db\":{\n      \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Reference\",\n      \"id\":{\n        \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Id\",\n        \"id\":\"116af10b-c9eb-4ea8-bfa3-7cc295f32532\",\n        \"version\":0,\n        \"typeName\":\"hive_db\"\n      },\n      \"typeName\":\"hive_db\",\n      \"values\":{\n\n      },\n      \"traitNames\":[\n\n      ],\n      \"traits\":{\n\n      }\n    },\n    \"viewOriginalText\":\"Original text\",\n    \"retention\":1435825433985,\n    \"tableName\":\"nicetable\",\n    \"columns\":[\n      {\n        \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Reference\",\n        \"id\":{\n          \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Id\",\n          \"id\":\"-1435825433985367000\",\n          \"version\":0,\n          \"typeName\":\"hive_column\"\n        },\n        \"typeName\":\"hive_column\",\n        \"values\":{\n          \"comment\":\"Driver Id\",\n          \"type\":\"String\",\n          \"name\":\"driver_id\"\n        },\n        \"traitNames\":[\n\n        ],\n        \"traits\":{\n\n        }\n      },\n      {\n        \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Reference\",\n        \"id\":{\n          \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Id\",\n          \"id\":\"-1435825433985382000\",\n          \"version\":0,\n          \"typeName\":\"hive_column\"\n        },\n        \"typeName\":\"hive_column\",\n        \"values\":{\n          \"comment\":\"Driver Name\",\n          \"type\":\"String\",\n          \"name\":\"driver_name\"\n        },\n        \"traitNames\":[\n\n        ],\n        \"traits\":{\n\n        }\n      },\n      {\n        \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Reference\",\n        \"id\":{\n          \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Id\",\n          \"id\":\"-1435825433985391000\",\n          \"version\":0,\n          \"typeName\":\"hive_column\"\n        },\n        \"typeName\":\"hive_column\",\n        \"values\":{\n          \"comment\":\"certified_Y/N\",\n          \"type\":\"String\",\n          \"name\":\"certified\"\n        },\n        \"traitNames\":[\n\n        ],\n        \"traits\":{\n\n        }\n      },\n      {\n        \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Reference\",\n        \"id\":{\n          \"jsonClass\":\"org.apache.atlas.typesystem.json.InstanceSerialization$_Id\",\n          \"id\":\"-1435825433985399000\",\n          \"version\":0,\n          \"typeName\":\"hive_column\"\n        },\n        \"typeName\":\"hive_column\",\n        \"values\":{\n          \"comment\":\"certified_Y/N\",\n          \"type\":\"String\",\n          \"name\":\"wageplan\"\n        },\n        \"traitNames\":[\n\n        ],\n        \"traits\":{\n\n        }\n      }\n    ],\n    \"comment\":\"This is loaded by Sqoop job\",\n    \"lastAccessTime\":1435825433985,\n    \"owner\":\"Hortonworks\",\n    \"parameters\":\"params\"\n  },\n  \"traitNames\":[\n\n  ],\n  \"traits\":{\n\n  }\n}";
-
-            String guid = startClass.createEntity(entityDefinition);
-            String entityDef = startClass.getEntityDefinition(guid);
-//       InstanceSerialization.fromJsonReferenceable(entityDef, true);
+        TypesDef typesDef = hiveDataModelGenerator.getTypesDef();
+        for (EnumTypeDefinition enumType : typesDef.enumTypesAsJavaList()) {
+            System.out.println(String.format("%s(%s) - %s", enumType.name, EnumType.class.getSimpleName(),
+                    Arrays.toString(enumType.enumValues)));
+        }
+        for (StructTypeDefinition structType : typesDef.structTypesAsJavaList()) {
+            System.out.println(String.format("%s(%s) - %s", structType.typeName, StructType.class.getSimpleName(),
+                    Arrays.toString(structType.attributeDefinitions)));
+        }
+        for (HierarchicalTypeDefinition<ClassType> classType : typesDef.classTypesAsJavaList()) {
+            System.out.println(String.format("%s(%s) - %s", classType.typeName, ClassType.class.getSimpleName(),
+                    Arrays.toString(classType.attributeDefinitions)));
+        }
+        for (HierarchicalTypeDefinition<TraitType> traitType : typesDef.traitTypesAsJavaList()) {
+            System.out.println(String.format("%s(%s) - %s", traitType.typeName, TraitType.class.getSimpleName(),
+                    Arrays.toString(traitType.attributeDefinitions)));
+        }
     }
 }

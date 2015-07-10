@@ -53,6 +53,8 @@ public class SecureEmbeddedServerIT extends SecureEmbeddedServerITBase {
 
             // test to see whether server is up and root page can be served
             Assert.assertEquals(connection.getResponseCode(), 200);
+        } catch(Throwable e) {
+            Assert.fail("War deploy failed", e);
         } finally {
             secureEmbeddedServer.server.stop();
         }

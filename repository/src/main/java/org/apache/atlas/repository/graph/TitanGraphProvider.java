@@ -21,9 +21,6 @@ package org.apache.atlas.repository.graph;
 import com.google.inject.Provides;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
-import com.thinkaurelius.titan.diskstorage.configuration.ReadConfiguration;
-import com.thinkaurelius.titan.diskstorage.configuration.backend.CommonsConfiguration;
-import com.thinkaurelius.titan.graphdb.configuration.GraphDatabaseConfiguration;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.PropertiesUtil;
 import org.apache.commons.configuration.Configuration;
@@ -45,6 +42,8 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
      * Constant for the configuration property that indicates the prefix.
      */
     private static final String ATLAS_PREFIX = "atlas.graph.";
+
+    private static TitanGraph graphInstance;
 
     private static Configuration getConfiguration() throws AtlasException {
         PropertiesConfiguration configProperties = PropertiesUtil.getApplicationProperties();
@@ -69,13 +68,20 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
     @Singleton
     @Provides
     public TitanGraph get() {
-        Configuration config;
-        try {
-            config = getConfiguration();
-        } catch (AtlasException e) {
-            throw new RuntimeException(e);
-        }
+        if(graphInstance == null) {
+            synchronized (TitanGraphProvider.class) {
+                if(graphInstance == null) {
+                    Configuration config;
+                    try {
+                        config = getConfiguration();
+                    } catch (AtlasException e) {
+                        throw new RuntimeException(e);
+                    }
 
-        return TitanFactory.open(config);
+                    graphInstance = TitanFactory.open(config);
+                }
+            }
+        }
+        return graphInstance;
     }
 }

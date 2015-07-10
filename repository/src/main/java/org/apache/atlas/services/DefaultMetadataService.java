@@ -20,13 +20,10 @@ package org.apache.atlas.services;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Provider;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.ParamChecker;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TypeNotFoundException;
 import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.listener.EntityChangeListener;
@@ -60,8 +57,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.io.IOException;
-import java.text.ParseException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -85,8 +80,9 @@ public class DefaultMetadataService implements MetadataService {
     private final Collection<Provider<TypesChangeListener>> typeChangeListeners;
 
     @Inject
-    public DefaultMetadataService(final MetadataRepository repository, final ITypeStore typeStore,
-                                  final Collection<Provider<TypesChangeListener>> typeChangeListeners) throws AtlasException {
+    DefaultMetadataService(final MetadataRepository repository, final ITypeStore typeStore,
+        final Collection<Provider<TypesChangeListener>> typeChangeListeners) throws AtlasException {
+
         this.typeStore = typeStore;
         this.typeSystem = TypeSystem.getInstance();
         this.repository = repository;
@@ -432,6 +428,4 @@ public class DefaultMetadataService implements MetadataService {
     public void unregisterListener(EntityChangeListener listener) {
         entityChangeListeners.remove(listener);
     }
-
-
 }
