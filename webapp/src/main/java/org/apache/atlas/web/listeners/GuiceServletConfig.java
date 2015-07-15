@@ -52,7 +52,7 @@ public class GuiceServletConfig extends GuiceServletContextListener {
 
     private static final String GUICE_CTX_PARAM = "guice.packages";
     static final String HTTP_AUTHENTICATION_ENABLED = "atlas.http.authentication.enabled";
-    private Injector injector;
+    protected Injector injector;
 
     @Override
     protected Injector getInjector() {
@@ -113,9 +113,11 @@ public class GuiceServletConfig extends GuiceServletContextListener {
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         super.contextDestroyed(servletContextEvent);
-        TypeLiteral<GraphProvider<TitanGraph>> graphProviderType = new TypeLiteral<GraphProvider<TitanGraph>>() {};;
-        Provider<GraphProvider<TitanGraph>> graphProvider = injector.getProvider(Key.get(graphProviderType));
-        final Graph graph = graphProvider.get().get();
-        graph.shutdown();
+        if(injector != null) {
+            TypeLiteral<GraphProvider<TitanGraph>> graphProviderType = new TypeLiteral<GraphProvider<TitanGraph>>() {};
+            Provider<GraphProvider<TitanGraph>> graphProvider = injector.getProvider(Key.get(graphProviderType));
+            final Graph graph = graphProvider.get().get();
+            graph.shutdown();
+        }
     }
 }

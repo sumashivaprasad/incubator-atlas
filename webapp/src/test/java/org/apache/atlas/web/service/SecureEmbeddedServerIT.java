@@ -38,6 +38,7 @@ public class SecureEmbeddedServerIT extends SecureEmbeddedServerITBase {
         SecureEmbeddedServer secureEmbeddedServer = null;
         try {
             String appPath = System.getProperty("user.dir") + getWarPath();
+
             secureEmbeddedServer = new SecureEmbeddedServer(21443, appPath) {
                 @Override
                 protected PropertiesConfiguration getConfiguration() {
