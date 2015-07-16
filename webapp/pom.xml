@@ -40,6 +40,61 @@
                 <!-- Override webapp listener to clean graph state in TestGuiceServletConfig during war destroy -->
                 <maven.war.webxml>src/test/webapp/WEB-INF/web.xml</maven.war.webxml>
             </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <configuration>
+                            <attachClasses>true</attachClasses>
+                            <webResources>
+                                <resource>
+                                    <directory>../dashboard/v2/dist</directory>
+                                    <targetPath>/</targetPath>
+                                </resource>
+                                <resource>
+                                    <directory>src/main/webapp/WEB-INF</directory>
+                                    <targetPath>WEB-INF</targetPath>
+                                </resource>
+                                <resource>
+                                    <directory>${project.build.directory}/test-classes</directory>
+                                    <targetPath>WEB-INF/classes</targetPath>
+                                </resource>
+                            </webResources>
+                            <archive>
+                                <manifest>
+                                    <addClasspath>true</addClasspath>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>embedded</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <configuration>
+                            <attachClasses>true</attachClasses>
+                            <webResources>
+                                <resource>
+                                    <directory>../dashboard/v2/dist</directory>
+                                    <targetPath>/</targetPath>
+                                </resource>
+                                <resource>
+                                    <directory>src/main/webapp/WEB-INF</directory>
+                                    <targetPath>WEB-INF</targetPath>
+                                </resource>
+                            </webResources>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
@@ -136,6 +191,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-webapp</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.sun.jersey</groupId>
             <artifactId>jersey-core</artifactId>
         </dependency>
@@ -207,36 +267,36 @@
                     <workingDirectory>../dashboard/v2/</workingDirectory>
                 </configuration>
                 <executions>
-                  <execution>
-                    <id>install node and npm</id>
-                    <goals>
-                      <goal>install-node-and-npm</goal>
-                    </goals>
-                    <configuration>
-                      <nodeVersion>v0.10.30</nodeVersion>
-                      <npmVersion>1.4.3</npmVersion>
-                    </configuration>
-                  </execution>
+                    <execution>
+                        <id>install node and npm</id>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>v0.10.30</nodeVersion>
+                            <npmVersion>1.4.3</npmVersion>
+                        </configuration>
+                    </execution>
 
-                  <execution>
-                    <id>npm install</id>
-                    <goals>
-                      <goal>npm</goal>
-                    </goals>
-                    <configuration>
-                      <arguments>install</arguments>
-                    </configuration>
-                  </execution>
+                    <execution>
+                        <id>npm install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install</arguments>
+                        </configuration>
+                    </execution>
 
-                  <execution>
-                    <id>grunt dist</id>
-                    <goals>
-                      <goal>grunt</goal>
-                    </goals>
-                    <configuration>
-                      <arguments>build</arguments>
-                    </configuration>
-                  </execution>
+                    <execution>
+                        <id>grunt dist</id>
+                        <goals>
+                            <goal>grunt</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>build</arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -260,23 +320,16 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <configuration>
-                    <attachClasses>true</attachClasses>
-                    <webResources>
-                        <resource>
-                            <directory>../dashboard/v2/dist</directory>
-                            <targetPath>/</targetPath>
-                        </resource>
-                        <resource>
-                            <directory>src/main/webapp/WEB-INF</directory>
-                            <targetPath>WEB-INF</targetPath>
-                        </resource>
-                    </webResources>
-                </configuration>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
@@ -338,11 +391,13 @@
                     </httpConnector>
                     <war>${project.build.directory}/atlas-webapp-${project.version}.war</war>
                     <daemon>true</daemon>
+                    <!--<webAppSourceDirectory>webapp/src/test/webapp</webAppSourceDirectory>-->
                     <webApp>
                         <contextPath>/</contextPath>
+                        <descriptor>webapp/src/test/webapp/WEB-INF/web.xml</descriptor>
                         <!-- ${project.build.directory}/atlas-webapp-${project.version} -->
                     </webApp>
-                    <useTestClasspath>true</useTestClasspath>
+                    <useTestScope>true</useTestScope>
                     <systemProperties>
                         <systemProperty>
                             <name>atlas.log.dir</name>
@@ -371,7 +426,7 @@
                         <id>start-jetty</id>
                         <phase>pre-integration-test</phase>
                         <goals>
-                            <goal>start</goal>
+                            <goal>deploy-war</goal>
                         </goals>
                     </execution>
                     <execution>
