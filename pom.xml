@@ -353,6 +353,8 @@
 
         <!-- skips checkstyle and find bugs -->
         <skipCheck>false</skipCheck>
+        <titan.storage.backend>berkeleyje</titan.storage.backend>
+        <titan.index.backend>elasticsearch</titan.index.backend>
     </properties>
 
     <profiles>
@@ -396,18 +398,8 @@
                 <titan.storage.hostname>localhost</titan.storage.hostname>
             </properties>
         </profile>
-        <profile>
-            <id>embedded</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <titan.storage.backend>berkeleyje</titan.storage.backend>
-                <titan.index.backend>es</titan.index.backend>
-            </properties>
-        </profile>
-    </profiles>
 
+    </profiles>
     <modules>
         <module>typesystem</module>
         <module>client</module>
