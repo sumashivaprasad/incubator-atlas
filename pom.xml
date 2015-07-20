@@ -322,7 +322,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <slf4j.version>1.7.7</slf4j.version>
-        <jetty.version>9.3.0.M1</jetty.version>
+        <jetty.version>9.2.12.v20150709</jetty.version>
         <jersey.version>1.9</jersey.version>
         <jackson.version>1.8.3</jackson.version>
         <tinkerpop.version>2.6.0</tinkerpop.version>
@@ -386,6 +386,7 @@
             </properties>
         </profile>
 
+        <!-- Turning on this profile affects only tests and does not affect packaging -->
         <profile>
             <id>distributed</id>
             <activation>
