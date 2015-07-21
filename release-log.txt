@@ -8,10 +8,17 @@ ATLAS-54 Rename configs in hive hook (shwethags)
 ATLAS-3 Mixed Index creation fails with Date types (suma.shivaprasad via shwethags)
 
 ALL CHANGES:
+ATLAS-56 atlas_config.py should give an informative error if jar or java binaries can't be found (dossett@gmail.com via shwethags)
+ATLAS-45 Entity submit fails (suma.shivaprasad via shwethags)
+ATLAS-46 Different data directory with restart (shwethags)
+ATLAS-81 atlas debian packaing fails in maven build (vijay_k via shwethags)
+ATLAS-36 Need separate persisted properties for HTTP and HTTPS ports (jmaron)
+ATLAS-21 quick_start script run throws an exception (jmaron)
+ATLAS-32 Atlas hook fails to fire in certain secure deployments (jmaron)
 ATLAS-31 ATLAS build fails with clean repo (suma.shivaprasad via shwethags)
 ATLAS-33 Atlas restart fails (shwethags)
+ATLAS-29 client authentication fails in secure environment from server processes (jmaron)
 ATLAS-10 Update trunk version to 0.6-incubating-SNAPSHOT (shwethags)
-ATLAS-36 listener port properties
 
 --Release 0.5-incubating
 
