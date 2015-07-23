@@ -295,7 +295,7 @@
         <developer>
             <id>ssuresh</id>
             <name>Suresh Srinivas</name>
-            <email> ssuresh@apache.org</email>
+            <email>ssuresh@apache.org</email>
             <timezone>-8</timezone>
             <roles>
                 <role>committer</role>
@@ -306,7 +306,7 @@
         <developer>
             <id>vranganathan</id>
             <name>Venkat Ranganathan</name>
-            <email> vranganathan@apache.org</email>
+            <email>vranganathan@apache.org</email>
             <timezone>-8</timezone>
             <roles>
                 <role>committer</role>
@@ -322,13 +322,15 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <slf4j.version>1.7.7</slf4j.version>
-        <jetty.version>9.2.12.v20150709</jetty.version>
+        <jetty.version>8.1.10.v20130312</jetty.version>
         <jersey.version>1.9</jersey.version>
+        <!--<restlet.version>2.1.1</restlet.version>-->
         <jackson.version>1.8.3</jackson.version>
         <tinkerpop.version>2.6.0</tinkerpop.version>
         <titan.version>0.5.4</titan.version>
         <hadoop.version>2.6.0</hadoop.version>
         <hbase.version>0.98.9-hadoop2</hbase.version>
+        <solr.version>4.10.4</solr.version>
 
         <!-- scala versions -->
         <scala.version>2.10.4</scala.version>
@@ -457,6 +459,11 @@
             <name>Typesafe Repository</name>
             <url>http://repo.typesafe.com/typesafe/releases/</url>
         </repository>
+        <!--<repository>-->
+        <!--<id>maven-restlet</id>-->
+        <!--<name>Public online Restlet repository</name>-->
+        <!--<url>http://maven.restlet.org</url>-->
+        <!--</repository>-->
     </repositories>
     <distributionManagement>
         <repository>
@@ -708,6 +715,13 @@
                 <version>2.0</version>
             </dependency>
 
+            <!-- Required for embedded solr -->
+            <!--<dependency>-->
+            <!--<groupId>org.restlet.jee</groupId>-->
+            <!--<artifactId>org.restlet</artifactId>-->
+            <!--<version>${restlet.version}</version>-->
+            <!--</dependency>-->
+
             <!-- JSON -->
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
@@ -750,6 +764,13 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-webapp</artifactId>
+                <version>${jetty.version}</version>
+                <scope>compile</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-io</artifactId>
                 <version>${jetty.version}</version>
                 <scope>compile</scope>
             </dependency>
@@ -877,15 +898,48 @@
                         <artifactId>*</artifactId>
                         <groupId>org.ow2.asm</groupId>
                     </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.apache.solr</groupId>
+                    </exclusion>
                 </exclusions>
-
             </dependency>
+
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-core</artifactId>
+                <version>${solr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-solrj</artifactId>
+                <version>${solr.version}</version>
+            </dependency>
+
+            <!--<dependency>-->
+            <!--<groupId>org.apache.solr</groupId>-->
+            <!--<artifactId>solr-test-framework</artifactId>-->
+            <!--<version>${solr.version}</version>-->
+            <!--&lt;!&ndash;<exclusions>&ndash;&gt;-->
+            <!--&lt;!&ndash;<exclusion>&ndash;&gt;-->
+            <!--&lt;!&ndash;<artifactId>*</artifactId>&ndash;&gt;-->
+            <!--&lt;!&ndash;<groupId>org.eclipse.jetty</groupId>&ndash;&gt;-->
+            <!--&lt;!&ndash;</exclusion>&ndash;&gt;-->
+            <!--&lt;!&ndash;</exclusions>&ndash;&gt;-->
+            <!--</dependency>-->
 
             <dependency>
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-lucene</artifactId>
                 <version>${titan.version}</version>
                 <!--<scope>test</scope>-->
+                <exclusions>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.apache.lucene</groupId>
+                    </exclusion>
+                </exclusions>
+
             </dependency>
 
             <dependency>
@@ -1444,12 +1498,18 @@
                         <exclude>**/maven-eclipse.xml</exclude>
                         <exclude>**/.externalToolBuilders/**</exclude>
                         <exclude>**/build.log</exclude>
-                        <exclude>dashboard/**/.bower-*/**</exclude> <!-- temp libs -->
-                        <exclude>dashboard/v2/.bowerrc</exclude> <!-- json file -->
-                        <exclude>dashboard/v2/lib/**</exclude>  <!-- temp libs -->
-                        <exclude>dashboard/v2/node*/**</exclude>  <!-- temp libs -->
-                        <exclude>dashboard/v2/dist/**</exclude>  <!-- package -->
-                        <exclude>dashboard/v2/**/*.min.js*</exclude> <!-- minified JS -->
+                        <exclude>dashboard/**/.bower-*/**</exclude>
+                        <!-- temp libs -->
+                        <exclude>dashboard/v2/.bowerrc</exclude>
+                        <!-- json file -->
+                        <exclude>dashboard/v2/lib/**</exclude>
+                        <!-- temp libs -->
+                        <exclude>dashboard/v2/node*/**</exclude>
+                        <!-- temp libs -->
+                        <exclude>dashboard/v2/dist/**</exclude>
+                        <!-- package -->
+                        <exclude>dashboard/v2/**/*.min.js*</exclude>
+                        <!-- minified JS -->
                     </excludes>
                 </configuration>
                 <executions>

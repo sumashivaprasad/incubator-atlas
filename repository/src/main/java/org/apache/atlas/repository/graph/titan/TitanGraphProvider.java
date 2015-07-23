@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.repository.graph;
+package org.apache.atlas.repository.graph.titan;
 
 import com.google.inject.Provides;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.PropertiesUtil;
+import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.slf4j.Logger;
