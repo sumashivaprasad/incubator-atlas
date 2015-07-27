@@ -24,6 +24,7 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.PropertiesUtil;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolr;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.slf4j.Logger;
@@ -43,10 +44,17 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
      * Constant for the configuration property that indicates the prefix.
      */
     private static final String ATLAS_PREFIX = "atlas.graph.";
+    private static final String INDEX_BACKEND_PREFIX = "index.search.";
+    private static final String INDEX_BACKEND_KEY = ATLAS_PREFIX + INDEX_BACKEND_PREFIX + "backend";
+    private static final String INDEX_BACKEND_SOLR = "solr";
+    private static final String SOLR_MODE_KEY = ATLAS_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".mode";
+    private static final String SOLR_ZK_URL_KEY = ATLAS_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".zookeeper-url";
+    private static final String SOLR_MODE_EMBEDDED = "embedded";
+    private static final String SOLR_MODE_CLOUD = "cloud";
 
     private static TitanGraph graphInstance;
 
-    private static Configuration getConfiguration() throws AtlasException {
+    static Configuration getConfiguration() throws AtlasException {
         PropertiesConfiguration configProperties = PropertiesUtil.getApplicationProperties();
 
         Configuration graphConfig = new PropertiesConfiguration();
@@ -79,6 +87,18 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
                         throw new RuntimeException(e);
                     }
 
+                    //Initialize solr
+                    //Index backend is solr
+                    if(INDEX_BACKEND_SOLR.equalsIgnoreCase(config.getString(INDEX_BACKEND_KEY))) {
+                        //solr deployment mode is embedded
+                        final String solrZKAddress = config.getString(SOLR_ZK_URL_KEY);
+                        if(SOLR_MODE_EMBEDDED.equalsIgnoreCase(config.getString(SOLR_MODE_KEY))) {
+                            EmbeddedSolr embeddedSolr = EmbeddedSolr.get(solrZKAddress);
+                            embeddedSolr.start();
+                        }
+//                        else if(SOLR_MODE_CLOUD.equalsIgnoreCase(config.getString(SOLR_MODE_KEY))) {
+//                        }
+                    }
                     graphInstance = TitanFactory.open(config);
                 }
             }

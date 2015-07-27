@@ -89,7 +89,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     @Inject
     public GraphBackedMetadataRepository(GraphProvider<TitanGraph> graphProvider) throws AtlasException {
         this.typeSystem = TypeSystem.getInstance();
-
         this.titanGraph = graphProvider.get();
     }
 
