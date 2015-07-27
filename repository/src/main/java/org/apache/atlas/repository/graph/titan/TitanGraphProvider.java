@@ -21,17 +21,15 @@ package org.apache.atlas.repository.graph.titan;
 import com.google.inject.Provides;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
+import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.PropertiesUtil;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolr;
 import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
-import java.util.Iterator;
 
 /**
  * Default implementation for Graph Provider that doles out Titan Graph.
@@ -43,34 +41,20 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
     /**
      * Constant for the configuration property that indicates the prefix.
      */
-    private static final String ATLAS_PREFIX = "atlas.graph.";
+    private static final String GRAPH_PREFIX = "atlas.graph";
     private static final String INDEX_BACKEND_PREFIX = "index.search.";
-    private static final String INDEX_BACKEND_KEY = ATLAS_PREFIX + INDEX_BACKEND_PREFIX + "backend";
+    private static final String INDEX_BACKEND_KEY = GRAPH_PREFIX + INDEX_BACKEND_PREFIX + "backend";
     private static final String INDEX_BACKEND_SOLR = "solr";
-    private static final String SOLR_MODE_KEY = ATLAS_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".mode";
-    private static final String SOLR_ZK_URL_KEY = ATLAS_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".zookeeper-url";
+    private static final String SOLR_MODE_KEY = GRAPH_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".mode";
+    private static final String SOLR_ZK_URL_KEY = GRAPH_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".zookeeper-url";
     private static final String SOLR_MODE_EMBEDDED = "embedded";
     private static final String SOLR_MODE_CLOUD = "cloud";
 
     private static TitanGraph graphInstance;
 
-    static Configuration getConfiguration() throws AtlasException {
-        PropertiesConfiguration configProperties = PropertiesUtil.getApplicationProperties();
-
-        Configuration graphConfig = new PropertiesConfiguration();
-
-        final Iterator<String> iterator = configProperties.getKeys();
-        while (iterator.hasNext()) {
-            String key = iterator.next();
-            if (key.startsWith(ATLAS_PREFIX)) {
-                String value = (String) configProperties.getProperty(key);
-                key = key.substring(ATLAS_PREFIX.length());
-                graphConfig.setProperty(key, value);
-                LOG.info("Using graph property {}={}", key, value);
-            }
-        }
-
-        return graphConfig;
+    private static Configuration getConfiguration() throws AtlasException {
+        Configuration configProperties = ApplicationProperties.get();
+        return ApplicationProperties.getSubsetConfiguration(configProperties, GRAPH_PREFIX);
     }
 
     @Override
