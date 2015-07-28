@@ -25,6 +25,7 @@ import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolr;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,10 +44,10 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
      */
     private static final String GRAPH_PREFIX = "atlas.graph";
     private static final String INDEX_BACKEND_PREFIX = "index.search.";
-    private static final String INDEX_BACKEND_KEY = GRAPH_PREFIX + INDEX_BACKEND_PREFIX + "backend";
+    private static final String INDEX_BACKEND_KEY = INDEX_BACKEND_PREFIX + "backend";
     private static final String INDEX_BACKEND_SOLR = "solr";
-    private static final String SOLR_MODE_KEY = GRAPH_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".mode";
-    private static final String SOLR_ZK_URL_KEY = GRAPH_PREFIX + INDEX_BACKEND_KEY + INDEX_BACKEND_SOLR + ".zookeeper-url";
+    private static final String SOLR_MODE_KEY = INDEX_BACKEND_PREFIX + INDEX_BACKEND_SOLR + ".mode";
+    private static final String SOLR_ZK_URL_KEY = INDEX_BACKEND_PREFIX + INDEX_BACKEND_SOLR + ".zookeeper-url";
     private static final String SOLR_MODE_EMBEDDED = "embedded";
     private static final String SOLR_MODE_CLOUD = "cloud";
 
@@ -77,11 +78,21 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
                         //solr deployment mode is embedded
                         final String solrZKAddress = config.getString(SOLR_ZK_URL_KEY);
                         if(SOLR_MODE_EMBEDDED.equalsIgnoreCase(config.getString(SOLR_MODE_KEY))) {
-                            EmbeddedSolr embeddedSolr = EmbeddedSolr.get(solrZKAddress);
-                            embeddedSolr.start();
+                            LOG.info("Starting embedded solr server");
+                            EmbeddedSolrCloud embeddedSolr = EmbeddedSolrCloud.get();
+                            try {
+                                embeddedSolr.start();
+                            } catch (Exception e) {
+                                throw new IllegalStateException("Could not initialize Embedded Solr. Aborting ", e);
+                            }
+                            //Reset the mode to cloud mode since EmbeddedSolr brings up an embedded ZK Server and comes up in pseudo-cloud mode.
+                            config.setProperty(SOLR_MODE_KEY, SOLR_MODE_CLOUD);
+                            //Set ZK Address to the embedded ZK address
+                            config.setProperty(SOLR_ZK_URL_KEY, embeddedSolr.getZkAddress());
+                            LOG.debug("Solr mode : " + config.getString(SOLR_MODE_KEY));
                         }
-//                        else if(SOLR_MODE_CLOUD.equalsIgnoreCase(config.getString(SOLR_MODE_KEY))) {
-//                        }
+//                      else if(SOLR_MODE_CLOUD.equalsIgnoreCase(config.getString(SOLR_MODE_KEY))) {
+//                      }
                     }
                     graphInstance = TitanFactory.open(config);
                 }
