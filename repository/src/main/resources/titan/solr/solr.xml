@@ -28,6 +28,7 @@
 
 <solr>
     <str name="collectionsHandler">${collectionsHandler:org.apache.solr.handler.admin.CollectionsHandler}</str>
+    <str name="coreRootDirectory">${coreRootDirectory:./target}</str>
     <solrcloud>
         <str name="host">${host:127.0.0.1}</str>
         <int name="hostPort">${hostPort:8983}</int>
@@ -38,10 +39,9 @@
         <int name="distribUpdateSoTimeout">${distribUpdateSoTimeout:120000}</int>
     </solrcloud>
 
-    <shardHandlerFactory name="shardHandlerFactory"
-                         class="HttpShardHandlerFactory">
-        <int name="socketTimeout">${socketTimeout:120000}</int>
-        <int name="connTimeout">${connTimeout:15000}</int>
-    </shardHandlerFactory>
-
+    <!--<shardHandlerFactory name="shardHandlerFactory"-->
+                         <!--class="HttpShardHandlerFactory">-->
+        <!--<int name="socketTimeout">${socketTimeout:120000}</int>-->
+        <!--<int name="connTimeout">${connTimeout:15000}</int>-->
+    <!--</shardHandlerFactory>-->
 </solr>

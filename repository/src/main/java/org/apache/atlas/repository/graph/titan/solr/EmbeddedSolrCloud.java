@@ -32,6 +32,7 @@ public class EmbeddedSolrCloud {
         String userDir = System.getProperty("user.dir");
 //      System.setProperty("zkRun", solrZKAddress);
         System.setProperty("bootstrap_conf", "true");
+        System.setProperty("numShards", "1");
 
         String defaultSolrHome = Joiner.on(File.separator).join(userDir, "target", "classes", "titan", "solr");
         solrHome = System.getProperty(SOLR_HOME, defaultSolrHome);
@@ -75,6 +76,7 @@ public class EmbeddedSolrCloud {
     public void stop() {
         try {
             if (server != null) {
+                LOG.info("Shutting down embedded solr");
                 server.shutdown();
             }
             FileUtils.deleteDirectory(new File(Joiner.on(File.separator).join(solrHome, "zoo_data")));
@@ -91,7 +93,7 @@ public class EmbeddedSolrCloud {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        EmbeddedSolrCloud.get().stop();
+//        EmbeddedSolrCloud.get().stop();
     }
 
     public String getZkAddress() {

@@ -30,6 +30,7 @@ import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -74,6 +75,7 @@ public class GraphBackedTypeStoreTest {
         } catch(Exception e) {
             e.printStackTrace();
         }
+        EmbeddedSolrCloud.get().stop();
     }
 
     @Test

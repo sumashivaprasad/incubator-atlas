@@ -26,6 +26,7 @@ import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.atlas.services.DefaultMetadataService;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
@@ -94,6 +95,7 @@ public class HiveLineageServiceTest {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        EmbeddedSolrCloud.get().stop();
     }
 
     @DataProvider(name = "dslQueriesProvider")

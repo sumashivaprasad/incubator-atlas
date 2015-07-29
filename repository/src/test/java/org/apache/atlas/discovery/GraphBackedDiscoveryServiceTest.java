@@ -31,6 +31,7 @@ import org.apache.atlas.query.QueryTestsUtils;
 import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -124,6 +125,7 @@ public class GraphBackedDiscoveryServiceTest {
         } catch(Exception e) {
             e.printStackTrace();
         }
+        EmbeddedSolrCloud.get().stop();
     }
 
     @Test

@@ -21,6 +21,7 @@ package org.apache.atlas;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -45,5 +46,10 @@ public class RepositoryServiceLoadingTest {
     public void testGetGraphService() throws Exception {
         Assert.assertNotNull(graphProvider);
         Assert.assertNotNull(graphProvider.get());
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        EmbeddedSolrCloud.get().stop();
     }
 }

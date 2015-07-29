@@ -32,6 +32,7 @@ import org.apache.atlas.repository.BaseTest;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.repository.RepositoryException;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
@@ -123,6 +124,7 @@ public class GraphBackedMetadataRepositoryTest {
         } catch(Exception e) {
             e.printStackTrace();
         }
+        EmbeddedSolrCloud.get().stop();
     }
 
 
