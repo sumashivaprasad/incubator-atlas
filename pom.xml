@@ -322,9 +322,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <slf4j.version>1.7.7</slf4j.version>
-        <jetty.version>9.2.10.v20150310</jetty.version>
+        <!--<jetty.version>9.2.10.v20150310</jetty.version>-->
         <!--<jetty.version>9.2.12.v20150709</jetty.version>-->
-        <!--<jetty.version>8.1.10.v20130312</jetty.version>-->
+        <jetty.version>8.1.10.v20130312</jetty.version>
 
         <jersey.version>1.9</jersey.version>
         <!--<restlet.version>2.1.1</restlet.version>-->
@@ -962,16 +962,16 @@
                 </exclusions>
             </dependency>
 
-            <!--<dependency>-->
-                <!--<groupId>org.apache.solr</groupId>-->
-                <!--<artifactId>solr-core</artifactId>-->
-                <!--<version>${solr.version}</version>-->
-            <!--</dependency>-->
-            <!--<dependency>-->
-                <!--<groupId>org.apache.solr</groupId>-->
-                <!--<artifactId>solr-solrj</artifactId>-->
-                <!--<version>${solr.version}</version>-->
-            <!--</dependency>-->
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-core</artifactId>
+                <version>${solr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-solrj</artifactId>
+                <version>${solr.version}</version>
+            </dependency>
 
              <!--Required for embedded solr-->
                         <!--<dependency>-->
@@ -983,7 +983,7 @@
             <dependency>
                         <groupId>org.apache.solr</groupId>
                         <artifactId>solr-test-framework</artifactId>
-                        <version>5.2.1</version>
+                        <version>4.10.4</version>
                 <!--<exclusions>-->
                 <!--<exclusion>-->
                 <!--<artifactId>*</artifactId>-->
@@ -1498,7 +1498,7 @@
 
             <!-- Run the application using "mvn jetty:run" -->
             <plugin>
-                <groupId>org.eclipse.jetty</groupId>
+                <groupId>org.mortbay.jetty</groupId>
                 <artifactId>jetty-maven-plugin</artifactId>
                 <version>${jetty.version}</version>
                 <configuration>
