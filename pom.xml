@@ -322,18 +322,15 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <slf4j.version>1.7.7</slf4j.version>
-        <!--<jetty.version>9.2.10.v20150310</jetty.version>-->
-        <!--<jetty.version>9.2.12.v20150709</jetty.version>-->
         <jetty.version>8.1.10.v20130312</jetty.version>
 
         <jersey.version>1.9</jersey.version>
-        <!--<restlet.version>2.1.1</restlet.version>-->
         <jackson.version>1.8.3</jackson.version>
         <tinkerpop.version>2.6.0</tinkerpop.version>
         <titan.version>0.5.4</titan.version>
         <hadoop.version>2.6.0</hadoop.version>
         <hbase.version>0.98.9-hadoop2</hbase.version>
-        <solr.version>4.8.1</solr.version>
+        <solr.version>4.10.4</solr.version>
 
         <!-- scala versions -->
         <scala.version>2.10.4</scala.version>
@@ -917,13 +914,24 @@
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-es</artifactId>
                 <version>${titan.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <artifactId>*</artifactId>
-                        <groupId>org.apache.lucene</groupId>
-                    </exclusion>
-                </exclusions>
+            <exclusions>
+                <exclusion>
+                    <artifactId>*</artifactId>
+                    <groupId>org.apache.lucene</groupId>
+                </exclusion>
+                <!--<exclusion>-->
+                    <!--<artifactId>*</artifactId>-->
+                    <!--<groupId>org.elasticsearch</groupId>-->
+                <!--</exclusion>-->
+            </exclusions>
             </dependency>
+
+            <dependency>
+                <groupId>org.elasticsearch</groupId>
+                <artifactId>elasticsearch</artifactId>
+                <version>1.4.3</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>com.thinkaurelius.titan</groupId>
@@ -966,47 +974,28 @@
                 <groupId>org.apache.solr</groupId>
                 <artifactId>solr-core</artifactId>
                 <version>${solr.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.restlet.jee</groupId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.solr</groupId>
                 <artifactId>solr-solrj</artifactId>
                 <version>${solr.version}</version>
             </dependency>
-
-             <!--Required for embedded solr-->
-                        <!--<dependency>-->
-                        <!--<groupId>org.restlet.jee</groupId>-->
-                        <!--<artifactId>org.restlet</artifactId>-->
-                        <!--<version>${restlet.version}</version>-->
-                        <!--</dependency>-->
-
             <dependency>
-                        <groupId>org.apache.solr</groupId>
-                        <artifactId>solr-test-framework</artifactId>
-                        <version>${solr.version}</version>
-                <!--<exclusions>-->
-                <!--<exclusion>-->
-                <!--<artifactId>*</artifactId>-->
-                <!--<groupId>org.apache.lucene</groupId>-->
-                <!--</exclusion>-->
-                <!--</exclusions>-->
-                        <!--<exclusions>-->
-
-                        </dependency>
-
-
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-test-framework</artifactId>
+                <version>${solr.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-lucene</artifactId>
                 <version>${titan.version}</version>
                 <!--<scope>test</scope>-->
-                <exclusions>
-                    <exclusion>
-                        <artifactId>*</artifactId>
-                        <groupId>org.apache.lucene</groupId>
-                    </exclusion>
-                </exclusions>
-
             </dependency>
 
             <dependency>

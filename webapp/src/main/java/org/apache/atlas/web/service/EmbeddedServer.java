@@ -21,10 +21,8 @@ package org.apache.atlas.web.service;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.bio.SocketConnector;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import java.io.IOException;
@@ -56,16 +54,15 @@ public class EmbeddedServer {
 
     protected Connector getConnector(int port) throws IOException {
 
-        HttpConfiguration http_config = new HttpConfiguration();
-        // this is to enable large header sizes when Kerberos is enabled with AD
-        final int bufferSize = getBufferSize();
-        http_config.setResponseHeaderSize(bufferSize);
-        http_config.setRequestHeaderSize(bufferSize);
-
-        ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(http_config));
+        Connector connector = new SocketConnector();
         connector.setPort(port);
         connector.setHost("0.0.0.0");
-        server.addConnector(connector);
+
+        // this is to enable large header sizes when Kerberos is enabled with AD		         // this is to enable large header sizes when Kerberos is enabled with AD
+        final Integer bufferSize = getBufferSize();
+        connector.setRequestHeaderSize(bufferSize);
+        connector.setResponseHeaderSize(bufferSize);
+        connector.setRequestBufferSize(bufferSize);
         return connector;
     }
 

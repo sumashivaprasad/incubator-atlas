@@ -34,10 +34,13 @@ import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.titan.solr.EmbeddedSolrCloud;
 import org.apache.atlas.web.filters.AtlasAuthenticationFilter;
 import org.apache.atlas.web.filters.AuditFilter;
+import org.apache.atlas.web.service.EmbeddedServer;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,5 +122,7 @@ public class GuiceServletConfig extends GuiceServletContextListener {
             final Graph graph = graphProvider.get().get();
             graph.shutdown();
         }
+        // This will stop embedded solr if its started
+        EmbeddedSolrCloud.get().stop();
     }
 }
