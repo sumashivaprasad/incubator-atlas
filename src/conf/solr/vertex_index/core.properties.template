@@ -1,0 +1,3 @@
+name=vertex_index
+dataDir=__ATLAS_GRAPH_SOLR_DATA_FOLDER__
+loadOnStartup=true
