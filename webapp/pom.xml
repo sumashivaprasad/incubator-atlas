@@ -34,8 +34,38 @@
     <packaging>war</packaging>
 
     <properties>
+        <projectBaseDir>${project.basedir}/..</projectBaseDir>
         <debug.jetty.daemon>true</debug.jetty.daemon>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>jdk7</id>
+            <activation>
+                <jdk>[1.7,1.8)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.enunciate</groupId>
+                        <artifactId>maven-enunciate-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>docs</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <!-- the directory where to put the docs -->
+                            <docsDir>${project.build.directory}/apidocs</docsDir>
+                            <configFile>${basedir}/../src/build/enunciate.xml</configFile>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <dependencies>
         <dependency>
@@ -51,7 +81,6 @@
         <dependency>
             <groupId>org.apache.atlas</groupId>
             <artifactId>atlas-client</artifactId>
-            <type>test-jar</type>
         </dependency>
 
         <dependency>
@@ -252,17 +281,6 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>test-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <configuration>
                     <attachClasses>true</attachClasses>
@@ -285,23 +303,6 @@
                             <addClasspath>true</addClasspath>
                         </manifest>
                     </archive>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.codehaus.enunciate</groupId>
-                <artifactId>maven-enunciate-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>docs</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <!-- the directory where to put the docs -->
-                    <docsDir>${project.build.directory}/apidocs</docsDir>
-                    <configFile>${basedir}/../src/build/enunciate.xml</configFile>
                 </configuration>
             </plugin>
 
@@ -393,12 +394,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <inherited>true</inherited>
-                <extensions>true</extensions>
             </plugin>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>

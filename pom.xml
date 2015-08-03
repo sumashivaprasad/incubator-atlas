@@ -327,7 +327,7 @@
         <jackson.version>1.8.3</jackson.version>
         <tinkerpop.version>2.6.0</tinkerpop.version>
         <titan.version>0.5.4</titan.version>
-        <hadoop.version>2.6.0</hadoop.version>
+        <hadoop.version>2.7.0</hadoop.version>
         <hbase.version>0.98.9-hadoop2</hbase.version>
 
         <!-- scala versions -->
@@ -353,6 +353,8 @@
 
         <!-- skips checkstyle and find bugs -->
         <skipCheck>false</skipCheck>
+        <skipTests>false</skipTests>
+        <projectBaseDir>${project.basedir}</projectBaseDir>
         <titan.storage.backend>berkeleyje</titan.storage.backend>
         <titan.index.backend>elasticsearch</titan.index.backend>
     </properties>
@@ -400,6 +402,21 @@
             </properties>
         </profile>
 
+        <profile>
+            <id>jdk7</id>
+            <activation>
+                <jdk>[1.7,1.8)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.enunciate</groupId>
+                        <artifactId>maven-enunciate-plugin</artifactId>
+                        <version>1.29</version>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
     <modules>
         <module>typesystem</module>
@@ -909,23 +926,15 @@
 
             <dependency>
                 <groupId>org.apache.atlas</groupId>
+                <artifactId>atlas-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.atlas</groupId>
                 <artifactId>atlas-webapp</artifactId>
                 <version>${project.version}</version>
-                <classifier>classes</classifier>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.atlas</groupId>
-                <artifactId>atlas-client</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.atlas</groupId>
-                <artifactId>atlas-client</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-                <scope>test</scope>
+                <type>war</type>
             </dependency>
 
             <!--Scala dependencies-->
@@ -1198,8 +1207,9 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>findbugs-maven-plugin</artifactId>
-                    <version>2.5.2</version>
+                    <version>3.0.1</version>
                 </plugin>
+                
                 <!-- Source code metrics: mvn javancss:report or mvn site -->
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1282,11 +1292,6 @@
                     </configuration>
                 </plugin>
 
-                <plugin>
-                    <groupId>org.codehaus.enunciate</groupId>
-                    <artifactId>maven-enunciate-plugin</artifactId>
-                    <version>1.29</version>
-                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -1300,6 +1305,14 @@
                     <target>1.7</target>
                     <optimize>true</optimize>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>2.5.4</version>
+                <inherited>true</inherited>
+                <extensions>true</extensions>
             </plugin>
 
             <plugin>
@@ -1349,6 +1362,9 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.18.1</version>
                 <configuration>
+                    <systemPropertyVariables>
+                        <projectBaseDir>${projectBaseDir}</projectBaseDir>
+                    </systemPropertyVariables>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <argLine>-Djava.awt.headless=true -Dproject.version=${project.version}
                         -Dhadoop.tmp.dir=${project.build.directory}/tmp-hadoop-${user.name}
