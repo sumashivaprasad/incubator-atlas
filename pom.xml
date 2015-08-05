@@ -329,6 +329,8 @@
         <titan.version>0.5.4</titan.version>
         <hadoop.version>2.7.0</hadoop.version>
         <hbase.version>0.98.9-hadoop2</hbase.version>
+        <solr.version>5.1.0</solr.version>
+        <!--<elasticsearch.version>1.5.1</elasticsearch.version>-->
 
         <!-- scala versions -->
         <scala.version>2.10.4</scala.version>
@@ -574,6 +576,10 @@
                     </exclusion>
                     <exclusion>
                         <groupId>org.htrace</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-httpclient</groupId>
                         <artifactId>*</artifactId>
                     </exclusion>
                 </exclusions>
@@ -869,12 +875,25 @@
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-es</artifactId>
                 <version>${titan.version}</version>
+                <!--<exclusions>-->
+                    <!--<exclusion>-->
+                        <!--<artifactId>*</artifactId>-->
+                        <!--<groupId>org.elasticsearch</groupId>-->
+                    <!--</exclusion>-->
+                <!--</exclusions>-->
             </dependency>
+
+            <!--<dependency>-->
+                <!--<groupId>org.elasticsearch</groupId>-->
+                <!--<artifactId>elasticsearch</artifactId>-->
+                <!--<version>${elasticsearch.version}</version>-->
+            <!--</dependency>-->
 
             <dependency>
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-solr</artifactId>
                 <version>${titan.version}</version>
+                <classifier>solr5</classifier>
                 <exclusions>
                     <exclusion>
                         <artifactId>*</artifactId>
@@ -901,8 +920,46 @@
                         <artifactId>*</artifactId>
                         <groupId>org.ow2.asm</groupId>
                     </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.apache.solr</groupId>
+                    </exclusion>
                 </exclusions>
 
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-core</artifactId>
+                <version>${solr.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.eclipse.jetty</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.eclipse.jetty.orbit</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.restlet.jee</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.ow2.asm</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>*</artifactId>
+                        <groupId>org.apache.lucene</groupId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-solrj</artifactId>
+                <version>${solr.version}</version>
             </dependency>
 
             <dependency>
@@ -1076,7 +1133,19 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.2.5</version>
+                <version>4.4.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>4.4.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpmime</artifactId>
+                <version>4.4.1</version>
             </dependency>
 
             <!--Test dependencies-->

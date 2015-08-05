@@ -89,9 +89,25 @@
             <artifactId>titan-es</artifactId>
         </dependency>
 
+        <!--<dependency>-->
+            <!--<groupId>org.elasticsearch</groupId>-->
+            <!--<artifactId>elasticsearch</artifactId>-->
+        <!--</dependency>-->
+
         <dependency>
             <groupId>com.thinkaurelius.titan</groupId>
             <artifactId>titan-solr</artifactId>
+            <classifier>solr5</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-solrj</artifactId>
         </dependency>
 
         <dependency>
