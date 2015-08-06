@@ -59,11 +59,15 @@ for i in "${BASEDIR}/bridge/hive/"*.jar; do
   METADATACPPATH="${METADATACPPATH}:$i"
 done
 
+for i in "${BASEDIR}/hook/hive/"*.jar; do
+  METADATACPPATH="${METADATACPPATH}:$i"
+done
+
 # log dir for applications
 METADATA_LOG_DIR="${METADATA_LOG_DIR:-$BASEDIR/logs}"
 export METADATA_LOG_DIR
 
-JAVA_PROPERTIES="$METADATA_OPTS -Dmetadata.log.dir=$METADATA_LOG_DIR -Dmetadata.log.file=import-hive.log"
+JAVA_PROPERTIES="$METADATA_OPTS -Datlas.log.dir=$METADATA_LOG_DIR -Datlas.log.file=import-hive.log"
 shift
 
 while [[ ${1} =~ ^\-D ]]; do
