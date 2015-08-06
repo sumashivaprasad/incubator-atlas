@@ -330,7 +330,6 @@
         <hadoop.version>2.7.0</hadoop.version>
         <hbase.version>0.98.9-hadoop2</hbase.version>
         <solr.version>5.1.0</solr.version>
-        <!--<elasticsearch.version>1.5.1</elasticsearch.version>-->
         <kafka.version>0.8.2.0</kafka.version>
         <!-- scala versions -->
         <scala.version>2.10.4</scala.version>
@@ -876,19 +875,7 @@
                 <groupId>com.thinkaurelius.titan</groupId>
                 <artifactId>titan-es</artifactId>
                 <version>${titan.version}</version>
-                <!--<exclusions>-->
-                    <!--<exclusion>-->
-                        <!--<artifactId>*</artifactId>-->
-                        <!--<groupId>org.elasticsearch</groupId>-->
-                    <!--</exclusion>-->
-                <!--</exclusions>-->
             </dependency>
-
-            <!--<dependency>-->
-                <!--<groupId>org.elasticsearch</groupId>-->
-                <!--<artifactId>elasticsearch</artifactId>-->
-                <!--<version>${elasticsearch.version}</version>-->
-            <!--</dependency>-->
 
             <dependency>
                 <groupId>com.thinkaurelius.titan</groupId>
@@ -1570,6 +1557,7 @@
                         <exclude>**/*.iml</exclude>
                         <exclude>**/*.json</exclude>
                         <exclude>**/target/**</exclude>
+                        <exclude>**/target*/**</exclude>
                         <exclude>**/build/**</exclude>
                         <exclude>**/*.patch</exclude>
                         <exclude>derby.log</exclude>

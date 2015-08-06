@@ -16,6 +16,6 @@
 # limitations under the License.
 #
 SOLR_INSTALL_DIR=__SOLR_INSTALL_DIR__
-SOLR_PORT=__SOLR_PORT__
+SOLR_PORT=__ATLAS_SOLR_PORT__
 
-$SOLR_INSTALL_DIR/bin/solr stop -p $SOLR_PORT
+$SOLR_INSTALL_DIR/bin/solr stop -p $ATLAS_SOLR_PORT

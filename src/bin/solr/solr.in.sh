@@ -18,8 +18,11 @@
 # affecting other Java applications on your server/workstation.
 #SOLR_JAVA_HOME=""
 
-# Increase Java Min/Max Heap as needed to support your indexing / query needs
-#This is passed as parameter during starting the server
+# Increase Java Heap as needed to support your indexing / query needs
+SOLR_HEAP="512m"
+
+# Expert: If you want finer control over memory options, specify them directly
+# Comment out SOLR_HEAP if you are using this though, that takes precedence
 #SOLR_JAVA_MEM="-Xms512m -Xmx512m"
 
 # Enable verbose GC logging
@@ -57,10 +60,58 @@ GC_TUNE="-XX:NewRatio=3 \
 # By default the start script uses UTC; override the timezone if needed
 #SOLR_TIMEZONE="UTC"
 
-# By default the start script enables some RMI related parameters to allow attaching
-# JMX savvy tools like VisualVM remotely, set to "false" to disable that behavior
-# (recommended in production environments)
+# Set to true to activate the JMX RMI connector to allow remote JMX client applications
+# to monitor the JVM hosting Solr; set to "false" to disable that behavior
+# (false is recommended in production environments)
 ENABLE_REMOTE_JMX_OPTS="false"
 
 # The script will use SOLR_PORT+10000 for the RMI_PORT or you can set it here
 # RMI_PORT=18983
+
+# Anything you add to the SOLR_OPTS variable will be included in the java
+# start command line as-is, in ADDITION to other options. If you specify the
+# -a option on start script, those options will be appended as well. Examples:
+#SOLR_OPTS="$SOLR_OPTS -Dsolr.autoSoftCommit.maxTime=3000"
+#SOLR_OPTS="$SOLR_OPTS -Dsolr.autoCommit.maxTime=60000"
+#SOLR_OPTS="$SOLR_OPTS -Dsolr.clustering.enabled=true"
+
+# Location where the bin/solr script will save PID files for running instances
+# If not set, the script will create PID files in $SOLR_TIP/bin
+#SOLR_PID_DIR=
+
+# Path to a directory where Solr creates index files, the specified directory
+# must contain a solr.xml; by default, Solr will use server/solr
+#SOLR_HOME=
+
+# Solr provides a default Log4J configuration properties file in server/resources
+# however, you may want to customize the log settings and file appender location
+# so you can point the script to use a different log4j.properties file
+#LOG4J_PROPS=/var/solr/log4j.properties
+
+# Location where Solr should write logs to; should agree with the file appender
+# settings in server/resources/log4j.properties
+#SOLR_LOGS_DIR=
+
+# Sets the port Solr binds to, default is 8983
+#SOLR_PORT=8983
+
+# Uncomment to set SSL-related system properties
+# Be sure to update the paths to the correct keystore for your environment
+#SOLR_SSL_KEY_STORE=etc/solr-ssl.keystore.jks
+#SOLR_SSL_KEY_STORE_PASSWORD=secret
+#SOLR_SSL_TRUST_STORE=etc/solr-ssl.keystore.jks
+#SOLR_SSL_TRUST_STORE_PASSWORD=secret
+#SOLR_SSL_NEED_CLIENT_AUTH=false
+#SOLR_SSL_WANT_CLIENT_AUTH=false
+
+# Uncomment if you want to override previously defined SSL values for HTTP client
+# otherwise keep them commented and the above values will automatically be set for HTTP clients
+#SOLR_SSL_CLIENT_KEY_STORE=
+#SOLR_SSL_CLIENT_KEY_STORE_PASSWORD=
+#SOLR_SSL_CLIENT_TRUST_STORE=
+#SOLR_SSL_CLIENT_TRUST_STORE_PASSWORD=
+
+# Settings for authentication
+#SOLR_AUTHENTICATION_CLIENT_CONFIGURER=
+#SOLR_AUTHENTICATION_OPTS=
+
