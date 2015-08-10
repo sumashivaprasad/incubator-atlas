@@ -46,8 +46,6 @@ Tar is structured as follows
             |- solrconfig.xml
             |- stopwords.txt
             |- synonyms.txt
-      |- solr.xml
-      |- zoo.cfg ( Required only in case of embedded zookeeper for solr, ignored otherwise)
 |- docs
 |- server
    |- webapp
