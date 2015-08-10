@@ -35,6 +35,19 @@ Tar is structured as follows
    |- client.properties
    |- atlas-env.sh
    |- log4j.xml
+   |- solr
+      |- atlasConfig
+         |- conf
+            |- currency.xml
+            |- lang
+               |- stopwords_en.txt
+            |- protowords.txt
+            |- schema.xml
+            |- solrconfig.xml
+            |- stopwords.txt
+            |- synonyms.txt
+      |- solr.xml
+      |- zoo.cfg ( Required only in case of embedded zookeeper for solr, ignored otherwise)
 |- docs
 |- server
    |- webapp
@@ -111,6 +124,39 @@ In  {package dir}/conf/atlas-env.sh uncomment the following line
 and change it to look as below
 export METADATA_SERVER_OPTS="-Djava.awt.headless=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc="
 </verbatim>
+
+* Configuring SOLR as the Indexing Backend for the Graph Repository
+
+By default, Atlas uses Titan as the graph repository and is the only graph repository implementation available currently.
+For configuring Titan to work with Solr, please follow the instructions below
+<verbatim>
+* Install solr if not already running from http://apache.mirrors.lucidnetworks.net/lucene/solr/5.2.1 - The version of SOLR supported in 5.2.1.
+
+* Copy solr required configuration for Atlas to SOLR installation directory  - Copy ATLAS_HOME/conf/solr to SOLR_HOME/atlas
+
+* Start solr in cloud mode.
+  SolrCloud mode uses a ZooKeeper Service as a highly available, central location for cluster management.
+  For a small cluster, running a ZooKeeper host colocated with the NameNode is recommended. For larger clusters, you would want to run multiple ZooKeeper servers.
+  Note: Atlas currently supports solr in "cloud" mode only. "http" mode is not supported. For more information, refer solr documentation - https://cwiki.apache.org/confluence/display/solr/SolrCloud
+
+* Run the following commands from SOLR_HOME directory
+  bin/solr create -c vertex_index -d atlas/atlasConfig/conf -shards #numShards -replicationFactor #replicationFactor
+  bin/solr create -c edge_index -d atlas/atlasConfig/conf -shards #numShards -replicationFactor #replicationFactor
+  bin/solr create -c fulltext_index -d atlas/atlasConfig/conf -shards #numShards -replicationFactor #replicationFactor
+
+  Note: If numShards and replicationFactor are not specified, they default to 1 which suffices if you are just trying out solr with ATLAS on a single node instance.
+  Otherwise specify numShards according to the number of hosts that you have in the cluster and the maxShardsPerNode conf setting.
+  The number of shards cannot exceed the total number of Solr servers in your SolrCloud cluster:
+
+* Change ATLAS configuration to point to the SOLR instance setup. Please make sure the following configurations are set to the below values
+
+ atlas.graph.index.search.backend=solr
+ atlas.graph.index.search.solr.mode=cloud
+ atlas.graph.index.search.solr.zookeeper-url=<the ZK quorum setup for solr as comma separated value> eg: 10.1.6.4:2181,10.1.6.5:2181
+
+* Restart ATLAS
+</verbatim>
+
 
 *Starting Atlas Server*
 <verbatim>
