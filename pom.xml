@@ -397,8 +397,8 @@
             </activation>
             <properties>
                 <titan.storage.backend>hbase</titan.storage.backend>
-                <titan.index.backend>solr</titan.index.backend>
-                <solr.zk.address>localhost:9983</solr.zk.address>
+                <titan.index.backend>solr5</titan.index.backend>
+                <solr.zk.address>localhost:2181</solr.zk.address>
                 <titan.storage.hostname>localhost</titan.storage.hostname>
             </properties>
         </profile>
@@ -1431,6 +1431,14 @@
                     </descriptors>
                     <finalName>apache-atlas-${project.version}</finalName>
                 </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
