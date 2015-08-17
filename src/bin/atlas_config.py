@@ -161,7 +161,7 @@ def which(program):
 
     return None
 
-def runProcess(commandline, logdir=None):
+def runProcess(commandline, logdir=None, logFilePrefix=None):
     """
     Run a process
     :param commandline: command line
@@ -169,11 +169,11 @@ def runProcess(commandline, logdir=None):
     """
     global finished
     debug ("Executing : %s" % commandline)
-    timestr = time.strftime("metadata.%Y%m%d-%H%M%S")
+    timestr = time.strftime(logFilePrefix + ".%Y%m%d-%H%M%S")
     stdoutFile = None
     stderrFile = None
     if logdir:
-        stdoutFile = open(os.path.join(logdir, timestr + ".out"), "w")
+        stdoutFile = open(os.path.join(logdir,timestr + ".out"), "w")
         stderrFile = open(os.path.join(logdir,timestr + ".err"), "w")
     return subprocess.Popen(commandline, stdout=stdoutFile, stderr=stderrFile)
 

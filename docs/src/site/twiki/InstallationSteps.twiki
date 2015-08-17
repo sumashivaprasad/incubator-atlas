@@ -139,7 +139,7 @@ For configuring Titan to work with Solr, please follow the instructions below
 
   Note: If numShards and replicationFactor are not specified, they default to 1 which suffices if you are trying out solr with ATLAS on a single node instance.
   Otherwise specify numShards according to the number of hosts that are in the Solr cluster and the maxShardsPerNode configuration.
-  The number of shards cannot exceed the total number of Solr nodes in your SolrCloud cluster
+  The number of shards cannot exceed the total number of Solr nodes in your SolrCloud cluster.
 
 * Change ATLAS configuration to point to the Solr instance setup. Please make sure the following configurations are set to the below values in ATLAS_HOME//conf/application.properties
  atlas.graph.index.search.backend=<'solr' for solr 4.8.1>/<'solr5' for solr 5.2.1>
