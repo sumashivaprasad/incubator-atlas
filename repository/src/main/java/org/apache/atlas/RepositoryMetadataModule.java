@@ -22,6 +22,7 @@ import com.google.inject.matcher.Matchers;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.throwingproviders.ThrowingProviderBinder;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.util.ReflectiveConfigOptionLoader;
 import com.tinkerpop.blueprints.Graph;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.apache.atlas.discovery.DiscoveryService;
@@ -73,6 +74,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         MethodInterceptor interceptor = new GraphTransactionInterceptor();
         requestInjection(interceptor);
         bindInterceptor(Matchers.any(), Matchers.annotatedWith(GraphTransaction.class), interceptor);
+//        ReflectiveConfigOptionLoader.INSTANCE.setUseThreadContextLoader(true);
     }
 
 }
