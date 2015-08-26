@@ -298,6 +298,65 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
     }
 
+
+    @Override
+    @GraphTransaction
+    public void deleteEntity(String guid) throws RepositoryException {
+        LOG.info("Deleting entity {}", guid);
+        try {
+            Vertex entityVertex = getVertexForGUID(guid);
+
+            //First take care of all outgoing relationships i.e traits, struct references and class
+            Iterator<Edge> outGoingEdges = entityVertex.getEdges(Direction.OUT).iterator();
+            while(outGoingEdges.hasNext()) {
+                Edge outGoingRelationShipEdge = outGoingEdges.next();
+                Vertex relVertex = outGoingRelationShipEdge.getVertex(Direction.IN);
+//                final String typeCategory = relVertex.getProperty(Constants.TYPE_CATEGORY_PROPERTY_KEY);
+                //If a CLASS vertex type, leave it as is. Delete TRAIT and STRUCT types
+//                if(!DataTypes.TypeCategory.CLASS.equals(typeCategory)) {
+                titanGraph.removeVertex(relVertex);
+//                }
+            }
+
+            //Take care of incoming edges
+
+            //Delete the vertex
+            titanGraph.removeVertex(entityVertex);
+
+//            //Delete traits
+//            List<String> traitNames = getTraitNames(entityVertex);
+//
+//            for(String traitName : traitNames) {
+//                final String entityTypeName = getTypeName(entityVertex);
+//                String relationshipLabel = getEdgeLabel(entityTypeName, traitName);
+//                Iterator<Edge> results = entityVertex.getEdges(Direction.OUT, relationshipLabel).iterator();
+//                if (results.hasNext()) { // there should only be one edge for this label
+//                    final Edge traitEdge = results.next();
+//                    final Vertex traitVertex = traitEdge.getVertex(Direction.IN);
+//                    // remove the edge to the trait instance from the repository
+//                    titanGraph.removeEdge(traitEdge);
+//
+//                    if (traitVertex != null) { // remove the trait instance from the repository
+//                        //Currently each entity trait is a separate instance. So deleting the trait as well.
+//                        titanGraph.removeVertex(traitVertex);
+//                    }
+//                }
+//            }
+
+            //Delete struct, class direct references
+//            for (TitanProperty property : ((TitanVertex) entityVertex).getProperties()) {
+//                property.
+//            }
+
+
+            //Delete array, map entry references to struct, class
+        } catch (RepositoryException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RepositoryException(e);
+        }
+    }
+
     private void updateTraits(Vertex instanceVertex, List<String> traitNames) {
         // remove the key
         instanceVertex.removeProperty(Constants.TRAIT_NAMES_PROPERTY_KEY);
