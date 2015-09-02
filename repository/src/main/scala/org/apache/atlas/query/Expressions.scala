@@ -19,6 +19,7 @@
 package org.apache.atlas.query
 
 import org.apache.atlas.AtlasException
+import org.apache.atlas.typesystem.ITypedInstance
 import org.apache.atlas.typesystem.types.DataTypes.{ArrayType, PrimitiveType, TypeCategory}
 import org.apache.atlas.typesystem.types._
 
@@ -468,6 +469,15 @@ object Expressions {
         }
     }
 
+    case class ListLiteral[_](dataType: ArrayType, rawValue: List[Expressions.Literal[_]]) extends Expression with LeafNode {
+        val value = if (rawValue != null) dataType.convert(rawValue, Multiplicity.REQUIRED)
+
+        override def toString = value match {
+            case s: Seq[_] => s.mkString(",")
+            case x => x.toString
+        }
+    }
+
     def literal[T](typ: PrimitiveType[T], rawValue: Any) = new Literal[T](typ, rawValue)
 
     def boolean(rawValue: Any) = literal(DataTypes.BOOLEAN_TYPE, rawValue)
@@ -491,6 +501,12 @@ object Expressions {
     def string(rawValue: Any) = literal(DataTypes.STRING_TYPE, rawValue)
 
     def date(rawValue: Any) = literal(DataTypes.DATE_TYPE, rawValue)
+
+    def list[_ >: PrimitiveType[_]](listElements: List[Expressions.Literal[_]]) =  {
+        listLiteral(TypeSystem.getInstance().defineArrayType(listElements.head.dataType), listElements)
+    }
+
+    def listLiteral[_ >: PrimitiveType[_]](typ: ArrayType, rawValue: List[Expressions.Literal[_]]) = new ListLiteral(typ, rawValue)
 
     case class ArithmeticExpression(symbol: String,
                                     left: Expression,

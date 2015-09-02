@@ -334,16 +334,13 @@ public class HiveHookIT {
 
         LOG.debug("Searching for partition of {}.{} with values {}", dbName, tableName, value);
         //todo replace with DSL
-
 //        String gremlinQuery = String.format("g.V.has('__typeName', '%s').has('%s.values', ['%s']).as('p')."
 //                        + "out('__%s.table').has('%s.tableName', '%s').out('__%s.db').has('%s.name', '%s')"
 //                        + ".has('%s.clusterName', '%s').back('p').toList()", typeName, typeName, value, typeName,
 //                tableType, tableName.toLowerCase(), tableType, dbType, dbName.toLowerCase(), dbType, CLUSTER_NAME);
-
-        String dslQuery = String.format("%s as p where values = %s, tableName where name = '%s', "
+        String dslQuery = String.format("%s as p where values = ['%s'], tableName where name = '%s', "
                                + "dbName where name = '%s' and clusterName = '%s' select p", typeName, value,
-         tableName,
-                       dbName, CLUSTER_NAME);
+                            tableName.toLowerCase(), dbName.toLowerCase(), CLUSTER_NAME);
 
         JSONArray results = dgiCLient.searchByDSL(dslQuery);
         //JSONObject response = dgiCLient.searchByGremlin(gremlinQuery);

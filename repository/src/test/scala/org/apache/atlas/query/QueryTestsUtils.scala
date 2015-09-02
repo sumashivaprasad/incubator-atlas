@@ -79,7 +79,8 @@ object QueryTestsUtils extends GraphUtils {
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 attrDef("owner", DataTypes.STRING_TYPE),
-                attrDef("createTime", DataTypes.INT_TYPE)
+                attrDef("createTime", DataTypes.INT_TYPE),
+                attrDef("clusterName", DataTypes.STRING_TYPE)
             ))
 
         def storageDescClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "StorageDesc", null,
@@ -101,6 +102,12 @@ object QueryTestsUtils extends GraphUtils {
                 new AttributeDefinition("db", "DB", Multiplicity.REQUIRED, false, null),
                 new AttributeDefinition("sd", "StorageDesc", Multiplicity.REQUIRED, false, null),
                 attrDef("created", DataTypes.DATE_TYPE)
+            ))
+
+        def partitionClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Partition", null,
+            Array(
+                new AttributeDefinition("values", DataTypes.arrayTypeName(DataTypes.STRING_TYPE.getName), Multiplicity.REQUIRED, false, null),
+                new AttributeDefinition("table", "Table", Multiplicity.REQUIRED, false, null)
             ))
 
         def loadProcessClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "LoadProcess", null,

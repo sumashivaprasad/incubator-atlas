@@ -119,7 +119,7 @@ object HiveTitanSample {
     case class ETL(_id: String = "" + nextVertexId.incrementAndGet()) extends Trait
 
 
-    case class DB(name: String, owner: String, createTime: Int, traits: Option[List[Trait]] = None,
+    case class DB(name: String, owner: String, createTime: Int, clusterName: String, traits: Option[List[Trait]] = None,
                   _id: String = "" + nextVertexId.incrementAndGet()) extends Instance
 
     case class StorageDescriptor(inputFormat: String, outputFormat: String,
@@ -167,7 +167,7 @@ object HiveTitanSample {
                     traits: Option[List[Trait]] = None,
                     _id: String = "" + nextVertexId.incrementAndGet()) extends Instance
 
-    val salesDB = DB("Sales", "John ETL", 1000)
+    val salesDB = DB("Sales", "John ETL", 1000, "test")
     val salesFact = TableDef("sales_fact",
         salesDB,
         "TextInputFormat",
@@ -210,7 +210,7 @@ object HiveTitanSample {
         ),
         Some(List(Dimension())))
 
-    val reportingDB = DB("Reporting", "Jane BI", 1500)
+    val reportingDB = DB("Reporting", "Jane BI", 1500, "test")
     val salesFactDaily = TableDef("sales_fact_daily_mv",
         reportingDB,
         "TextInputFormat",
