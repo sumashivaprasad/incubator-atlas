@@ -32,6 +32,7 @@ import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
+import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.StructType;
@@ -108,9 +109,12 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
                 return dataType.convert(value, Multiplicity.OPTIONAL);
 
             case ARRAY:
-                // todo
-                break;
-
+                DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
+                IDataType<U> elemType = arrType.getElemType();
+                List list = (List) value;
+                for(Object listElement : list) {
+                    constructCollectionEntry(elemType, listElement);
+                }
             case MAP:
                 // todo
                 break;
@@ -128,7 +132,7 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
 
                 } else {
                     metadataRepository.getGraphToInstanceMapper()
-                            .mapVertexToInstance(structVertex, structInstance, structType.fieldMapping().fields);
+                        .mapVertexToInstance(structVertex, structInstance, structType.fieldMapping().fields);
                 }
                 return dataType.convert(structInstance, Multiplicity.OPTIONAL);
 
@@ -141,14 +145,14 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
                 // metadataRepository.getGraphToInstanceMapper().mapVertexToTraitInstance(
                 //        traitVertex, dataType.getName(), , traitType, traitInstance);
                 metadataRepository.getGraphToInstanceMapper()
-                        .mapVertexToInstance(traitVertex, traitInstance, traitType.fieldMapping().fields);
+                    .mapVertexToInstance(traitVertex, traitInstance, traitType.fieldMapping().fields);
                 break;
 
             case CLASS:
                 TitanVertex classVertex = (TitanVertex) value;
                 ITypedReferenceableInstance classInstance = metadataRepository.getGraphToInstanceMapper()
-                        .mapGraphToTypedInstance(classVertex.<String>getProperty(Constants.GUID_PROPERTY_KEY),
-                                classVertex);
+                    .mapGraphToTypedInstance(classVertex.<String>getProperty(Constants.GUID_PROPERTY_KEY),
+                        classVertex);
                 return dataType.convert(classInstance, Multiplicity.OPTIONAL);
 
             default:
@@ -160,6 +164,36 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
 
         return null;
     }
+
+    public <U> U constructCollectionEntry(IDataType<U> elementType, Object value) {
+
+    switch(elementType.getTypeCategory())
+    {
+        case PRIMITIVE:
+        case ENUM:
+            return constructInstance(elementType, value);
+        //TODO
+        case STRUCT:
+        case CLASS:
+            //The array alues in case f STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS ertex referenced
+            String edgeId = (String) value;
+
+
+        case ARRAY:
+        case MAP:
+        case TRAIT:
+            // do nothing
+            break;
+
+        default:
+            break;
+    }
+
+    throw new
+
+    IllegalArgumentException();
+
+}
 
     @Override
     public String edgeLabel(TypeUtils.FieldInfo fInfo) {

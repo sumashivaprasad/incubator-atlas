@@ -138,7 +138,7 @@ object QueryTestsUtils extends GraphUtils {
             ImmutableList.of[HierarchicalTypeDefinition[TraitType]](dimTraitDef, piiTraitDef,
                 metricTraitDef, etlTraitDef, jdbcTraitDef),
             ImmutableList.of[HierarchicalTypeDefinition[ClassType]](dbClsDef, storageDescClsDef, columnClsDef, tblClsDef,
-                loadProcessClsDef, viewClsDef))
+                partitionClsDef, loadProcessClsDef, viewClsDef))
 
         ()
     }

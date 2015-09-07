@@ -144,7 +144,7 @@ class GremlinTranslator(expr: Expression,
             if (!left.isInstanceOf[FieldExpression]) {
                 throw new GremlinTranslationException(c, s"lhs of comparison is not a field")
             }
-            if (!right.isInstanceOf[Literal[_]]) {
+            if (!right.isInstanceOf[Literal[_]] && !right.isInstanceOf[ListLiteral[_]]) {
                 throw new GremlinTranslationException(c,
                     s"rhs of comparison is not a literal")
             }

@@ -59,6 +59,8 @@ object HiveTitanSample {
                 val fV = f.get(this)
                 val convertedVal = fV match {
                     case _: String => s""""$fV""""
+                    case ls: List[_] if (ls.head.isInstanceOf[String]) =>
+                            s"""["${ls.mkString(",")}"]"""
                     case d: Date => d.getTime
                     case _ => fV
                 }
@@ -158,6 +160,9 @@ object HiveTitanSample {
         }
     }
 
+    case class Partition(values: List[String], table: Table, traits: Option[List[Trait]] = None,
+                  _id: String = "" + nextVertexId.incrementAndGet()) extends Instance
+
     case class LoadProcess(name: String, inputTables: List[Vertex],
                            outputTable: Vertex,
                            traits: Option[List[Trait]] = None,
@@ -248,6 +253,8 @@ object HiveTitanSample {
         List(salesFactDaily.tablDef), salesFactMonthly.tablDef,
         Some(List(ETL())))
 
+    val salesDailyPartition = Partition(List("2015-01-01"),salesFactDaily.tablDef)
+
 
     val vertices: ArrayBuffer[String] = new ArrayBuffer[String]()
     val edges: ArrayBuffer[String] = new ArrayBuffer[String]()
@@ -265,6 +272,7 @@ object HiveTitanSample {
     customerDimView.toGSon(vertices, edges)
     salesFactMonthly.toGSon(vertices, edges)
     loadSalesFactMonthly.toGSon(vertices, edges)
+    salesDailyPartition.toGSon(vertices, edges)
 
     def toGSon(): String = {
         s"""{

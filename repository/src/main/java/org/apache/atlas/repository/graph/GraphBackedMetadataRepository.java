@@ -89,7 +89,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     @Inject
     public GraphBackedMetadataRepository(GraphProvider<TitanGraph> graphProvider) throws AtlasException {
         this.typeSystem = TypeSystem.getInstance();
-
         this.titanGraph = graphProvider.get();
     }
 
@@ -419,7 +418,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         return getQualifiedName(dataType, attributeInfo.name);
     }
 
-    String getQualifiedName(IDataType dataType, String attributeName) throws AtlasException {
+    public static String getQualifiedName(IDataType dataType, String attributeName) throws AtlasException {
         return dataType.getTypeCategory() == DataTypes.TypeCategory.STRUCT ? dataType.getName() + "." + attributeName
                 // else class or trait
                 : ((HierarchicalType) dataType).getQualifiedName(attributeName);
