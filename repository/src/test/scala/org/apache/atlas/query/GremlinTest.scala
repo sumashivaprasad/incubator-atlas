@@ -900,40 +900,38 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     val e = p("Partition as p where values = ['2015-01-01']," +
       " table where name = 'sales_fact_daily_mv'," +
       " db where name = 'Reporting' and clusterName = 'test' select p").right.get
-//    val r = QueryProcessor.evaluate(e, g, new DefaultGraphPersistenceStrategy(new GraphBackedMetadataRepository(new TitanGraphProvider())))
     val r = QueryProcessor.evaluate(e, g)
-//    validateJson(r)
-//    validateJson(r, """{
-//                      |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p as _col_0",
-//                      |  "dataType":{
-//                      |    "typeName":"__tempQueryResultStruct2",
-//                      |    "attributeDefinitions":[
-//                      |      {
-//                      |        "name":"_col_0",
-//                      |        "dataTypeName":"Partition",
-//                      |        "multiplicity":{
-//                      |          "lower":0,
-//                      |          "upper":1,
-//                      |          "isUnique":false
-//                      |        },
-//                      |        "isComposite":false,
-//                      |        "isUnique":false,
-//                      |        "isIndexable":true,
-//                      |        "reverseAttributeName":null
-//                      |      }
-//                      |    ]
-//                      |  },
-//                      |  "rows":[
-//                      |    {
-//                      |      "$typeName$":"__tempQueryResultStruct2",
-//                      |      "_col_0":{
-//                      |        "id":"13824",
-//                      |        "$typeName$":"Partition",
-//                      |        "version":0
-//                      |      }
-//                      |    }
-//                      |  ]
-//                      |}""".stripMargin)
+    validateJson(r, """{
+                      |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p as _col_0",
+                      |  "dataType":{
+                      |    "typeName":"__tempQueryResultStruct2",
+                      |    "attributeDefinitions":[
+                      |      {
+                      |        "name":"_col_0",
+                      |        "dataTypeName":"Partition",
+                      |        "multiplicity":{
+                      |          "lower":0,
+                      |          "upper":1,
+                      |          "isUnique":false
+                      |        },
+                      |        "isComposite":false,
+                      |        "isUnique":false,
+                      |        "isIndexable":true,
+                      |        "reverseAttributeName":null
+                      |      }
+                      |    ]
+                      |  },
+                      |  "rows":[
+                      |    {
+                      |      "$typeName$":"__tempQueryResultStruct2",
+                      |      "_col_0":{
+                      |        "id":"13824",
+                      |        "$typeName$":"Partition",
+                      |        "version":0
+                      |      }
+                      |    }
+                      |  ]
+                      |}""".stripMargin)
   }
 
   test("testArrayComparisionWithSelectOnArray") {
