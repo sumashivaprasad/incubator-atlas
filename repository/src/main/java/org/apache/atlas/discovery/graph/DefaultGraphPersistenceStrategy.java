@@ -165,35 +165,25 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
         return null;
     }
 
-    public <U> U constructCollectionEntry(IDataType<U> elementType, Object value) {
-
-    switch(elementType.getTypeCategory())
-    {
+    public <U> U constructCollectionEntry(IDataType<U> elementType, Object value) throws AtlasException {
+        switch (elementType.getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
             return constructInstance(elementType, value);
-        //TODO
+        //The array values in case of STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS vertex referenced
         case STRUCT:
-        case CLASS:
-            //The array alues in case f STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS ertex referenced
             String edgeId = (String) value;
-
-
+            metadataRepository.getGraphToInstanceMapper().getReferredValue(edgeId, elementType);
+        case CLASS:
+            //TODO
         case ARRAY:
         case MAP:
         case TRAIT:
             // do nothing
-            break;
-
         default:
-            break;
+            throw new UnsupportedOperationException("Load for type " + elementType + " in collections is not supported");
+        }
     }
-
-    throw new
-
-    IllegalArgumentException();
-
-}
 
     @Override
     public String edgeLabel(TypeUtils.FieldInfo fInfo) {

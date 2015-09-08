@@ -479,8 +479,12 @@ object Expressions {
         val value = if (rawValue != null) dataType.convert(lc, Multiplicity.REQUIRED)
 
         override def toString = value match {
-            case c: ImmutableCollection[_] => c.asList.mkString("[",",","]")
-            case x => x.toString
+            case l: Seq[_]
+               => l.mkString("[",",","]")
+            case c: ImmutableCollection[_] =>
+                c.asList.mkString("[",",","]")
+            case x =>
+                x.toString
         }
     }
 
@@ -675,7 +679,6 @@ object Expressions {
     val GEN_COL_ALIAS_PREFIX = "_col"
 
     case class SelectExpression(child: Expression, selectList: List[Expression]) extends Expression {
-
         val children = List(child) ::: selectList
         lazy val selectListWithAlias = selectList.zipWithIndex map {
             case (s: AliasExpression, _) => s

@@ -224,9 +224,9 @@ class QueryParser extends StandardTokenParsers with QueryKeywords with Expressio
 
     def multiERight = (STAR | DIV) ~ atomE ^^ { case op ~ r => (op, r)}
 
-    def atomE = literal | identifier | LPAREN ~> expr <~ RPAREN | listExpression
+    def atomE = literal | identifier | LPAREN ~> expr <~ RPAREN | listLiteral
 
-    def listExpression = LIST_LPAREN ~ rep1sep(literal, COMMA) ~ LIST_RPAREN ^^ {
+    def listLiteral = LIST_LPAREN ~ rep1sep(literal, COMMA) ~ LIST_RPAREN ^^ {
         case lp ~ le ~ rp => list(le)
     }
 

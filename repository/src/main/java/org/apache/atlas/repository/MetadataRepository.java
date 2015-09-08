@@ -158,12 +158,4 @@ public interface MetadataRepository {
      * @param value    property value
      */
     void updateEntity(String guid, String property, String value) throws RepositoryException;
-
-    /**
-     * Deletes a given entity and all its corresponding relationships with other entities.
-     *
-     * @param guid                 globally unique identifier for the entity
-     * @throws RepositoryException
-     */
-    void deleteEntity(String guid) throws RepositoryException;
 }

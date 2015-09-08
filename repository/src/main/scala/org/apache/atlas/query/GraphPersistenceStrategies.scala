@@ -18,6 +18,7 @@
 
 package org.apache.atlas.query
 
+import java.util
 import java.util.Date
 
 import com.thinkaurelius.titan.core.TitanVertex
@@ -217,7 +218,8 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
     def constructInstance[U](dataType: IDataType[U], v: AnyRef): U = {
         dataType.getTypeCategory match {
             case DataTypes.TypeCategory.PRIMITIVE => dataType.convert(v, Multiplicity.OPTIONAL)
-            case DataTypes.TypeCategory.ARRAY => dataType.convert(v, Multiplicity.OPTIONAL)
+            case DataTypes.TypeCategory.ARRAY =>
+                dataType.convert(v, Multiplicity.OPTIONAL)
             case DataTypes.TypeCategory.STRUCT
               if dataType.getName == TypeSystem.getInstance().getIdType.getName => {
               val sType = dataType.asInstanceOf[StructType]
@@ -288,7 +290,6 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
             case DataTypes.TypeCategory.ENUM => loadEnumAttribute(dataType, aInfo, i, v)
             case DataTypes.TypeCategory.ARRAY =>
                 loadArrayAttribute(dataType, aInfo, i, v)
-//                throw new UnsupportedOperationException(s"load for ${aInfo.dataType()} not supported")
             case DataTypes.TypeCategory.MAP =>
                 throw new UnsupportedOperationException(s"load for ${aInfo.dataType()} not supported")
             case DataTypes.TypeCategory.STRUCT => loadStructAttribute(dataType, aInfo, i, v)
@@ -331,7 +332,7 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
         val list: java.util.List[_] = v.getProperty(aInfo.name)
         val arrayType: DataTypes.ArrayType = aInfo.dataType.asInstanceOf[ArrayType]
 
-        var values = mutable.MutableList[Any]()
+        var values = new util.ArrayList[Any]
         list.foreach( listElement =>
             values += mapVertexToCollectionEntry(v, aInfo, arrayType.getElemType, i, listElement)
         )

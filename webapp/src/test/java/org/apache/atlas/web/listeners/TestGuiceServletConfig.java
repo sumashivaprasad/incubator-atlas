@@ -48,7 +48,7 @@ public class TestGuiceServletConfig extends GuiceServletConfig {
             LOG.info("Clearing graph store");
             try {
                 graph.shutdown();
-//                TitanCleanup.clear(graph);
+                TitanCleanup.clear(graph);
             } catch (Exception e) {
                 LOG.warn("Clearing graph store failed ", e);
             }

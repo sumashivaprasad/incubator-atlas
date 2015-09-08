@@ -895,23 +895,117 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     validateJson(r, "{\n  \"query\":\"DB as db1 where (name = \\\"Sales\\\") Table as tab where DB as db1 where (name = \\\"Sales\\\") Table as tab is Dimension as _src1 select db1 as dbO, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbO\",\n        \"dataTypeName\":\"DB\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"customer_dim\"\n    }\n  ]\n}")
   }
 
-  test("testList") {
+  test("testArrayComparision") {
     val p = new QueryParser
     val e = p("Partition as p where values = ['2015-01-01']," +
       " table where name = 'sales_fact_daily_mv'," +
       " db where name = 'Reporting' and clusterName = 'test' select p").right.get
 //    val r = QueryProcessor.evaluate(e, g, new DefaultGraphPersistenceStrategy(new GraphBackedMetadataRepository(new TitanGraphProvider())))
     val r = QueryProcessor.evaluate(e, g)
+//    validateJson(r)
+//    validateJson(r, """{
+//                      |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p as _col_0",
+//                      |  "dataType":{
+//                      |    "typeName":"__tempQueryResultStruct2",
+//                      |    "attributeDefinitions":[
+//                      |      {
+//                      |        "name":"_col_0",
+//                      |        "dataTypeName":"Partition",
+//                      |        "multiplicity":{
+//                      |          "lower":0,
+//                      |          "upper":1,
+//                      |          "isUnique":false
+//                      |        },
+//                      |        "isComposite":false,
+//                      |        "isUnique":false,
+//                      |        "isIndexable":true,
+//                      |        "reverseAttributeName":null
+//                      |      }
+//                      |    ]
+//                      |  },
+//                      |  "rows":[
+//                      |    {
+//                      |      "$typeName$":"__tempQueryResultStruct2",
+//                      |      "_col_0":{
+//                      |        "id":"13824",
+//                      |        "$typeName$":"Partition",
+//                      |        "version":0
+//                      |      }
+//                      |    }
+//                      |  ]
+//                      |}""".stripMargin)
+  }
+
+  test("testArrayComparisionWithSelectOnArray") {
+    val p = new QueryParser
+    val e = p("Partition as p where values = ['2015-01-01']," +
+      " table where name = 'sales_fact_daily_mv'," +
+      " db where name = 'Reporting' and clusterName = 'test' select p.values").right.get
+    val r = QueryProcessor.evaluate(e, g)
+    validateJson(r,
+      """{
+        |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p.values as _col_0",
+        |  "dataType":{
+        |    "typeName":"__tempQueryResultStruct2",
+        |    "attributeDefinitions":[
+        |  {
+        |    "name":"_col_0",
+        |    "dataTypeName":"array<string>",
+        |    "multiplicity":{
+        |    "lower":0,
+        |    "upper":1,
+        |    "isUnique":false
+        |  },
+        |    "isComposite":false,
+        |    "isUnique":false,
+        |    "isIndexable":true,
+        |    "reverseAttributeName":null
+        |  }
+        |    ]
+        |  },
+        |  "rows":[
+        |  {
+        |    "$typeName$":"__tempQueryResultStruct2",
+        |    "_col_0":[
+        |    "2015-01-01"
+        |    ]
+        |  }
+        |  ]
+        |}
+      """.stripMargin)
+  }
+
+  test("testArrayInWhereClause") {
+    val p = new QueryParser
+    val e = p("Partition as p where values = ['2015-01-01']").right.get
+    val r = QueryProcessor.evaluate(e, g)
     validateJson(r, """{
-                      |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p as _col_0",
+                      |  "query":"Partition as p where (values = [\"2015-01-01\"])",
                       |  "dataType":{
-                      |    "typeName":"__tempQueryResultStruct2",
+                      |    "superTypes":[
+                      |
+                      |    ],
+                      |    "hierarchicalMetaTypeName":"org.apache.atlas.typesystem.types.ClassType",
+                      |    "typeName":"Partition",
                       |    "attributeDefinitions":[
                       |      {
-                      |        "name":"_col_0",
-                      |        "dataTypeName":"Partition",
+                      |        "name":"values",
+                      |        "dataTypeName":"array<string>",
                       |        "multiplicity":{
-                      |          "lower":0,
+                      |          "lower":1,
+                      |          "upper":1,
+                      |          "isUnique":false
+                      |        },
+                      |        "isComposite":false,
+                      |        "isUnique":false,
+                      |        "isIndexable":true,
+                      |        "reverseAttributeName":null
+                      |      },
+                      |      {
+                      |        "name":"table",
+                      |        "dataTypeName":"Table",
+                      |        "multiplicity":{
+                      |          "lower":1,
                       |          "upper":1,
                       |          "isUnique":false
                       |        },
@@ -924,10 +1018,18 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |  },
                       |  "rows":[
                       |    {
-                      |      "$typeName$":"__tempQueryResultStruct2",
-                      |      "_col_0":{
+                      |      "$typeName$":"Partition",
+                      |      "$id$":{
                       |        "id":"13824",
                       |        "$typeName$":"Partition",
+                      |        "version":0
+                      |      },
+                      |      "values":[
+                      |        "2015-01-01"
+                      |      ],
+                      |      "table":{
+                      |        "id":"9216",
+                      |        "$typeName$":"Table",
                       |        "version":0
                       |      }
                       |    }

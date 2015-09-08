@@ -427,6 +427,7 @@
         <module>webapp</module>
         <module>docs</module>
         <module>addons/hive-bridge</module>
+        <module>builder</module>
     </modules>
 
     <repositories>
@@ -1418,26 +1419,6 @@
                 <version>2.5.4</version>
                 <inherited>true</inherited>
                 <extensions>true</extensions>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <inherited>false</inherited>
-                <configuration>
-                    <descriptors>
-                        <descriptor>src/main/assemblies/standalone-package.xml</descriptor>
-                        <descriptor>src/main/assemblies/src-package.xml</descriptor>
-                    </descriptors>
-                    <finalName>apache-atlas-${project.version}</finalName>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>

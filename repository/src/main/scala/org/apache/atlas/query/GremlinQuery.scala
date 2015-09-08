@@ -140,13 +140,18 @@ class GremlinTranslator(expr: Expression,
     }
 
     val validateComparisonForm: PartialFunction[Expression, Unit] = {
-        case c@ComparisonExpression(_, left, right) =>
+        case c@ComparisonExpression(op, left, right) =>
             if (!left.isInstanceOf[FieldExpression]) {
                 throw new GremlinTranslationException(c, s"lhs of comparison is not a field")
             }
             if (!right.isInstanceOf[Literal[_]] && !right.isInstanceOf[ListLiteral[_]]) {
                 throw new GremlinTranslationException(c,
                     s"rhs of comparison is not a literal")
+            }
+
+            if(right.isInstanceOf[ListLiteral[_]] && (!op.equals("=") && !op.equals("!="))) {
+                throw new GremlinTranslationException(c,
+                    s"operation not supported with list literal")
             }
             ()
     }
@@ -201,7 +206,8 @@ class GremlinTranslator(expr: Expression,
             typeTestExpression(clsName)
         case TraitExpression(clsName) =>
             typeTestExpression(clsName)
-        case fe@FieldExpression(fieldName, fInfo, child) if fe.dataType.getTypeCategory == TypeCategory.PRIMITIVE => {
+        case fe@FieldExpression(fieldName, fInfo, child)
+            if fe.dataType.getTypeCategory == TypeCategory.PRIMITIVE || fe.dataType.getTypeCategory == TypeCategory.ARRAY => {
             val fN = "\"" + gPersistenceBehavior.fieldNameInVertex(fInfo.dataType, fInfo.attrInfo) + "\""
             child match {
                 case Some(e) => s"${genQuery(e, inSelect)}.$fN"
@@ -218,15 +224,14 @@ class GremlinTranslator(expr: Expression,
                 case None => step
             }
         }
-        case fe@FieldExpression(fieldName, fInfo, child)
-          if fInfo.traitName != null => {
-          val direction = gPersistenceBehavior.instanceToTraitEdgeDirection
-          val edgeLbl = gPersistenceBehavior.edgeLabel(fInfo)
-          val step = s"""$direction("$edgeLbl")"""
-          child match {
-            case Some(e) => s"${genQuery(e, inSelect)}.$step"
-            case None => step
-          }
+        case fe@FieldExpression(fieldName, fInfo, child) if fInfo.traitName != null => {
+            val direction = gPersistenceBehavior.instanceToTraitEdgeDirection
+            val edgeLbl = gPersistenceBehavior.edgeLabel(fInfo)
+            val step = s"""$direction("$edgeLbl")"""
+            child match {
+              case Some(e) => s"${genQuery(e, inSelect)}.$step"
+              case None => step
+            }
         }
         case c@ComparisonExpression(symb, f@FieldExpression(fieldName, fInfo, ch), l) => {
           val QUOTE = "\"";
@@ -300,6 +305,7 @@ class GremlinTranslator(expr: Expression,
             s"""${genQuery(child, inSelect)}.has("$fieldName")"""
         case ArithmeticExpression(symb, left, right) => s"${genQuery(left, inSelect)} $symb ${genQuery(right, inSelect)}"
         case l: Literal[_] => l.toString
+        case list: ListLiteral[_] => list.toString
         case in@TraitInstanceExpression(child) => {
           val direction = gPersistenceBehavior.traitToInstanceEdgeDirection
           s"${genQuery(child, inSelect)}.$direction()"
@@ -356,6 +362,7 @@ class GremlinTranslator(expr: Expression,
     }
 
     /*
+     * TODO
      * Translation Issues:
      * 1. back references in filters. For e.g. testBackreference: 'DB as db Table where (db.name = "Reporting")'
      *    this is translated to:
