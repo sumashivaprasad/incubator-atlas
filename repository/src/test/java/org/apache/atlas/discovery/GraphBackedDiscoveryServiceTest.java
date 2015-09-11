@@ -177,25 +177,25 @@ public class GraphBackedDiscoveryServiceTest {
     @DataProvider(name = "dslQueriesProvider")
     private Object[][] createDSLQueries() {
         return new String[][]{
-                {"from DB"}, {"DB"}, {"DB where DB.name=\"Reporting\""}, {"DB DB.name = \"Reporting\""},
-                {"DB where DB.name=\"Reporting\" select name, owner"}, {"DB has name"}, {"DB, Table"},
-                {"DB is JdbcAccess"},
+//                {"from DB"}, {"DB"}, {"DB where DB.name=\"Reporting\""}, {"DB DB.name = \"Reporting\""},
+//                {"DB where DB.name=\"Reporting\" select name, owner"}, {"DB has name"}, {"DB, Table"},
+//                {"DB is JdbcAccess"},
             /*
             {"DB, LoadProcess has name"},
             {"DB as db1, Table where db1.name = \"Reporting\""},
             {"DB where DB.name=\"Reporting\" and DB.createTime < " + System.currentTimeMillis()},
             */
-                {"from Table"}, {"Table"}, {"Table is Dimension"}, {"Column where Column isa PII"},
-                {"View is Dimension"},
-            /*{"Column where Column isa PII select Column.name"},*/
-                {"Column select Column.name"}, {"Column select name"}, {"Column where Column.name=\"customer_id\""},
-                {"from Table select Table.name"}, {"DB where (name = \"Reporting\")"},
-                {"DB where (name = \"Reporting\") select name as _col_0, owner as _col_1"},
-                {"DB where DB is JdbcAccess"}, {"DB where DB has name"}, {"DB Table"}, {"DB where DB has name"},
-                {"DB as db1 Table where (db1.name = \"Reporting\")"},
-                {"DB where (name = \"Reporting\") select name as _col_0, (createTime + 1) as _col_1 "},
-                {"Table where (name = \"sales_fact\" and created > \"2014-01-01\" ) select name as _col_0, created as _col_1 "},
-                {"Table where (name = \"sales_fact\" and created > \"2014-12-11T02:35:58.440Z\" ) select name as _col_0, created as _col_1 "},
+//                {"from Table"}, {"Table"}, {"Table is Dimension"}, {"Column where Column isa PII"},
+//                {"View is Dimension"},
+//            /*{"Column where Column isa PII select Column.name"},*/
+//                {"Column select Column.name"}, {"Column select name"}, {"Column where Column.name=\"customer_id\""},
+//                {"from Table select Table.name"}, {"DB where (name = \"Reporting\")"},
+//                {"DB where (name = \"Reporting\") select name as _col_0, owner as _col_1"},
+//                {"DB where DB is JdbcAccess"}, {"DB where DB has name"}, {"DB Table"}, {"DB where DB has name"},
+//                {"DB as db1 Table where (db1.name = \"Reporting\")"},
+//                {"DB where (name = \"Reporting\") select name as _col_0, (createTime + 1) as _col_1 "},
+//                {"Table where (name = \"sales_fact\" and created > \"2014-01-01\" ) select name as _col_0, created as _col_1 "},
+//                {"Table where (name = \"sales_fact\" and created > \"2014-12-11T02:35:58.440Z\" ) select name as _col_0, created as _col_1 "},
             /*
             todo: does not work
             {"DB where (name = \"Reporting\") and ((createTime + 1) > 0)"},
@@ -209,17 +209,20 @@ public class GraphBackedDiscoveryServiceTest {
              select db1.name as dbName, tab.name as tabName"},
             */
                 // trait searches
-                {"Dimension"},
-            /*{"Fact"}, - todo: does not work*/
-                {"JdbcAccess"}, {"ETL"}, {"Metric"}, {"PII"},
-                // Lineage
-                {"Table LoadProcess outputTable"}, {"Table loop (LoadProcess outputTable)"},
-                {"Table as _loop0 loop (LoadProcess outputTable) withPath"},
-                {"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as "
-                        + "destTable withPath"},
-                {"Table as t, sd, Column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
-                        + "colType"},
-                {"Table where name='sales_fact', db where name='Reporting'"}};
+//                {"Dimension"},
+//            /*{"Fact"}, - todo: does not work*/
+//                {"JdbcAccess"}, {"ETL"}, {"Metric"}, {"PII"},
+//                // Lineage
+//                {"Table LoadProcess outputTable"}, {"Table loop (LoadProcess outputTable)"},
+//                {"Table as _loop0 loop (LoadProcess outputTable) withPath"},
+//                {"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as "
+//                        + "destTable withPath"},
+//                {"Table as t, sd, Column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
+//                        + "colType"},
+//                {"Table where name='sales_fact', db where name='Reporting'"},
+//                {"Partition as p where values = ['2015-01-01']" },
+                {"StorageDesc sortCols"},
+        };
     }
 
     @Test(dataProvider = "dslQueriesProvider")

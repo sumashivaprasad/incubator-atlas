@@ -26,6 +26,7 @@ import javax.script.{Bindings, ScriptEngine, ScriptEngineManager}
 import com.thinkaurelius.titan.core.TitanGraph
 import com.typesafe.config.ConfigFactory
 import org.apache.atlas.repository.BaseTest
+import org.apache.atlas.repository.graph.TitanGraphProvider
 import org.apache.atlas.typesystem.types.TypeSystem
 import org.apache.commons.io.FileUtils
 
@@ -43,9 +44,11 @@ object HiveTitanSample {
         val version = 0
         val guid = s"""${UUID.randomUUID()}""".stripMargin
 
-        def addEdge(to: Vertex, label: String, edges: ArrayBuffer[String]): Unit = {
+        def addEdge(to: Vertex, label: String, edges: ArrayBuffer[String]): Int = {
+            val edgeId = nextEdgeId.incrementAndGet();
             edges +=
-                s"""{"_id" : "${nextEdgeId.incrementAndGet()}", "_type" : "edge", "_inV" : "${to.id}", "_outV" : "$id", "_label" : "$label"}"""
+                s"""{"_id" : "${edgeId}", "_type" : "edge", "_inV" : "${to.id}", "_outV" : "$id", "_label" : "__$label"}"""
+            edgeId
         }
 
         def toGSon(vertices: ArrayBuffer[String],
@@ -67,8 +70,12 @@ object HiveTitanSample {
 
                 convertedVal match {
                     case x: Vertex => addEdge(x, s"${this.getClass.getSimpleName}.${f.getName}", edges)
-                    case l: List[_] => l.foreach(x => addEdge(x.asInstanceOf[Vertex],
-                        s"${this.getClass.getSimpleName}.${f.getName}", edges))
+                    case l: List[_] => val edgeList = l.map(x =>
+                        s"""${addEdge(x.asInstanceOf[Vertex], s"${this.getClass.getSimpleName}.${f.getName}", edges)}"""
+                    )
+                    if(l.head.isInstanceOf[Struct]) {
+                        sb.append( s""", "${f.getName}" : ${edgeList.mkString("[", ",", "]")}""")
+                    }
                     case _ => sb.append( s""", "${f.getName}" : $convertedVal""")
                         sb.append( s""", "${this.getClass.getSimpleName}.${f.getName}" : $convertedVal""")
                 }
@@ -124,8 +131,18 @@ object HiveTitanSample {
     case class DB(name: String, owner: String, createTime: Int, clusterName: String, traits: Option[List[Trait]] = None,
                   _id: String = "" + nextVertexId.incrementAndGet()) extends Instance
 
+    case class HiveOrder(col: String, order: Int,
+                  _id: String = "" + nextVertexId.incrementAndGet()) extends Struct
+
     case class StorageDescriptor(inputFormat: String, outputFormat: String,
-                                 _id: String = "" + nextVertexId.incrementAndGet()) extends Struct
+                                 sortCols: List[Struct], _id: String = "" + nextVertexId.incrementAndGet()) extends Struct {
+
+        override def toGSon(vertices: ArrayBuffer[String],
+                   edges: ArrayBuffer[String]): Unit = {
+            sortCols.foreach(_.toGSon(vertices, edges))
+            super.toGSon(vertices, edges)
+        }
+    }
 
     case class Column(name: String, dataType: String, sd: StorageDescriptor,
                       traits: Option[List[Trait]] = None,
@@ -136,7 +153,7 @@ object HiveTitanSample {
                      traits: Option[List[Trait]] = None,
                      _id: String = "" + nextVertexId.incrementAndGet()) extends Instance
 
-    case class TableDef(name: String, db: DB, inputFormat: String, outputFormat: String,
+    case class TableDef(name: String, db: DB, sd: StorageDescriptor,
                         columns: List[(String, String, Option[List[Trait]])],
                         traits: Option[List[Trait]] = None,
                         created: Option[Date] = None) {
@@ -144,7 +161,7 @@ object HiveTitanSample {
             case Some(x) => x
             case None => new Date(BaseTest.TEST_DATE_IN_LONG)
         }
-        val sd = StorageDescriptor(inputFormat, outputFormat)
+
         val colDefs = columns map { c =>
             Column(c._1, c._2, sd, c._3)
         }
@@ -175,8 +192,8 @@ object HiveTitanSample {
     val salesDB = DB("Sales", "John ETL", 1000, "test")
     val salesFact = TableDef("sales_fact",
         salesDB,
-        "TextInputFormat",
-        "TextOutputFormat",
+        StorageDescriptor("TextInputFormat",
+            "TextOutputFormat", List(HiveOrder("customer_id", 0))),
         List(
             ("time_id", "int", None),
             ("product_id", "int", None),
@@ -186,8 +203,8 @@ object HiveTitanSample {
         ))
     val productDim = TableDef("product_dim",
         salesDB,
-        "TextInputFormat",
-        "TextOutputFormat",
+        StorageDescriptor("TextInputFormat",
+            "TextOutputFormat", List(HiveOrder("product_id", 0))),
         List(
             ("product_id", "int", None),
             ("product_name", "string", None),
@@ -196,8 +213,8 @@ object HiveTitanSample {
         Some(List(Dimension())))
     val timeDim = TableDef("time_dim",
         salesDB,
-        "TextInputFormat",
-        "TextOutputFormat",
+        StorageDescriptor("TextInputFormat",
+            "TextOutputFormat", List(HiveOrder("time_id", 0))),
         List(
             ("time_id", "int", None),
             ("dayOfYear", "int", None),
@@ -206,8 +223,8 @@ object HiveTitanSample {
         Some(List(Dimension())))
     val customerDim = TableDef("customer_dim",
         salesDB,
-        "TextInputFormat",
-        "TextOutputFormat",
+        StorageDescriptor("TextInputFormat",
+            "TextOutputFormat", List(HiveOrder("customer_id", 0))),
         List(
             ("customer_id", "int", None),
             ("name", "int", None),
@@ -218,8 +235,8 @@ object HiveTitanSample {
     val reportingDB = DB("Reporting", "Jane BI", 1500, "test")
     val salesFactDaily = TableDef("sales_fact_daily_mv",
         reportingDB,
-        "TextInputFormat",
-        "TextOutputFormat",
+        StorageDescriptor("TextInputFormat",
+            "TextOutputFormat", List(HiveOrder("customer_id", 0))),
         List(
             ("time_id", "int", None),
             ("product_id", "int", None),
@@ -241,8 +258,8 @@ object HiveTitanSample {
 
     val salesFactMonthly = TableDef("sales_fact_monthly_mv",
         reportingDB,
-        "TextInputFormat",
-        "TextOutputFormat",
+        StorageDescriptor("TextInputFormat",
+            "TextOutputFormat", List(HiveOrder("customer_id", 0))),
         List(
             ("time_id", "int", None),
             ("product_id", "int", None),
@@ -337,9 +354,10 @@ object HiveTitanSample {
 
 object TestApp extends App with GraphUtils {
 
-    var conf = ConfigFactory.load()
-    conf = conf.getConfig("graphRepo")
-    val g: TitanGraph = titanGraph(conf)
+//    var conf = ConfigFactory.load()
+//    conf = conf.getConfig("graphRepo")
+//    val g: TitanGraph = titanGraph()
+    val g: TitanGraph = TitanGraphProvider.getGraphInstance
     val manager: ScriptEngineManager = new ScriptEngineManager
     val engine: ScriptEngine = manager.getEngineByName("gremlin-groovy")
     val bindings: Bindings = engine.createBindings

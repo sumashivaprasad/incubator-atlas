@@ -108,6 +108,8 @@ trait GraphPersistenceStrategies {
 
     def constructInstance[U](dataType: IDataType[U], v: java.lang.Object): U
 
+    def constructInstance[U](attributeInfo: AttributeInfo, v: java.lang.Object): U
+
     def gremlinCompOp(op: ComparisonExpression) = op.symbol match {
         case "=" => "T.eq"
         case "!=" => "T.neq"
@@ -191,7 +193,7 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
     val superTypeAttributeName = "superTypeNames"
     val idAttributeName = "guid"
 
-    def edgeLabel(dataType: IDataType[_], aInfo: AttributeInfo) = s"${dataType.getName}.${aInfo.name}"
+    def edgeLabel(dataType: IDataType[_], aInfo: AttributeInfo) = s"__${dataType.getName}.${aInfo.name}"
 
     def edgeLabel(propertyName: String) = s"__${propertyName}"
 
@@ -365,8 +367,6 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
             case DataTypes.TypeCategory.PRIMITIVE => value
             case DataTypes.TypeCategory.ENUM => value
             case DataTypes.TypeCategory.STRUCT =>
-//                loadStructAttribute(elementType, attributeInfo, i,
-//                    instanceVertex.getEdges(Direction.OUT, edgeLabel()))
                 throw new UnsupportedOperationException(s"load for ${attributeInfo.dataType()} not supported")
             case DataTypes.TypeCategory.TRAIT =>
                 throw new UnsupportedOperationException(s"load for ${attributeInfo.dataType()} not supported")
@@ -376,5 +376,7 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
                 throw new UnsupportedOperationException(s"load for ${attributeInfo.dataType()} not supported")
         }
     }
+
+    override def constructInstance[U](attributeInfo: AttributeInfo, v: Object): U = ???
 }
 

@@ -18,6 +18,8 @@
 
 package org.apache.atlas.discovery.graph;
 
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.thinkaurelius.titan.core.TitanVertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.query.Expressions;
@@ -41,6 +43,7 @@ import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -101,20 +104,51 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
     }
 
     @Override
+    public <U> U constructInstance(AttributeInfo aInfo, Object value) {
+        try {
+            IDataType<U> dataType = aInfo.dataType();
+            switch (dataType.getTypeCategory()) {
+            case PRIMITIVE:
+            case ENUM:
+            case CLASS:
+            case STRUCT:
+            case TRAIT:
+            case MAP:
+                return constructInstance(dataType, value);
+            case ARRAY:
+                DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
+                IDataType<?> elemType = arrType.getElemType();
+
+                ImmutableCollection.Builder result = ImmutableList.builder();
+                List list = (List) value;
+                for (Object listElement : list) {
+                    result.add(constructCollectionEntry(aInfo, elemType, listElement));
+                }
+                return (U) result.build();
+            }
+        } catch (AtlasException e) {
+            LOG.error("error while constructing an instance", e);
+        }
+        return null;
+    }
+
+    @Override
     public <U> U constructInstance(IDataType<U> dataType, Object value) {
         try {
             switch (dataType.getTypeCategory()) {
             case PRIMITIVE:
             case ENUM:
                 return dataType.convert(value, Multiplicity.OPTIONAL);
-
             case ARRAY:
                 DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
-                IDataType<U> elemType = arrType.getElemType();
+                IDataType<?> elemType = arrType.getElemType();
+
+                ImmutableCollection.Builder result = ImmutableList.builder();
                 List list = (List) value;
                 for(Object listElement : list) {
-                    constructCollectionEntry(elemType, listElement);
+                    result.add(constructCollectionEntry(elemType, listElement));
                 }
+                return (U)result.build();
             case MAP:
                 // todo
                 break;
@@ -173,9 +207,27 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
         //The array values in case of STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS vertex referenced
         case STRUCT:
             String edgeId = (String) value;
-            metadataRepository.getGraphToInstanceMapper().getReferredValue(edgeId, elementType);
+            return (U) metadataRepository.getGraphToInstanceMapper().getReferredValue(edgeId, elementType);
         case CLASS:
-            //TODO
+        case ARRAY:
+        case MAP:
+        case TRAIT:
+            // do nothing
+        default:
+            throw new UnsupportedOperationException("Load for type " + elementType + " in collections is not supported");
+        }
+    }
+
+    public <U> U constructCollectionEntry(AttributeInfo aInfo, IDataType<U> elementType, Object value) throws AtlasException {
+        switch (elementType.getTypeCategory()) {
+        case PRIMITIVE:
+        case ENUM:
+            return constructInstance(elementType, value);
+        //The array values in case of STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS vertex referenced
+        case STRUCT:
+        case CLASS:
+            String edgeId = (String) value;
+            return (U) metadataRepository.getGraphToInstanceMapper().getReferredValue(edgeId, aInfo, elementType);
         case ARRAY:
         case MAP:
         case TRAIT:

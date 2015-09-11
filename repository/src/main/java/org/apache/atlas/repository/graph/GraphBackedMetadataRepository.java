@@ -1194,7 +1194,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     LOG.debug("Found struct instance vertex {}, mapping to instance {} ", referredVertex,
                         referredType.getName());
                     StructType structType = typeSystem.getDataType(StructType.class, referredType.getName());
-                    ITypedInstance instance = structType.createInstance();
+                    ITypedStruct instance = structType.createInstance();
                     Map<String, AttributeInfo> fields = structType.fieldMapping().fields;
                     mapVertexToInstance(referredVertex, instance, fields);
                     return instance;
@@ -1205,6 +1205,31 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 }
             }
             return null;
+        }
+
+        public ITypedInstance getReferredValue(String edgeId, AttributeInfo aInfo, IDataType<?> referredType) throws AtlasException {
+                switch (referredType.getTypeCategory()) {
+                case STRUCT:
+                    return getReferredValue(edgeId, referredType);
+                case CLASS:
+                    final Edge edge = titanGraph.getEdge(edgeId);
+                    final Vertex referredVertex = edge.getVertex(Direction.IN);
+                    final String guid = referredVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+                    LOG.debug("Found vertex {} for edge {} with guid {}", referredVertex, edgeId ,
+                        guid);
+                    if (aInfo.isComposite) {
+                        LOG.debug("Found composite, mapping vertex to instance");
+                        return mapGraphToTypedInstance(guid, referredVertex);
+                    } else {
+                        Id referenceId =
+                            new Id(guid, referredVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY),
+                                referredType.getName());
+                        LOG.debug("Found non-composite, adding id {} ", referenceId);
+                        return referenceId;
+                    }
+                default:
+                    throw new UnsupportedOperationException("Loading " + referredType.getTypeCategory() + " is not supported");
+                }
         }
     }
 }

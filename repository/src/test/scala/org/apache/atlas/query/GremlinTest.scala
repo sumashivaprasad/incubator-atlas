@@ -19,6 +19,7 @@
 package org.apache.atlas.query
 
 import com.thinkaurelius.titan.core.TitanGraph
+import com.thinkaurelius.titan.core.util.TitanCleanup
 import org.apache.atlas.discovery.graph.DefaultGraphPersistenceStrategy
 import org.apache.atlas.query.Expressions._
 import org.apache.atlas.repository.graph.{TitanGraphProvider, GraphBackedMetadataRepository}
@@ -33,19 +34,30 @@ import org.scalatest.junit.JUnitRunner
 class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
 
   var g: TitanGraph = null
+  var gp: GraphPersistenceStrategies = null;
+  var gProvider: TitanGraphProvider = null;
 
   override def beforeAll() {
     TypeSystem.getInstance().reset()
     QueryTestsUtils.setupTypes
-    g = QueryTestsUtils.setupTestGraph
+    gProvider = new TitanGraphProvider();
+    gp = new DefaultGraphPersistenceStrategy(new GraphBackedMetadataRepository(gProvider))
+    g = QueryTestsUtils.setupTestGraph(gProvider)
+
   }
 
   override def afterAll() {
     g.shutdown()
+    try {
+      TitanCleanup.clear(g);
+    } catch {
+      case ex: Exception =>
+        print("Could not clear the graph ", ex);
+    }
   }
 
   test("testClass") {
-    val r = QueryProcessor.evaluate(_class("DB"), g)
+    val r = QueryProcessor.evaluate(_class("DB"), g, gp)
     validateJson(r, """{
                       |    "query": "DB",
                       |    "dataType": {
@@ -114,7 +126,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |            {
                       |                "$typeName$": "DB",
                       |                "$id$": {
-                      |                    "id": "256",
                       |                    "$typeName$": "DB",
                       |                    "version": 0
                       |                },
@@ -126,7 +137,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |            {
                       |                "$typeName$": "DB",
                       |                "$id$": {
-                      |                    "id": "7424",
                       |                    "$typeName$": "DB",
                       |                    "version": 0
                       |                },
@@ -140,12 +150,12 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
   }
 
   test("testName") {
-    val r = QueryProcessor.evaluate(_class("DB").field("name"), g)
+    val r = QueryProcessor.evaluate(_class("DB").field("name"), g, gp)
     validateJson(r, "{\n  \"query\":\"DB.name\",\n  \"dataType\":\"string\",\n  \"rows\":[\n    \"Sales\",\n    \"Reporting\"\n  ]\n}")
   }
 
   test("testFilter") {
-    var r = QueryProcessor.evaluate(_class("DB").where(id("name").`=`(string("Reporting"))), g)
+    var r = QueryProcessor.evaluate(_class("DB").where(id("name").`=`(string("Reporting"))), g, gp)
     validateJson(r, """{
                       |    "query": "DB where (name = \"Reporting\")",
                       |    "dataType": {
@@ -211,7 +221,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |        {
                       |            "$typeName$": "DB",
                       |            "$id$": {
-                      |                "id": "7424",
                       |                "$typeName$": "DB",
                       |                "version": 0
                       |            },
@@ -225,7 +234,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
   }
 
   test("testFilter2") {
-    var r = QueryProcessor.evaluate(_class("DB").where(id("DB").field("name").`=`(string("Reporting"))), g)
+    var r = QueryProcessor.evaluate(_class("DB").where(id("DB").field("name").`=`(string("Reporting"))), g, gp)
     validateJson(r, """{
                       |    "query": "DB where (name = \"Reporting\")",
                       |    "dataType": {
@@ -291,7 +300,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |        {
                       |            "$typeName$": "DB",
                       |            "$id$": {
-                      |                "id": "7424",
                       |                "$typeName$": "DB",
                       |                "version": 0
                       |            },
@@ -306,7 +314,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
 
   test("testSelect") {
     val r = QueryProcessor.evaluate(_class("DB").where(id("name").`=`(string("Reporting"))).
-      select(id("name"), id("owner")), g)
+      select(id("name"), id("owner")), g, gp)
     validateJson(r, """{
                       |    "query": "DB where (name = \"Reporting\") as _src1 select _src1.name as _col_0, _src1.owner as _col_1",
                       |    "dataType": {
@@ -351,7 +359,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
   }
 
   test("testIsTrait") {
-    val r = QueryProcessor.evaluate(_class("Table").where(isTrait("Dimension")), g)
+    val r = QueryProcessor.evaluate(_class("Table").where(isTrait("Dimension")), g, gp)
     validateJson(r, """{
                       |  "query":"Table where Table is Dimension",
                       |  "dataType":{
@@ -487,7 +495,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
   }
 
   test("testhasField") {
-    val r = QueryProcessor.evaluate(_class("DB").where(hasField("name")), g)
+    val r = QueryProcessor.evaluate(_class("DB").where(hasField("name")), g, gp)
     validateJson(r, """{
                       |  "query":"DB where DB has name",
                       |  "dataType":{
@@ -579,7 +587,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
   }
 
   test("testFieldReference") {
-    val r = QueryProcessor.evaluate(_class("DB").field("Table"), g)
+    val r = QueryProcessor.evaluate(_class("DB").field("Table"), g, gp)
     validateJson(r, """{
                       |  "query":"DB Table",
                       |  "dataType":{
@@ -765,7 +773,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
 
   test("testBackReference") {
     val r = QueryProcessor.evaluate(
-      _class("DB").as("db").field("Table").where(id("db").field("name").`=`(string("Reporting"))), g)
+      _class("DB").as("db").field("Table").where(id("db").field("name").`=`(string("Reporting"))), g, gp)
     validateJson(r, null)
   }
 
@@ -777,7 +785,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
 
   test("testComparisonLogical") {
     val r = QueryProcessor.evaluate(_class("DB").where(id("name").`=`(string("Reporting")).
-      and(id("createTime") > int(0))), g)
+      and(id("createTime") > int(0))), g, gp)
     validateJson(r, """{
                       |    "query": "DB where (name = \"Reporting\") and (createTime > 0)",
                       |    "dataType": {
@@ -845,7 +853,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |        {
                       |            "$typeName$": "DB",
                       |            "$id$": {
-                      |                "id": "7424",
                       |                "$typeName$": "DB",
                       |                "version": 0
                       |            },
@@ -862,7 +869,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     val r = QueryProcessor.evaluate(
       _class("DB").as("db1").where(id("name").`=`(string("Sales"))).field("Table").as("tab").
         where((isTrait("Dimension"))).
-        select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g
+        select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g, gp
     )
     validateJson(r, "{\n  \"query\":\"DB as db1 where (name = \\\"Sales\\\") Table as tab where DB as db1 where (name = \\\"Sales\\\") Table as tab is Dimension as _src1 select db1.name as dbName, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"__tempQueryResultStruct5\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"__tempQueryResultStruct5\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct5\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct5\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"customer_dim\"\n    }\n  ]\n}")
   }
@@ -871,7 +878,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     val r = QueryProcessor.evaluate(
       _class("DB").as("db1").where((id("db1").field("createTime") > int(0))
         .or(id("name").`=`(string("Reporting")))).field("Table").as("tab")
-        .select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g
+        .select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g, gp
     )
     validateJson(r, "{\n  \"query\":\"DB as db1 where (db1.createTime > 0) or (name = \\\"Reporting\\\") Table as tab select db1.name as dbName, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"__tempQueryResultStruct6\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"__tempQueryResultStruct6\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"sales_fact\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct6\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct6\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct6\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"customer_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct6\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_daily_mv\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct6\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_monthly_mv\"\n    }\n  ]\n}")
   }
@@ -881,7 +888,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
       _class("DB").as("db1").where((id("db1").field("createTime") > int(0))
         .and(id("db1").field("name").`=`(string("Reporting")))
         .or(id("db1").hasField("owner"))).field("Table").as("tab")
-        .select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g
+        .select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g, gp
     )
     validateJson(r, "{\n  \"query\":\"DB as db1 where (db1.createTime > 0) and (db1.name = \\\"Reporting\\\") or DB as db1 has owner Table as tab select db1.name as dbName, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"__tempQueryResultStruct7\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"sales_fact\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"customer_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_daily_mv\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_monthly_mv\"\n    }\n  ]\n}")
   }
@@ -890,7 +897,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     val r = QueryProcessor.evaluate(
       _class("DB").as("db1").where(id("name").`=`(string("Sales"))).field("Table").as("tab").
         where((isTrait("Dimension"))).
-        select(id("db1").as("dbO"), id("tab").field("name").as("tabName")), g
+        select(id("db1").as("dbO"), id("tab").field("name").as("tabName")), g, gp
     )
     validateJson(r, "{\n  \"query\":\"DB as db1 where (name = \\\"Sales\\\") Table as tab where DB as db1 where (name = \\\"Sales\\\") Table as tab is Dimension as _src1 select db1 as dbO, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbO\",\n        \"dataTypeName\":\"DB\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"customer_dim\"\n    }\n  ]\n}")
   }
@@ -900,7 +907,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     val e = p("Partition as p where values = ['2015-01-01']," +
       " table where name = 'sales_fact_daily_mv'," +
       " db where name = 'Reporting' and clusterName = 'test' select p").right.get
-    val r = QueryProcessor.evaluate(e, g)
+    val r = QueryProcessor.evaluate(e, g, gp)
     validateJson(r, """{
                       |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p as _col_0",
                       |  "dataType":{
@@ -939,7 +946,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
     val e = p("Partition as p where values = ['2015-01-01']," +
       " table where name = 'sales_fact_daily_mv'," +
       " db where name = 'Reporting' and clusterName = 'test' select p.values").right.get
-    val r = QueryProcessor.evaluate(e, g)
+    val r = QueryProcessor.evaluate(e, g, gp)
     validateJson(r,
       """{
         |  "query":"Partition as p where (values = [\"2015-01-01\"]) table where (name = \"sales_fact_daily_mv\") db where (name = \"Reporting\") and (clusterName = \"test\") as _src1 select p.values as _col_0",
@@ -976,7 +983,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
   test("testArrayInWhereClause") {
     val p = new QueryParser
     val e = p("Partition as p where values = ['2015-01-01']").right.get
-    val r = QueryProcessor.evaluate(e, g)
+    val r = QueryProcessor.evaluate(e, g, gp)
     validateJson(r, """{
                       |  "query":"Partition as p where (values = [\"2015-01-01\"])",
                       |  "dataType":{
@@ -1018,7 +1025,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |    {
                       |      "$typeName$":"Partition",
                       |      "$id$":{
-                      |        "id":"13824",
                       |        "$typeName$":"Partition",
                       |        "version":0
                       |      },
@@ -1035,16 +1041,25 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |}""".stripMargin)
   }
 
+  test("testArrayWithStruct") {
+//    val p = new QueryParser
+//    val e = p("from LoadProcess select inputTables").right.get
+//    val r = QueryProcessor.evaluate(e, g)
+    val r = QueryProcessor.evaluate(_class("LoadProcess").field("inputTables"), g, gp)
+    validateJson(r)
+  }
+
+
   test("testNegativeInvalidType") {
     val p = new QueryParser
     val e = p("from blah").right.get
-    an[ExpressionException] should be thrownBy QueryProcessor.evaluate(e, g)
+    an[ExpressionException] should be thrownBy QueryProcessor.evaluate(e, g, gp)
   }
 
   test("testJoinAndSelect5") {
     val p = new QueryParser
     val e = p("Table as t where name = 'sales_fact' db where name = 'Sales' and owner = 'John ETL' select t").right.get
-    val r = QueryProcessor.evaluate(e, g)
+    val r = QueryProcessor.evaluate(e, g, gp)
     validateJson(r)
   }
 }
