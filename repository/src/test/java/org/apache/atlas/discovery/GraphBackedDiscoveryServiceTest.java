@@ -176,26 +176,40 @@ public class GraphBackedDiscoveryServiceTest {
 
     @DataProvider(name = "dslQueriesProvider")
     private Object[][] createDSLQueries() {
-        return new String[][]{
-//                {"from DB"}, {"DB"}, {"DB where DB.name=\"Reporting\""}, {"DB DB.name = \"Reporting\""},
-//                {"DB where DB.name=\"Reporting\" select name, owner"}, {"DB has name"}, {"DB, Table"},
-//                {"DB is JdbcAccess"},
+        return new Object[][]{
+                {"from DB", 2},
+                {"DB", 2},
+                {"DB where DB.name=\"Reporting\"", 1},
+                {"DB DB.name = \"Reporting\"", 1},
+                {"DB where DB.name=\"Reporting\" select name, owner", 1},
+                {"DB has name", 2},
+                {"DB, Table", 6},
+                {"View is JdbcAccess", 0}, //Not working
             /*
             {"DB, LoadProcess has name"},
             {"DB as db1, Table where db1.name = \"Reporting\""},
             {"DB where DB.name=\"Reporting\" and DB.createTime < " + System.currentTimeMillis()},
             */
-//                {"from Table"}, {"Table"}, {"Table is Dimension"}, {"Column where Column isa PII"},
-//                {"View is Dimension"},
-//            /*{"Column where Column isa PII select Column.name"},*/
-//                {"Column select Column.name"}, {"Column select name"}, {"Column where Column.name=\"customer_id\""},
-//                {"from Table select Table.name"}, {"DB where (name = \"Reporting\")"},
-//                {"DB where (name = \"Reporting\") select name as _col_0, owner as _col_1"},
-//                {"DB where DB is JdbcAccess"}, {"DB where DB has name"}, {"DB Table"}, {"DB where DB has name"},
-//                {"DB as db1 Table where (db1.name = \"Reporting\")"},
-//                {"DB where (name = \"Reporting\") select name as _col_0, (createTime + 1) as _col_1 "},
-//                {"Table where (name = \"sales_fact\" and created > \"2014-01-01\" ) select name as _col_0, created as _col_1 "},
-//                {"Table where (name = \"sales_fact\" and created > \"2014-12-11T02:35:58.440Z\" ) select name as _col_0, created as _col_1 "},
+                {"from Table", 6},
+                {"Table", 6},
+                {"Table is Dimension", 0}, //Not working
+                {"Column where Column isa PII", 0},
+                {"View is Dimension" , 0},
+                /*{"Column where Column isa PII select Column.name"},*/
+                {"Column select Column.name", 22},
+                {"Column select name", 22},
+                {"Column where Column.name=\"customer_id\"", 4},
+                {"from Table select Table.name", 6},
+                {"DB where (name = \"Reporting\")", 1},
+                {"DB where (name = \"Reporting\") select name as _col_0, owner as _col_1", 1},
+                {"DB where DB is JdbcAccess", 0},
+                {"DB where DB has name", 2},
+                {"DB Table", 6},
+                {"DB where DB has name", 2},
+                {"DB as db1 Table where (db1.name = \"Reporting\")", 0}, //Not working
+                {"DB where (name = \"Reporting\") select name as _col_0, (createTime + 1) as _col_1 ", 1},
+                {"Table where (name = \"sales_fact\" and created > \"2014-01-01\" ) select name as _col_0, created as _col_1 ", 1},
+                {"Table where (name = \"sales_fact\" and created >= \"2014-12-11T02:35:58.440Z\" ) select name as _col_0, created as _col_1 ", 1},
             /*
             todo: does not work
             {"DB where (name = \"Reporting\") and ((createTime + 1) > 0)"},
@@ -209,24 +223,28 @@ public class GraphBackedDiscoveryServiceTest {
              select db1.name as dbName, tab.name as tabName"},
             */
                 // trait searches
-//                {"Dimension"},
-//            /*{"Fact"}, - todo: does not work*/
-//                {"JdbcAccess"}, {"ETL"}, {"Metric"}, {"PII"},
-//                // Lineage
-//                {"Table LoadProcess outputTable"}, {"Table loop (LoadProcess outputTable)"},
-//                {"Table as _loop0 loop (LoadProcess outputTable) withPath"},
-//                {"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as "
-//                        + "destTable withPath"},
-//                {"Table as t, sd, Column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
-//                        + "colType"},
-//                {"Table where name='sales_fact', db where name='Reporting'"},
-//                {"Partition as p where values = ['2015-01-01']" },
-                {"StorageDesc sortCols"},
+                {"Dimension", 5},
+            /*{"Fact"}, - todo: does not work*/
+                {"JdbcAccess", 2},
+                {"ETL", 2},
+                {"Metric", 3},
+                {"PII", 1},
+                // Lineage
+                {"Table LoadProcess outputTable", 3},
+                {"Table loop (LoadProcess outputTable)", 5},
+                {"Table as _loop0 loop (LoadProcess outputTable) withPath", 5},
+                {"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as "
+                        + "destTable withPath", 5},
+                {"Table as t, sd, Column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
+                        + "colType", 0}, //Not working
+                {"Table where name='sales_fact', db where name='Reporting'", 0}, //Not working
+                {"Partition as p where values = ['2015-01-01']", 1},
+                {"StorageDesc sortCols", 2} //Not working
         };
     }
 
     @Test(dataProvider = "dslQueriesProvider")
-    public void testSearchByDSLQueries(String dslQuery) throws Exception {
+    public void  testSearchByDSLQueries(String dslQuery, Integer expectedNumRows) throws Exception {
         System.out.println("Executing dslQuery = " + dslQuery);
         String jsonResults = discoveryService.searchByDSL(dslQuery);
         Assert.assertNotNull(jsonResults);
@@ -245,7 +263,7 @@ public class GraphBackedDiscoveryServiceTest {
 
         JSONArray rows = results.getJSONArray("rows");
         Assert.assertNotNull(rows);
-        Assert.assertTrue(rows.length() >= 0); // some queries may not have any results
+        Assert.assertEquals(rows.length(), expectedNumRows.intValue()); // some queries may not have any results
         System.out.println("query [" + dslQuery + "] returned [" + rows.length() + "] rows");
     }
 

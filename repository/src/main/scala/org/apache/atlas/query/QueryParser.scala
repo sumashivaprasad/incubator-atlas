@@ -242,7 +242,7 @@ class QueryParser extends StandardTokenParsers with QueryKeywords with Expressio
 
     def literal = booleanConstant ^^ {
         boolean(_)
-    } |
+        } |
         intConstant ^^ {
             int(_)
         } |

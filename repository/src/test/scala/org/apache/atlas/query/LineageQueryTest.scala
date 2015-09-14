@@ -56,7 +56,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
     val PREFIX_SPACES_REGEX = ("\\n\\s*").r
 
     test("testInputTables") {
-        val r = QueryProcessor.evaluate(_class("LoadProcess").field("inputTables"), g)
+        val r = QueryProcessor.evaluate(_class("LoadProcess").field("inputTables"), g, gp)
         val x = r.toJson
         validateJson(r,"""{
                          |  "query":"LoadProcess inputTables",
@@ -184,12 +184,12 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
     }
 
     test("testLoadProcessOut") {
-        val r = QueryProcessor.evaluate(_class("Table").field("LoadProcess").field("outputTable"), g)
+        val r = QueryProcessor.evaluate(_class("Table").field("LoadProcess").field("outputTable"), g, gp)
         validateJson(r, null)
     }
 
     test("testLineageAll") {
-        val r = QueryProcessor.evaluate(_class("Table").loop(id("LoadProcess").field("outputTable")), g)
+        val r = QueryProcessor.evaluate(_class("Table").loop(id("LoadProcess").field("outputTable")), g, gp)
         validateJson(r, """{
                           |  "query":"Table as _loop0 loop (LoadProcess outputTable)",
                           |  "dataType":{
@@ -346,7 +346,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
 
     test("testLineageAllSelect") {
         val r = QueryProcessor.evaluate(_class("Table").as("src").loop(id("LoadProcess").field("outputTable")).as("dest").
-            select(id("src").field("name").as("srcTable"), id("dest").field("name").as("destTable")), g)
+            select(id("src").field("name").as("srcTable"), id("dest").field("name").as("destTable")), g, gp)
         validateJson(r, """{
   "query":"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as destTable",
   "dataType":{
@@ -411,7 +411,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
     }
 
     test("testLineageFixedDepth") {
-        val r = QueryProcessor.evaluate(_class("Table").loop(id("LoadProcess").field("outputTable"), int(1)), g)
+        val r = QueryProcessor.evaluate(_class("Table").loop(id("LoadProcess").field("outputTable"), int(1)), g, gp)
         validateJson(r, """{
                           |  "query":"Table as _loop0 loop (LoadProcess outputTable) times 1",
                           |  "dataType":{

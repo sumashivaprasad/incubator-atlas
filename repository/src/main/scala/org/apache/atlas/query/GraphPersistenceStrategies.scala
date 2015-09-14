@@ -108,8 +108,6 @@ trait GraphPersistenceStrategies {
 
     def constructInstance[U](dataType: IDataType[U], v: java.lang.Object): U
 
-    def constructInstance[U](attributeInfo: AttributeInfo, v: java.lang.Object): U
-
     def gremlinCompOp(op: ComparisonExpression) = op.symbol match {
         case "=" => "T.eq"
         case "!=" => "T.neq"
@@ -376,7 +374,5 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
                 throw new UnsupportedOperationException(s"load for ${attributeInfo.dataType()} not supported")
         }
     }
-
-    override def constructInstance[U](attributeInfo: AttributeInfo, v: Object): U = ???
 }
 

@@ -25,7 +25,7 @@ import javax.script.{Bindings, ScriptEngine, ScriptEngineManager}
 
 import com.thinkaurelius.titan.core.TitanGraph
 import com.typesafe.config.ConfigFactory
-import org.apache.atlas.repository.BaseTest
+import org.apache.atlas.repository.{Constants, BaseTest}
 import org.apache.atlas.repository.graph.TitanGraphProvider
 import org.apache.atlas.typesystem.types.TypeSystem
 import org.apache.commons.io.FileUtils
@@ -41,8 +41,8 @@ object HiveTitanSample {
         val _id: String
 
         def id = _id
-        val version = 0
-        val guid = s"""${UUID.randomUUID()}""".stripMargin
+        val __version = 0
+        val __guid = s"""${UUID.randomUUID()}""".stripMargin
 
         def addEdge(to: Vertex, label: String, edges: ArrayBuffer[String]): Int = {
             val edgeId = nextEdgeId.incrementAndGet();
@@ -55,14 +55,14 @@ object HiveTitanSample {
                    edges: ArrayBuffer[String]): Unit = {
 
             val sb = new StringBuilder
-            sb.append( s"""{"typeName" : "${this.getClass.getSimpleName}", "_type" : "vertex"""")
+            sb.append( s"""{"${Constants.ENTITY_TYPE_PROPERTY_KEY}" : "${this.getClass.getSimpleName}", "_type" : "vertex"""")
 
             this.getClass.getDeclaredFields filter (_.getName != "traits") foreach { f =>
                 f.setAccessible(true)
                 val fV = f.get(this)
                 val convertedVal = fV match {
                     case _: String => s""""$fV""""
-                    case ls: List[_] if (ls.head.isInstanceOf[String]) =>
+                    case ls: List[_] if isPrimitiveType(ls) =>
                             s"""["${ls.mkString(",")}"]"""
                     case d: Date => d.getTime
                     case _ => fV
@@ -93,6 +93,18 @@ object HiveTitanSample {
 
             sb.append("}")
             vertices += sb.toString()
+        }
+
+        def isPrimitiveType(ls: List[_]) : Boolean = {
+            ls.head match {
+                case _: String => true
+                case _: Int => true
+                case _: Float => true
+                case _: Double => true
+                case _: Long => true
+                case _: Boolean => true
+                case default => false
+            }
         }
     }
 

@@ -104,35 +104,6 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
     }
 
     @Override
-    public <U> U constructInstance(AttributeInfo aInfo, Object value) {
-        try {
-            IDataType<U> dataType = aInfo.dataType();
-            switch (dataType.getTypeCategory()) {
-            case PRIMITIVE:
-            case ENUM:
-            case CLASS:
-            case STRUCT:
-            case TRAIT:
-            case MAP:
-                return constructInstance(dataType, value);
-            case ARRAY:
-                DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
-                IDataType<?> elemType = arrType.getElemType();
-
-                ImmutableCollection.Builder result = ImmutableList.builder();
-                List list = (List) value;
-                for (Object listElement : list) {
-                    result.add(constructCollectionEntry(aInfo, elemType, listElement));
-                }
-                return (U) result.build();
-            }
-        } catch (AtlasException e) {
-            LOG.error("error while constructing an instance", e);
-        }
-        return null;
-    }
-
-    @Override
     public <U> U constructInstance(IDataType<U> dataType, Object value) {
         try {
             switch (dataType.getTypeCategory()) {
@@ -142,7 +113,6 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
             case ARRAY:
                 DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
                 IDataType<?> elemType = arrType.getElemType();
-
                 ImmutableCollection.Builder result = ImmutableList.builder();
                 List list = (List) value;
                 for(Object listElement : list) {
@@ -206,28 +176,9 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
             return constructInstance(elementType, value);
         //The array values in case of STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS vertex referenced
         case STRUCT:
-            String edgeId = (String) value;
-            return (U) metadataRepository.getGraphToInstanceMapper().getReferredValue(edgeId, elementType);
-        case CLASS:
-        case ARRAY:
-        case MAP:
-        case TRAIT:
-            // do nothing
-        default:
-            throw new UnsupportedOperationException("Load for type " + elementType + " in collections is not supported");
-        }
-    }
-
-    public <U> U constructCollectionEntry(AttributeInfo aInfo, IDataType<U> elementType, Object value) throws AtlasException {
-        switch (elementType.getTypeCategory()) {
-        case PRIMITIVE:
-        case ENUM:
-            return constructInstance(elementType, value);
-        //The array values in case of STRUCT, CLASS contain the edgeId if the outgoing edge which links to the STRUCT, CLASS vertex referenced
-        case STRUCT:
         case CLASS:
             String edgeId = (String) value;
-            return (U) metadataRepository.getGraphToInstanceMapper().getReferredValue(edgeId, aInfo, elementType);
+            return (U) metadataRepository.getGraphToInstanceMapper().getReferredEntity(edgeId, elementType);
         case ARRAY:
         case MAP:
         case TRAIT:
