@@ -184,15 +184,17 @@ public class GraphBackedDiscoveryServiceTest {
                 {"DB where DB.name=\"Reporting\" select name, owner", 1},
                 {"DB has name", 2},
                 {"DB, Table", 6},
-                {"View is JdbcAccess", 0}, //Not working
+                {"View is JdbcAccess", 2},
+                {"DB, LoadProcess has name", 2},
+                {"DB as db1, Table where db1.name = \"Reporting\"", 0}, //Not working - ATLAS-145
+            // - Final working query -> discoveryService.searchByGremlin("L:{_var_0 = [] as Set;g.V().has(\"__typeName\", \"DB\").fill(_var_0);g.V().has(\"__superTypeNames\", \"DB\").fill(_var_0);_var_0._().as(\"db1\").in(\"__Table.db\").back(\"db1\").and(_().has(\"DB.name\", T.eq, \"Reporting\")).toList()}")
             /*
-            {"DB, LoadProcess has name"},
-            {"DB as db1, Table where db1.name = \"Reporting\""},
-            {"DB where DB.name=\"Reporting\" and DB.createTime < " + System.currentTimeMillis()},
+            {"DB, LoadProcess has name"}, //Invalid query
+            {"DB where DB.name=\"Reporting\" and DB.createTime < " + System.currentTimeMillis()} - ATLAS-
             */
                 {"from Table", 6},
                 {"Table", 6},
-                {"Table is Dimension", 0}, //Not working
+                {"Table isa Dimension", 3},
                 {"Column where Column isa PII", 0},
                 {"View is Dimension" , 0},
                 /*{"Column where Column isa PII select Column.name"},*/
@@ -202,16 +204,16 @@ public class GraphBackedDiscoveryServiceTest {
                 {"from Table select Table.name", 6},
                 {"DB where (name = \"Reporting\")", 1},
                 {"DB where (name = \"Reporting\") select name as _col_0, owner as _col_1", 1},
-                {"DB where DB is JdbcAccess", 0},
+                {"DB where DB is JdbcAccess", 0}, //Not supposed to work
                 {"DB where DB has name", 2},
                 {"DB Table", 6},
                 {"DB where DB has name", 2},
-                {"DB as db1 Table where (db1.name = \"Reporting\")", 0}, //Not working
+                {"DB as db1 Table where (db1.name = \"Reporting\")", 0}, //Not working -> ATLAS-145
                 {"DB where (name = \"Reporting\") select name as _col_0, (createTime + 1) as _col_1 ", 1},
                 {"Table where (name = \"sales_fact\" and created > \"2014-01-01\" ) select name as _col_0, created as _col_1 ", 1},
                 {"Table where (name = \"sales_fact\" and created >= \"2014-12-11T02:35:58.440Z\" ) select name as _col_0, created as _col_1 ", 1},
             /*
-            todo: does not work
+            todo: does not work - ATLAS-146
             {"DB where (name = \"Reporting\") and ((createTime + 1) > 0)"},
             {"DB as db1 Table as tab where ((db1.createTime + 1) > 0) and (db1.name = \"Reporting\") select db1.name
             as dbName, tab.name as tabName"},
@@ -224,7 +226,6 @@ public class GraphBackedDiscoveryServiceTest {
             */
                 // trait searches
                 {"Dimension", 5},
-            /*{"Fact"}, - todo: does not work*/
                 {"JdbcAccess", 2},
                 {"ETL", 2},
                 {"Metric", 3},
@@ -236,10 +237,11 @@ public class GraphBackedDiscoveryServiceTest {
                 {"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as "
                         + "destTable withPath", 5},
                 {"Table as t, sd, Column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
-                        + "colType", 0}, //Not working
-                {"Table where name='sales_fact', db where name='Reporting'", 0}, //Not working
+                        + "colType", 0}, //Not working - ATLAS-145 and ATLAS-166
+                {"Table where name='sales_fact', db where name='Sales'", 1},
+                {"Table where name='sales_fact', db where name='Reporting'", 0},
                 {"Partition as p where values = ['2015-01-01']", 1},
-                {"StorageDesc sortCols", 2} //Not working
+//                {"StorageDescriptor select sortCols", 2} //Not working due to edgeId being different from GraphSon edgeId
         };
     }
 

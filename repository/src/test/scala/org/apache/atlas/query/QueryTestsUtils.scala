@@ -90,7 +90,7 @@ object QueryTestsUtils extends GraphUtils {
                 attrDef("order", DataTypes.INT_TYPE)
             ))
 
-        def storageDescClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "StorageDesc", null,
+        def storageDescClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "StorageDescriptor", null,
             Array(
                 attrDef("inputFormat", DataTypes.STRING_TYPE),
                 attrDef("outputFormat", DataTypes.STRING_TYPE),
@@ -101,14 +101,14 @@ object QueryTestsUtils extends GraphUtils {
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 attrDef("dataType", DataTypes.STRING_TYPE),
-                new AttributeDefinition("sd", "StorageDesc", Multiplicity.REQUIRED, false, null)
+                new AttributeDefinition("sd", "StorageDescriptor", Multiplicity.REQUIRED, false, null)
             ))
 
         def tblClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Table", null,
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 new AttributeDefinition("db", "DB", Multiplicity.REQUIRED, false, null),
-                new AttributeDefinition("sd", "StorageDesc", Multiplicity.REQUIRED, false, null),
+                new AttributeDefinition("sd", "StorageDescriptor", Multiplicity.REQUIRED, false, null),
                 attrDef("created", DataTypes.DATE_TYPE)
             ))
 

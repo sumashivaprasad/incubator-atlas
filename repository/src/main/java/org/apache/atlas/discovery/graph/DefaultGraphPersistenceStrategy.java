@@ -116,7 +116,10 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
                 ImmutableCollection.Builder result = ImmutableList.builder();
                 List list = (List) value;
                 for(Object listElement : list) {
-                    result.add(constructCollectionEntry(elemType, listElement));
+                    Object collectionEntry = constructCollectionEntry(elemType, listElement);
+                    if(collectionEntry != null) {
+                        result.add(collectionEntry);
+                    }
                 }
                 return (U)result.build();
             case MAP:

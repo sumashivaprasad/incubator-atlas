@@ -402,13 +402,13 @@ object Expressions {
         extends Expression {
 
         def elemType(t: IDataType[_]): IDataType[_] = {
-            if (t.getTypeCategory == TypeCategory.ARRAY) {
-                val aT = t.asInstanceOf[ArrayType]
-                if (aT.getElemType.getTypeCategory == TypeCategory.CLASS ||
-                    aT.getElemType.getTypeCategory == TypeCategory.STRUCT) {
-                    return aT.getElemType
-                }
-            }
+//            if (t.getTypeCategory == TypeCategory.ARRAY) {
+//                val aT = t.asInstanceOf[ArrayType]
+//                if (aT.getElemType.getTypeCategory == TypeCategory.CLASS ||
+//                    aT.getElemType.getTypeCategory == TypeCategory.STRUCT) {
+//                    return aT.getElemType
+//                }
+//            }
             t
         }
 

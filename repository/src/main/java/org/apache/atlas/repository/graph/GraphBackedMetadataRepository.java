@@ -117,7 +117,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
     @Override
     public String getTraitLabel(IDataType<?> dataType, String traitName) {
-        return dataType.getName() + "." + traitName;
+        return EDGE_LABEL_PREFIX + dataType.getName() + "." + traitName;
     }
 
     @Override
@@ -1187,26 +1187,28 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
         public ITypedInstance getReferredEntity(String edgeId, IDataType<?> referredType) throws AtlasException {
             final Edge edge = titanGraph.getEdge(edgeId);
-            final Vertex referredVertex = edge.getVertex(Direction.IN);
-            if (referredVertex != null) {
-                switch (referredType.getTypeCategory()) {
-                case STRUCT:
-                    LOG.debug("Found struct instance vertex {}, mapping to instance {} ", referredVertex,
-                        referredType.getName());
-                    StructType structType = typeSystem.getDataType(StructType.class, referredType.getName());
-                    ITypedStruct instance = structType.createInstance();
-                    Map<String, AttributeInfo> fields = structType.fieldMapping().fields;
-                    mapVertexToInstance(referredVertex, instance, fields);
-                    return instance;
-                case CLASS:
-                    //TODO isComposite handling for class loads
-                    final String guid = referredVertex.getProperty(Constants.GUID_PROPERTY_KEY);
-                    Id referenceId =
-                        new Id(guid, referredVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY),
+            if(edge != null) {
+                final Vertex referredVertex = edge.getVertex(Direction.IN);
+                if (referredVertex != null) {
+                    switch (referredType.getTypeCategory()) {
+                    case STRUCT:
+                        LOG.debug("Found struct instance vertex {}, mapping to instance {} ", referredVertex,
                             referredType.getName());
-                    LOG.debug("Adding id {} ", referenceId);
-                default:
-                    throw new UnsupportedOperationException("Loading " + referredType.getTypeCategory() + " is not supported");
+                        StructType structType = typeSystem.getDataType(StructType.class, referredType.getName());
+                        ITypedStruct instance = structType.createInstance();
+                        Map<String, AttributeInfo> fields = structType.fieldMapping().fields;
+                        mapVertexToInstance(referredVertex, instance, fields);
+                        return instance;
+                    case CLASS:
+                        //TODO isComposite handling for class loads
+                        final String guid = referredVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+                        Id referenceId =
+                            new Id(guid, referredVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY),
+                                referredType.getName());
+                        LOG.debug("Adding id {} ", referenceId);
+                    default:
+                        throw new UnsupportedOperationException("Loading " + referredType.getTypeCategory() + " is not supported");
+                    }
                 }
             }
             return null;

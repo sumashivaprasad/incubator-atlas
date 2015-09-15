@@ -71,10 +71,10 @@ object HiveTitanSample {
                 convertedVal match {
                     case x: Vertex => addEdge(x, s"${this.getClass.getSimpleName}.${f.getName}", edges)
                     case l: List[_] => val edgeList = l.map(x =>
-                        s"""${addEdge(x.asInstanceOf[Vertex], s"${this.getClass.getSimpleName}.${f.getName}", edges)}"""
+                        s""""${addEdge(x.asInstanceOf[Vertex], s"${this.getClass.getSimpleName}.${f.getName}", edges)}""""
                     )
                     if(l.head.isInstanceOf[Struct]) {
-                        sb.append( s""", "${f.getName}" : ${edgeList.mkString("[", ",", "]")}""")
+                        sb.append( s""", "${this.getClass.getSimpleName}.${f.getName}" : ${edgeList.mkString("[", ",", "]")}""")
                     }
                     case _ => sb.append( s""", "${f.getName}" : $convertedVal""")
                         sb.append( s""", "${this.getClass.getSimpleName}.${f.getName}" : $convertedVal""")
