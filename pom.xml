@@ -295,7 +295,7 @@
         <developer>
             <id>ssuresh</id>
             <name>Suresh Srinivas</name>
-            <email> ssuresh@apache.org</email>
+            <email>ssuresh@apache.org</email>
             <timezone>-8</timezone>
             <roles>
                 <role>committer</role>
@@ -306,7 +306,7 @@
         <developer>
             <id>vranganathan</id>
             <name>Venkat Ranganathan</name>
-            <email> vranganathan@apache.org</email>
+            <email>vranganathan@apache.org</email>
             <timezone>-8</timezone>
             <roles>
                 <role>committer</role>
@@ -320,7 +320,7 @@
         <!-- platform encoding override -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
+        <node.version>v0.10.30</node.version>
         <slf4j.version>1.7.7</slf4j.version>
         <jetty.version>9.2.12.v20150709</jetty.version>
         <jersey.version>1.10</jersey.version>
@@ -361,34 +361,6 @@
     </properties>
 
     <profiles>
-        <profile>
-            <id>Windows</id>
-            <activation>
-                <os>
-                    <family>windows</family>
-                </os>
-            </activation>
-            <properties>
-                <python.path.l>
-                    ${project.basedir}\src\bin;${project.basedir}\src\test\python\scripts;${project.basedir}\src\test\mock
-                </python.path.l>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>Linux</id>
-            <activation>
-                <os>
-                    <family>!windows</family>
-                </os>
-            </activation>
-            <properties>
-                <python.path.l>
-                    ${project.basedir}/src/bin:${project.basedir}/src/test/mock:${project.basedir}/src/test/python/scripts
-                </python.path.l>
-            </properties>
-        </profile>
-
         <!-- Turning on this profile affects only tests and does not affect packaging -->
         <profile>
             <id>distributed</id>
@@ -427,7 +399,7 @@
         <module>webapp</module>
         <module>docs</module>
         <module>addons/hive-bridge</module>
-        <module>builder</module>
+        <module>distro</module>
     </modules>
 
     <repositories>
@@ -502,7 +474,17 @@
                         <groupId>javax.servlet</groupId>
                         <artifactId>*</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.glassfish</groupId>
+                        <artifactId>javax.el</artifactId>
+                    </exclusion>
                 </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish</groupId>
+                <artifactId>javax.el</artifactId>
+                <version>3.0.0</version>
             </dependency>
 
             <!-- Logging -->
@@ -1269,6 +1251,15 @@
                 </plugin>
 
                 <plugin>
+                    <groupId>com.github.eirslett</groupId>
+                    <artifactId>frontend-maven-plugin</artifactId>
+                    <version>0.0.23</version>
+                    <configuration>
+                        <workingDirectory>../dashboard/</workingDirectory>
+                    </configuration>
+                </plugin>
+
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.16</version>
@@ -1315,7 +1306,7 @@
                     <artifactId>findbugs-maven-plugin</artifactId>
                     <version>3.0.1</version>
                 </plugin>
-                
+
                 <!-- Source code metrics: mvn javancss:report or mvn site -->
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1560,12 +1551,20 @@
                         <exclude>**/maven-eclipse.xml</exclude>
                         <exclude>**/.externalToolBuilders/**</exclude>
                         <exclude>**/build.log</exclude>
-                        <exclude>dashboard/**/.bower-*/**</exclude> <!-- temp libs -->
-                        <exclude>dashboard/v2/.bowerrc</exclude> <!-- json file -->
-                        <exclude>dashboard/v2/lib/**</exclude>  <!-- temp libs -->
-                        <exclude>dashboard/v2/node*/**</exclude>  <!-- temp libs -->
-                        <exclude>dashboard/v2/dist/**</exclude>  <!-- package -->
-                        <exclude>dashboard/v2/**/*.min.js*</exclude> <!-- minified JS -->
+                        <!-- temp libs -->
+                        <exclude>dashboard/.bower-*/**</exclude>
+                        <!-- json file -->
+                        <exclude>dashboard/.bowerrc</exclude>
+                        <!-- temp libs -->
+                        <exclude>dashboard/lib/**</exclude>
+                        <!-- temp libs -->
+                        <exclude>dashboard/node*/**</exclude>
+                        <!-- package -->
+                        <exclude>dashboard/dist/**</exclude>
+                        <!-- lib files -->
+                        <exclude>dashboard/public/lib/**</exclude>
+                        <!-- minified JS -->
+                        <exclude>dashboard/**/*.min.js*</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -1625,32 +1624,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>javancss-maven-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.2.1</version>
-                <inherited>false</inherited>
-                <executions>
-                    <execution>
-                        <configuration>
-                            <executable>python</executable>
-                            <workingDirectory>src/test/python</workingDirectory>
-                            <arguments>
-                                <argument>unitTests.py</argument>
-                            </arguments>
-                            <environmentVariables>
-                                <PYTHONPATH>${python.path.l}</PYTHONPATH>
-                            </environmentVariables>
-                        </configuration>
-                        <id>python-test</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>
