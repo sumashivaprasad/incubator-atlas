@@ -95,7 +95,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                          |      },
                          |      {
                          |        "name":"sd",
-                         |        "dataTypeName":"StorageDesc",
+                         |        "dataTypeName":"StorageDescriptor",
                          |        "multiplicity":{
                          |          "lower":1,
                          |          "upper":1,
@@ -130,7 +130,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                          |      },
                          |      "created":"2014-12-11T02:35:58.440Z",
                          |      "sd":{
-                         |        "$typeName$":"StorageDesc",
+                         |        "$typeName$":"StorageDescriptor",
                          |        "version":0
                          |      },
                          |      "db":{
@@ -147,7 +147,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                          |      },
                          |      "created":"2014-12-11T02:35:58.440Z",
                          |      "sd":{
-                         |        "$typeName$":"StorageDesc",
+                         |        "$typeName$":"StorageDescriptor",
                          |        "version":0
                          |      },
                          |      "db":{
@@ -169,7 +169,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                          |      },
                          |      "created":"2014-12-11T02:35:58.440Z",
                          |      "sd":{
-                         |        "$typeName$":"StorageDesc",
+                         |        "$typeName$":"StorageDescriptor",
                          |        "version":0
                          |      },
                          |      "db":{
@@ -227,7 +227,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      {
                           |        "name":"sd",
-                          |        "dataTypeName":"StorageDesc",
+                          |        "dataTypeName":"StorageDescriptor",
                           |        "multiplicity":{
                           |          "lower":1,
                           |          "upper":1,
@@ -257,13 +257,12 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |    {
                           |      "$typeName$":"Table",
                           |      "$id$":{
-                          |        "id":"9216",
                           |        "$typeName$":"Table",
                           |        "version":0
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -280,7 +279,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -297,7 +296,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -314,7 +313,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -331,7 +330,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -449,7 +448,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      {
                           |        "name":"sd",
-                          |        "dataTypeName":"StorageDesc",
+                          |        "dataTypeName":"StorageDescriptor",
                           |        "multiplicity":{
                           |          "lower":1,
                           |          "upper":1,
@@ -484,7 +483,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -501,7 +500,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{
@@ -518,7 +517,7 @@ class LineageQueryTest extends FunSuite with BeforeAndAfterAll with BaseGremlinT
                           |      },
                           |      "created":"2014-12-11T02:35:58.440Z",
                           |      "sd":{
-                          |        "$typeName$":"StorageDesc",
+                          |        "$typeName$":"StorageDescriptor",
                           |        "version":0
                           |      },
                           |      "db":{

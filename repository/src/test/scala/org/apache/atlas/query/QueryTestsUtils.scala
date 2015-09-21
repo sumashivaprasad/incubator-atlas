@@ -152,8 +152,6 @@ object QueryTestsUtils extends GraphUtils {
     }
 
     def setupTestGraph(gp: TitanGraphProvider): TitanGraph = {
-//        var conf = ConfigFactory.load()
-//        conf = conf.getConfig("graphRepo")
         val g = gp.get
         val manager: ScriptEngineManager = new ScriptEngineManager
         val engine: ScriptEngine = manager.getEngineByName("gremlin-groovy")

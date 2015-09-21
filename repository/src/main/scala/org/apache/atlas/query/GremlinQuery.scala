@@ -77,6 +77,7 @@ trait SelectExpressionHandling {
         val l = ArrayBuffer[String]()
         e.traverseUp {
             case BackReference(alias, _, _) => l += alias
+            case ClassExpression(clsName) => l += clsName
         }
         l.toSet.toList
     }
@@ -299,8 +300,15 @@ class GremlinTranslator(expr: Expression,
             s"""out("${gPersistenceBehavior.traitLabel(clsExp.dataType, traitName)}")"""
         case isTraitUnaryExpression(traitName, child) =>
             s"""out("${gPersistenceBehavior.traitLabel(child.dataType, traitName)}")"""
-        case hasFieldLeafExpression(fieldName, Some(clsExp)) =>
-            s"""has("$fieldName")"""
+        case hasFieldLeafExpression(fieldName, clsExp) => clsExp match {
+            case None => s"""has("$fieldName")"""
+            case Some(x) =>
+             x match {
+                 case c: ClassExpression =>
+                     s"""has("${x.asInstanceOf[ClassExpression].clsName}.$fieldName")"""
+                 case default => s"""has("$fieldName")"""
+             }
+        }
         case hasFieldUnaryExpression(fieldName, child) =>
             s"""${genQuery(child, inSelect)}.has("$fieldName")"""
         case ArithmeticExpression(symb, left, right) => s"${genQuery(left, inSelect)} $symb ${genQuery(right, inSelect)}"

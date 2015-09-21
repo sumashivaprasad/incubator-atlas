@@ -397,7 +397,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      {
                       |        "name":"sd",
-                      |        "dataTypeName":"StorageDesc",
+                      |        "dataTypeName":"StorageDescriptor",
                       |        "multiplicity":{
                       |          "lower":1,
                       |          "upper":1,
@@ -432,7 +432,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -454,7 +454,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -476,7 +476,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -623,7 +623,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      {
                       |        "name":"sd",
-                      |        "dataTypeName":"StorageDesc",
+                      |        "dataTypeName":"StorageDescriptor",
                       |        "multiplicity":{
                       |          "lower":1,
                       |          "upper":1,
@@ -658,7 +658,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -675,7 +675,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -697,7 +697,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -719,7 +719,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -741,7 +741,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -758,7 +758,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |      },
                       |      "created":"2014-12-11T02:35:58.440Z",
                       |      "sd":{
-                      |        "$typeName$":"StorageDesc",
+                      |        "$typeName$":"StorageDescriptor",
                       |        "version":0
                       |      },
                       |      "db":{
@@ -779,7 +779,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
 
   test("testArith") {
     val r = QueryProcessor.evaluate(_class("DB").where(id("name").`=`(string("Reporting"))).
-      select(id("name"), id("createTime") + int(1)), g)
+      select(id("name"), id("createTime") + int(1)), g, gp)
     validateJson(r, "{\n  \"query\":\"DB where (name = \\\"Reporting\\\") as _src1 select _src1.name as _col_0, (_src1.createTime + 1) as _col_1\",\n  \"dataType\":{\n    \"typeName\":\"__tempQueryResultStruct3\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"_col_0\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"_col_1\",\n        \"dataTypeName\":\"int\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"__tempQueryResultStruct3\",\n      \"_col_1\":1501,\n      \"_col_0\":\"Reporting\"\n    }\n  ]\n}")
   }
 
@@ -890,7 +890,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
         .or(id("db1").hasField("owner"))).field("Table").as("tab")
         .select(id("db1").field("name").as("dbName"), id("tab").field("name").as("tabName")), g, gp
     )
-    validateJson(r, "{\n  \"query\":\"DB as db1 where (db1.createTime > 0) and (db1.name = \\\"Reporting\\\") or DB as db1 has owner Table as tab select db1.name as dbName, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"__tempQueryResultStruct7\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"sales_fact\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"customer_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_daily_mv\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_monthly_mv\"\n    }\n  ]\n}")
+    validateJson(r, "{\n  \"query\":\"DB as db1 where (db1.createTime > 0) and (db1.name = \\\"Reporting\\\") or db1 has owner Table as tab select db1.name as dbName, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"__tempQueryResultStruct7\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"sales_fact\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Sales\",\n      \"tabName\":\"customer_dim\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_daily_mv\"\n    },\n    {\n      \"$typeName$\":\"__tempQueryResultStruct7\",\n      \"dbName\":\"Reporting\",\n      \"tabName\":\"sales_fact_monthly_mv\"\n    }\n  ]\n}")
   }
 
   test("testJoinAndSelect4") {
@@ -899,7 +899,7 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
         where((isTrait("Dimension"))).
         select(id("db1").as("dbO"), id("tab").field("name").as("tabName")), g, gp
     )
-    validateJson(r, "{\n  \"query\":\"DB as db1 where (name = \\\"Sales\\\") Table as tab where DB as db1 where (name = \\\"Sales\\\") Table as tab is Dimension as _src1 select db1 as dbO, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbO\",\n        \"dataTypeName\":\"DB\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"id\":\"256\",\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"customer_dim\"\n    }\n  ]\n}")
+    validateJson(r, "{\n  \"query\":\"DB as db1 where (name = \\\"Sales\\\") Table as tab where DB as db1 where (name = \\\"Sales\\\") Table as tab is Dimension as _src1 select db1 as dbO, tab.name as tabName\",\n  \"dataType\":{\n    \"typeName\":\"\",\n    \"attributeDefinitions\":[\n      {\n        \"name\":\"dbO\",\n        \"dataTypeName\":\"DB\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      },\n      {\n        \"name\":\"tabName\",\n        \"dataTypeName\":\"string\",\n        \"multiplicity\":{\n          \"lower\":0,\n          \"upper\":1,\n          \"isUnique\":false\n        },\n        \"isComposite\":false,\n        \"isUnique\":false,\n        \"isIndexable\":true,\n        \"reverseAttributeName\":null\n      }\n    ]\n  },\n  \"rows\":[\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"product_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"time_dim\"\n    },\n    {\n      \"$typeName$\":\"\",\n      \"dbO\":{\n        \"$typeName$\":\"DB\",\n        \"version\":0\n      },\n      \"tabName\":\"customer_dim\"\n    }\n  ]\n}")
   }
 
   test("testArrayComparision") {
@@ -932,7 +932,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |    {
                       |      "$typeName$":"__tempQueryResultStruct2",
                       |      "_col_0":{
-                      |        "id":"13824",
                       |        "$typeName$":"Partition",
                       |        "version":0
                       |      }
@@ -1032,7 +1031,6 @@ class GremlinTest extends FunSuite with BeforeAndAfterAll with BaseGremlinTest {
                       |        "2015-01-01"
                       |      ],
                       |      "table":{
-                      |        "id":"9216",
                       |        "$typeName$":"Table",
                       |        "version":0
                       |      }

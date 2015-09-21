@@ -87,7 +87,7 @@ object HiveTitanSample {
 
                 if (traits.isDefined) {
                     val fV = traits.get.map(_.getClass.getSimpleName).mkString(",")
-                    sb.append( s""", "traitNames" : "$fV"""")
+                    sb.append( s""", "${Constants.TRAIT_NAMES_PROPERTY_KEY}" : "$fV"""")
                 }
             }
 
@@ -98,10 +98,14 @@ object HiveTitanSample {
         def isPrimitiveType(ls: List[_]) : Boolean = {
             ls.head match {
                 case _: String => true
+                case _: Byte => true
+                case _: Short => true
                 case _: Int => true
+                case _: Long => true
                 case _: Float => true
                 case _: Double => true
-                case _: Long => true
+                case _: BigDecimal => true
+                case _: BigInt => true
                 case _: Boolean => true
                 case default => false
             }
