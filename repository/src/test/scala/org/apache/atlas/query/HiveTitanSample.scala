@@ -19,15 +19,14 @@
 package org.apache.atlas.query
 
 import java.io.File
-import java.util.{Date, UUID}
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.{Date, UUID}
 import javax.script.{Bindings, ScriptEngine, ScriptEngineManager}
 
 import com.thinkaurelius.titan.core.TitanGraph
-import com.typesafe.config.ConfigFactory
-import org.apache.atlas.repository.{Constants, BaseTest}
+import org.apache.atlas.repository.Constants
 import org.apache.atlas.repository.graph.TitanGraphProvider
-import org.apache.atlas.typesystem.types.TypeSystem
+import org.apache.atlas.TestUtils
 import org.apache.commons.io.FileUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -175,7 +174,7 @@ object HiveTitanSample {
                         created: Option[Date] = None) {
         val createdDate : Date = created match {
             case Some(x) => x
-            case None => new Date(BaseTest.TEST_DATE_IN_LONG)
+            case None => new Date(TestUtils.TEST_DATE_IN_LONG)
         }
 
         val colDefs = columns map { c =>

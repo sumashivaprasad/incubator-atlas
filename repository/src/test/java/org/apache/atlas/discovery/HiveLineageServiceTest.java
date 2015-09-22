@@ -32,6 +32,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.util.List;
 
 /**
  * Unit tests for Hive LineageService.
