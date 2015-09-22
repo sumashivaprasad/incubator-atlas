@@ -20,17 +20,11 @@ package org.apache.atlas.discovery;
 
 import com.google.common.collect.ImmutableList;
 import com.thinkaurelius.titan.core.TitanGraph;
-import com.thinkaurelius.titan.core.util.TitanCleanup;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Vertex;
-import org.apache.atlas.BaseHiveTest;
+import org.apache.atlas.BaseHiveRepositoryTest;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
-import org.apache.atlas.query.HiveTitanSample;
-import org.apache.atlas.query.QueryTestsUtils;
 import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
-import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
@@ -39,7 +33,6 @@ import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
-import org.apache.commons.io.FileUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
@@ -50,18 +43,13 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import javax.script.Bindings;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-import java.io.File;
 
 import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
 import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
 import static org.apache.atlas.typesystem.types.utils.TypesUtil.createRequiredAttrDef;
 
 @Guice(modules = RepositoryMetadataModule.class)
-public class GraphBackedDiscoveryServiceTest extends BaseHiveTest {
+public class GraphBackedDiscoveryServiceTest extends BaseHiveRepositoryTest {
 
     @Inject
     private GraphProvider<TitanGraph> graphProvider;
@@ -160,7 +148,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseHiveTest {
                 {"hive_table isa Dimension", 3},
                 {"hive_column where hive_column isa PII", 6},
                 {"View is Dimension" , 2},
-//                {"hive_column where hive_column isa PII select hive_column.name", 6}, //Not working
+//                {"hive_column where hive_column isa PII select hive_column.name", 6}, //Not working - ATLAS-175
                 {"hive_column select hive_column.name", 27},
                 {"hive_column select name", 27},
                 {"hive_column where hive_column.name=\"customer_id\"", 4},
@@ -194,20 +182,22 @@ public class GraphBackedDiscoveryServiceTest extends BaseHiveTest {
                 {"Metric", 5},
                 {"PII", 6},
 
-                // Lineage
-//                {"DataSet where name=\"sales_fact_daily_mv\" loop (Process outputs)", 3},
-//                {"hive_table loop (hive_process outputs)", 5},
-//                {"hive_table as _loop0 loop (hive_process outputs) withPath", 5},
-//                {"hive_table as src loop (hive_process outputs) as dest select src.name as srcTable, dest.name as "
-//                        + "destTable withPath", 5},
-//                {"hive_table as t, sd, hive_column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
-//                        + "colType", 0}, //Not working - ATLAS-145 and ATLAS-166
-//
+                /* Lineage queries are fired through ClosureQuery and are tested through HiveLineageJerseyResourceIt in webapp module.
+                   Commenting out the below queries since DSL to Gremlin parsing/translation fails with lineage queries when there are array types
+                   used within loop expressions which is the case with DataSet.inputs and outputs.
+                  // Lineage
+                  {"Table LoadProcess outputTable"}, {"Table loop (LoadProcess outputTable)"},
+                  {"Table as _loop0 loop (LoadProcess outputTable) withPath"},
+                  {"Table as src loop (LoadProcess outputTable) as dest select src.name as srcTable, dest.name as "
+                                        + "destTable withPath"},
+                 */
+                {"hive_table as t, sd, hive_column as c where t.name=\"sales_fact\" select c.name as colName, c.dataType as "
+                        + "colType", 0}, //Not working - ATLAS-145 and ATLAS-166
 
                 {"hive_table where name='sales_fact', db where name='Sales'", 1},
                 {"hive_table where name='sales_fact', db where name='Reporting'", 0},
                 {"hive_partition as p where values = ['2015-01-01']", 1},
-//                {"StorageDescriptor select sortCols", 2} //Not working due to edgeId being different from GraphSon edgeId
+//              {"StorageDesc select cols", 6} //Not working since loading of lists needs to be fixed yet
         };
     }
 

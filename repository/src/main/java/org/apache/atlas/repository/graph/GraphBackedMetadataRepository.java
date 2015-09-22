@@ -1205,7 +1205,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                         Id referenceId =
                             new Id(guid, referredVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY),
                                 referredType.getName());
-                        LOG.debug("Adding id {} ", referenceId);
+                        return referenceId;
                     default:
                         throw new UnsupportedOperationException("Loading " + referredType.getTypeCategory() + " is not supported");
                     }

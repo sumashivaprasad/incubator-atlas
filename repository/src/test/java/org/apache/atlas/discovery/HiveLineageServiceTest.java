@@ -18,33 +18,10 @@
 
 package org.apache.atlas.discovery;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.thinkaurelius.titan.core.TitanGraph;
-import com.thinkaurelius.titan.core.util.TitanCleanup;
-import org.apache.atlas.BaseHiveTest;
+import org.apache.atlas.BaseHiveRepositoryTest;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.repository.EntityNotFoundException;
-import org.apache.atlas.repository.graph.GraphProvider;
-import org.apache.atlas.services.DefaultMetadataService;
-import org.apache.atlas.typesystem.Referenceable;
-import org.apache.atlas.typesystem.TypesDef;
-import org.apache.atlas.typesystem.json.InstanceSerialization;
-import org.apache.atlas.typesystem.json.TypesSerialization;
-import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.typesystem.types.AttributeDefinition;
-import org.apache.atlas.typesystem.types.ClassType;
-import org.apache.atlas.typesystem.types.DataTypes;
-import org.apache.atlas.typesystem.types.EnumTypeDefinition;
-import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
-import org.apache.atlas.typesystem.types.IDataType;
-import org.apache.atlas.typesystem.types.Multiplicity;
-import org.apache.atlas.typesystem.types.StructTypeDefinition;
-import org.apache.atlas.typesystem.types.TraitType;
-import org.apache.atlas.typesystem.types.TypeSystem;
-import org.apache.atlas.typesystem.types.TypeUtils;
-import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
@@ -55,16 +32,12 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
 
 /**
  * Unit tests for Hive LineageService.
  */
 @Guice(modules = RepositoryMetadataModule.class)
-public class HiveLineageServiceTest extends BaseHiveTest {
+public class HiveLineageServiceTest extends BaseHiveRepositoryTest {
 
     @Inject
     private GraphBackedDiscoveryService discoveryService;

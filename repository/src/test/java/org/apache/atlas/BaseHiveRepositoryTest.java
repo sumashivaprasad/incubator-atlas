@@ -54,7 +54,7 @@ import java.util.List;
  *  Base Class to set up hive types and instances for tests
  */
 @Guice(modules = RepositoryMetadataModule.class)
-public class BaseHiveTest {
+public class BaseHiveRepositoryTest {
 
     @Inject
     protected DefaultMetadataService metadataService;
@@ -114,7 +114,6 @@ public class BaseHiveTest {
                 attrDef("location", DataTypes.STRING_TYPE),
                 attrDef("inputFormat", DataTypes.STRING_TYPE), attrDef("outputFormat", DataTypes.STRING_TYPE),
                 attrDef("compressed", DataTypes.STRING_TYPE, Multiplicity.REQUIRED, false, null));
-
 
 
         HierarchicalTypeDefinition<ClassType> tblClsDef = TypesUtil
