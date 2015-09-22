@@ -21,9 +21,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
+import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.services.DefaultMetadataService;
+import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
@@ -58,6 +60,9 @@ public class BaseHiveRepositoryTest {
 
     @Inject
     protected DefaultMetadataService metadataService;
+
+    @Inject
+    protected GraphBackedMetadataRepository repository;
 
     @Inject
     protected GraphProvider<TitanGraph> graphProvider;
@@ -254,7 +259,8 @@ public class BaseHiveRepositoryTest {
         referenceable.set("locationUri", locationUri);
         referenceable.set("createTime", System.currentTimeMillis());
 
-        return createInstance(referenceable);
+        ClassType clsType = TypeSystem.getInstance().getDataType(ClassType.class, DATABASE_TYPE);
+        return createInstance(referenceable, clsType);
     }
 
     Referenceable storageDescriptor(String location, String inputFormat, String outputFormat, boolean compressed, List<Referenceable> columns)
@@ -295,7 +301,8 @@ public class BaseHiveRepositoryTest {
         referenceable.set("sd", sd);
         referenceable.set("columns", columns);
 
-        return createInstance(referenceable);
+        ClassType clsType = TypeSystem.getInstance().getDataType(ClassType.class, HIVE_TABLE_TYPE);
+        return createInstance(referenceable, clsType);
     }
 
     Id loadProcess(String name, String description, String user, List<Id> inputTables, List<Id> outputTables,
@@ -316,7 +323,8 @@ public class BaseHiveRepositoryTest {
         referenceable.set("queryId", queryId);
         referenceable.set("queryGraph", queryGraph);
 
-        return createInstance(referenceable);
+        ClassType clsType = TypeSystem.getInstance().getDataType(ClassType.class, HIVE_PROCESS_TYPE);
+        return createInstance(referenceable, clsType);
     }
 
     Id view(String name, Id dbId, List<Id> inputTables, String... traitNames) throws Exception {
@@ -325,19 +333,23 @@ public class BaseHiveRepositoryTest {
         referenceable.set("db", dbId);
 
         referenceable.set("inputTables", inputTables);
-
-        return createInstance(referenceable);
+        ClassType clsType = TypeSystem.getInstance().getDataType(ClassType.class, VIEW_TYPE);
+        return createInstance(referenceable, clsType);
     }
 
     Id partition(List<String> values, Id table, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(PARTITION_TYPE, traitNames);
         referenceable.set("values", values);
         referenceable.set("table", table);
-        return createInstance(referenceable);
+        ClassType clsType = TypeSystem.getInstance().getDataType(ClassType.class, PARTITION_TYPE);
+        return createInstance(referenceable, clsType);
     }
-    private Id createInstance(Referenceable referenceable) throws Exception {
-        String entityJSON = InstanceSerialization.toJson(referenceable, true);
-        String guid = metadataService.createEntity(entityJSON);
+    private Id createInstance(Referenceable referenceable, ClassType clsType) throws Exception {
+//        String entityJSON = InstanceSerialization.toJson(referenceable, true);
+
+
+        ITypedReferenceableInstance typedInstance = clsType.convert(referenceable, Multiplicity.REQUIRED);
+        String guid = repository.createEntities(typedInstance)[0];
 
         // return the reference to created instance with guid
         return new Id(guid, 0, referenceable.getTypeName());
