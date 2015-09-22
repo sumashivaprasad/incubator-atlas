@@ -199,8 +199,6 @@ object GraphPersistenceStrategy1 extends GraphPersistenceStrategies {
 
     def traitLabel(cls: IDataType[_], traitName: String) = s"${cls.getName}.$traitName"
 
-//  def fieldNameInVertex(dataType: IDataType[_], aInfo: AttributeInfo) = aInfo.name
-
     def fieldNameInVertex(dataType: IDataType[_], aInfo: AttributeInfo) = GraphBackedMetadataRepository.getQualifiedName(dataType, aInfo.name)
 
     def getIdFromVertex(dataTypeNm: String, v: TitanVertex): Id =

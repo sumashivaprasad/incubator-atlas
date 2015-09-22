@@ -370,9 +370,6 @@ object HiveTitanSample {
 
 object TestApp extends App with GraphUtils {
 
-//    var conf = ConfigFactory.load()
-//    conf = conf.getConfig("graphRepo")
-//    val g: TitanGraph = titanGraph()
     val g: TitanGraph = TitanGraphProvider.getGraphInstance
     val manager: ScriptEngineManager = new ScriptEngineManager
     val engine: ScriptEngine = manager.getEngineByName("gremlin-groovy")
