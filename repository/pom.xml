@@ -89,9 +89,13 @@
             <artifactId>titan-es</artifactId>
         </dependency>
 
+        <!--<dependency>-->
+            <!--<groupId>com.thinkaurelius.titan</groupId>-->
+            <!--<artifactId>titan-solr</artifactId>-->
+        <!--</dependency>-->
         <dependency>
-            <groupId>com.thinkaurelius.titan</groupId>
-            <artifactId>titan-solr</artifactId>
+            <groupId>com.vividsolutions</groupId>
+            <artifactId>jts</artifactId>
         </dependency>
 
         <dependency>
