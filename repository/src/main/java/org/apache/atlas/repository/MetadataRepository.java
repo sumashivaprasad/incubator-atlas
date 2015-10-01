@@ -21,6 +21,7 @@ package org.apache.atlas.repository;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
+import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.IDataType;
 
@@ -158,6 +159,22 @@ public interface MetadataRepository {
      * @param value    property value
      */
     void updateEntity(String guid, String property, String value) throws RepositoryException;
+
+    /**
+     * Adds the property to the entity that corresponds to the GUID
+     * @param guid entity id
+     * @param entityUpdated The updated entity values
+     */
+    void updateEntity(String guid, Referenceable entityUpdated) throws RepositoryException;
+
+    /**
+     * Adds the property to the entity that corresponds to the GUID
+     * @param entityType
+     * @param uniqAttributeName
+     * @param uniqAttributeValue
+     * @param entityUpdated The updated entity values
+     */
+    void updateEntity(String entityType, String uniqAttributeName, String uniqAttributeValue, Referenceable entityUpdated) throws RepositoryException;
 
     /**
      * Returns the entity for the given type and qualified name

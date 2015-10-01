@@ -19,6 +19,7 @@
 package org.apache.atlas.services;
 
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.codehaus.jettison.json.JSONObject;
 
@@ -102,6 +103,14 @@ public interface MetadataService {
      * @param value    property value
      */
     void updateEntity(String guid, String property, String value) throws AtlasException;
+
+    /**
+     * Adds the property to the given entity id(guid).
+     *
+     * @param guid entity id
+     * @param updatedEntity Contains values that needs to be updated onto the original entity
+     */
+    void updateEntity(String guid, Referenceable updatedEntity) throws AtlasException;
 
     // Trait management functions
 

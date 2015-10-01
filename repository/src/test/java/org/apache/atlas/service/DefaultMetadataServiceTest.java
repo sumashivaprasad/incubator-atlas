@@ -18,6 +18,7 @@
 
 package org.apache.atlas.service;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
@@ -80,11 +81,26 @@ public class DefaultMetadataServiceTest {
         return new JSONArray(response).getString(0);
     }
 
+    private void updateInstance(String guid, String property, Object value) throws Exception {
+        String attrValueJson = InstanceSerialization._toJson(value, true);
+        metadataService.updateEntity(guid, property, attrValueJson);
+    }
+
     private Referenceable createDBEntity() {
         Referenceable entity = new Referenceable(TestUtils.DATABASE_TYPE);
         String dbName = RandomStringUtils.randomAlphanumeric(10);
         entity.set("name", dbName);
         entity.set("description", "us db");
+        return entity;
+    }
+
+    private Referenceable createTableEntity(Referenceable db) {
+        Referenceable entity = new Referenceable(TestUtils.TABLE_TYPE);
+        String tableName = RandomStringUtils.randomAlphanumeric(10);
+        entity.set("name", tableName);
+        entity.set("description", "us db");
+        entity.set("tableType", "MANAGED");
+        entity.set("database", db);
         return entity;
     }
 
@@ -123,6 +139,19 @@ public class DefaultMetadataServiceTest {
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Referenceable actualDb = (Referenceable) tableDefinition.get("database");
         Assert.assertEquals(actualDb.getId().id, dbId);
+    }
+
+    @Test
+    public void testUpdateEntityWithArray() throws Exception {
+        Referenceable db = createDBEntity();
+        String id = createInstance(db);
+
+        Referenceable table = createTableEntity(db);
+        String tableId = createInstance(table);
+
+        //Update entity, add new array attribute
+//      table.set("columns", ImmutableList.of("col1", "col2"));
+        updateInstance(tableId, "columns", ImmutableList.of("col1", "col2"));
     }
 
     @Test

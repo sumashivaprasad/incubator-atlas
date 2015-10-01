@@ -336,6 +336,14 @@ public class DefaultMetadataService implements MetadataService {
         repository.updateEntity(guid, property, value);
     }
 
+    @Override
+    public void updateEntity(String guid, Referenceable updatedEntity) throws AtlasException {
+        ParamChecker.notEmpty(guid, "guid cannot be null");
+        ParamChecker.notNull(updatedEntity, "updatedEntity cannot be null");
+
+        repository.updateEntity(guid, updatedEntity);
+    }
+
     private void validateTypeExists(String entityType) throws AtlasException {
         ParamChecker.notEmpty(entityType, "entity type cannot be null");
 
