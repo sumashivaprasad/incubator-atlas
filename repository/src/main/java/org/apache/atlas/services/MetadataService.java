@@ -97,12 +97,13 @@ public interface MetadataService {
 
     /**
      * Adds the property to the given entity id(guid).
+     * Currently supports updates only on PRIMITIVE, CLASS attribute types
      *
      * @param guid entity id
-     * @param property property name
+     * @param attribute property name
      * @param value    property value
      */
-    void updateEntity(String guid, String property, String value) throws AtlasException;
+    void updateEntity(String guid, String attribute, String value) throws AtlasException;
 
     /**
      * Adds the property to the given entity id(guid).

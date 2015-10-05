@@ -118,6 +118,15 @@ public final class GraphHelper {
         ((TitanVertex)vertex).addProperty(propertyName, value);
     }
 
+    public static void removeRelation(TitanGraph titanGraph, String edgeId, boolean cascade) {
+        final Edge edge = titanGraph.getEdge(edgeId);
+        if (cascade) {
+           Vertex referredVertex = edge.getVertex(Direction.IN);
+           titanGraph.removeVertex(referredVertex);
+        }
+        titanGraph.removeEdge(edge);
+    }
+
 /*
     public static void dumpToLog(final Graph graph) {
         LOG.debug("*******************Graph Dump****************************");
