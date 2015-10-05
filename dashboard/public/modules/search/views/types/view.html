@@ -15,21 +15,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<table class="table table-bordered">
-    <thead>
-    <tr>
-        <th>Name</th>
-        <th>Comment</th>
-        <th>DataType</th>
-    </tr>
-    </thead>
-    <tbody ng-repeat="colm in details.values.columns">
-    <tr>
-        <td> {{colm.values.name}}</td>
-        <td>{{colm.values.comment}}</td>
-        <td> {{colm.values.dataType}}</td>
 
-    </tr>
-
-    </tbody>
-</table>
+<h4><a data-ui-sref="details({id:result['$id$'].id})">{{result.name}}</a></h4>
+<p><b>inputTables: </b><a ng-repeat="inputs in result.inputTables" data-ui-sref="details({id: inputs.id})">{{ inputs.id}}</a></p>
+<h5>Tags :  <a ng-repeat="(key, value) in result['$traits$']" data-ui-sref="search.results({query: key})">{{key}}</a> </h5>
