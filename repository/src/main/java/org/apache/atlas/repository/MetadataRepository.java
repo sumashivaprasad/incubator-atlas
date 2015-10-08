@@ -81,7 +81,7 @@ public interface MetadataRepository {
      * @throws RepositoryException
      * @throws EntityExistsException
      */
-    String[] createEntities(ITypedReferenceableInstance... entities) throws RepositoryException, EntityExistsException;
+    String[] createOrUpdateEntities(ITypedReferenceableInstance... entities) throws RepositoryException, EntityExistsException;
 
     /**
      * Fetch the complete definition of an entity given its GUID.
@@ -109,20 +109,6 @@ public interface MetadataRepository {
      * @throws RepositoryException
      */
     // boolean deleteEntity(String guid) throws RepositoryException;
-
-    /**
-     * Updates an entity given its GUID with the attribute name and value.
-     *
-     * @param guid           globally unique identifier for the entity
-     * @param attributeName  name of the attribute
-     * @param attributeValue value of the attribute
-     * @return an entity instance with updated state
-     * @throws RepositoryException
-     */
-    //ITypedReferenceableInstance updateEntity(String guid, String attributeName,
-    //                                         String attributeValue) throws RepositoryException;
-
-
     // Trait management functions
 
     /**
@@ -153,28 +139,14 @@ public interface MetadataRepository {
     void deleteTrait(String guid, String traitNameToBeDeleted) throws RepositoryException;
 
     /**
-     * Adds the property to the entity that corresponds to the GUID
+     * Adds/Updates the property to the entity that corresponds to the GUID
+     * Supports only primitive attribute/Class Id updations.
      * @param guid entity id
      * @param property property name
      * @param value    property value
      */
     void updateEntity(String guid, String property, String value) throws RepositoryException;
 
-    /**
-     * Adds the property to the entity that corresponds to the GUID
-     * @param guid entity id
-     * @param entityUpdated The updated entity values
-     */
-    void updateEntity(String guid, Referenceable entityUpdated) throws RepositoryException;
-
-    /**
-     * Adds the property to the entity that corresponds to the GUID
-     * @param entityType
-     * @param uniqAttributeName
-     * @param uniqAttributeValue
-     * @param entityUpdated The updated entity values
-     */
-    void updateEntity(String entityType, String uniqAttributeName, String uniqAttributeValue, Referenceable entityUpdated) throws RepositoryException;
 
     /**
      * Returns the entity for the given type and qualified name

@@ -25,6 +25,8 @@ import org.apache.atlas.ParamChecker;
 import org.apache.atlas.TypeNotFoundException;
 import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.services.MetadataService;
+import org.apache.atlas.typesystem.Referenceable;
+import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.web.util.Servlets;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
@@ -170,6 +172,75 @@ public class EntityResource {
     }
 
     /**
+     * Updates entity identified by its GUID
+     *
+     * @param guid
+     * @param request The updated entity json
+     * @return
+     */
+    @PUT
+    @Path("{guid}")
+    @Consumes(Servlets.JSON_MEDIA_TYPE)
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    public Response update(@PathParam("guid") String guid, @Context HttpServletRequest request) {
+        try {
+            ParamChecker.notEmpty(guid, "Guid property cannot be null");
+            final String entityJson = Servlets.getRequestPayload(request);
+            LOG.debug("submitting entities {} ", AtlasClient.toString(new JSONArray(entityJson)));
+
+            Referenceable updatedEntity =
+                InstanceSerialization.fromJsonReferenceable(entityJson, true);
+            metadataService.updateEntity(guid, updatedEntity);
+
+            JSONObject response = new JSONObject();
+            response.put(AtlasClient.REQUEST_ID, Thread.currentThread().getName());
+            return Response.ok(response).build();
+        } catch (EntityNotFoundException e) {
+            LOG.error("An entity with GUID={} does not exist", guid, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
+        } catch (AtlasException | IllegalArgumentException e) {
+            LOG.error("Unable to update entity {}", guid, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
+        } catch (Throwable e) {
+            LOG.error("Unable to update entity {}", guid, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
+        }
+    }
+
+
+    @PUT
+    @Consumes(Servlets.JSON_MEDIA_TYPE)
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    public Response update(@QueryParam("type") String entityType,
+        @QueryParam("property") String attribute,
+        @QueryParam("value") String value, @Context HttpServletRequest request) {
+        try {
+            ParamChecker.notEmpty(entityType, "type cannot be null");
+            ParamChecker.notEmpty(attribute, "attribute name cannot be null");
+            ParamChecker.notEmpty(value, "attribute value cannot be null");
+            final String entityJson = Servlets.getRequestPayload(request);
+            LOG.debug("submitting entities {} ", AtlasClient.toString(new JSONArray(entityJson)));
+
+            Referenceable updatedEntity =
+                InstanceSerialization.fromJsonReferenceable(entityJson, true);
+            metadataService.updateEntity(entityType, attribute, value, updatedEntity);
+
+            JSONObject response = new JSONObject();
+            response.put(AtlasClient.REQUEST_ID, Thread.currentThread().getName());
+            return Response.ok(response).build();
+        } catch (EntityNotFoundException e) {
+            LOG.error("An entity with type={} and qualifiedName={} does not exist", entityType, value, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
+        } catch (AtlasException | IllegalArgumentException e) {
+            LOG.error("Unable to update entity {}" + entityType + ":" + attribute + "." + value, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
+        } catch (Throwable e) {
+            LOG.error("Unable to update entity {}" + entityType + ":" + attribute + "." + value, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
+        }
+    }
+
+    /**
      * Adds property to the given entity id
      * @param guid entity id
      * @param property property to add
@@ -181,7 +252,7 @@ public class EntityResource {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public Response update(@PathParam("guid") String guid, @QueryParam("property") String property,
-            @QueryParam("value") String value) {
+        @QueryParam("value") String value) {
         try {
             Preconditions.checkNotNull(property, "Entity property cannot be null");
             Preconditions.checkNotNull(value, "Entity value cannot be null");

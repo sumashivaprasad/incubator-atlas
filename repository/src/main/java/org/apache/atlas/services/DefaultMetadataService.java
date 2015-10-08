@@ -28,6 +28,7 @@ import org.apache.atlas.TypeNotFoundException;
 import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.listener.TypesChangeListener;
+import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.repository.IndexCreationException;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.typestore.ITypeStore;
@@ -38,6 +39,7 @@ import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
+import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -61,6 +63,7 @@ import scala.actors.threadpool.Arrays;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -242,12 +245,12 @@ public class DefaultMetadataService implements MetadataService {
      * @return guids - json array of guids
      */
     @Override
-    public String createEntities(String entityInstanceDefinition) throws AtlasException {
+    public String createOrUpdateEntities(String entityInstanceDefinition) throws AtlasException {
         ParamChecker.notEmpty(entityInstanceDefinition, "Entity instance definition cannot be empty");
 
         ITypedReferenceableInstance[] typedInstances = deserializeClassInstances(entityInstanceDefinition);
 
-        final String[] guids = repository.createEntities(typedInstances);
+        final String[] guids = repository.createOrUpdateEntities(typedInstances);
 
         onEntityAddedToRepo(Arrays.asList(typedInstances));
         return new JSONArray(Arrays.asList(guids)).toString();
@@ -341,7 +344,60 @@ public class DefaultMetadataService implements MetadataService {
         ParamChecker.notEmpty(guid, "guid cannot be null");
         ParamChecker.notNull(updatedEntity, "updatedEntity cannot be null");
 
-        repository.updateEntity(guid, updatedEntity);
+        ITypedReferenceableInstance instance = repository.getEntityDefinition(guid);
+        if(instance == null) {
+            throw new EntityNotFoundException(String.format("Entity with guid %s not found ", guid));
+        }
+        updateInstance(instance, updatedEntity);
+        repository.createOrUpdateEntities(instance);
+    }
+
+    private List<AttributeInfo> updateInstance(ITypedReferenceableInstance instance, Referenceable updatedEntity) throws AtlasException {
+        List<AttributeInfo> updatedAttributes = new ArrayList<>();
+        ClassType type = typeSystem.getDataType(ClassType.class, instance.getTypeName());
+        for (String property : updatedEntity.getValuesMap().keySet()) {
+            AttributeInfo attributeInfo = type.fieldMapping.fields.get(property);
+            if (attributeInfo == null) {
+                throw new AtlasException("Invalid property " + property + " for entity " + updatedEntity);
+            }
+
+            DataTypes.TypeCategory attrTypeCategory = attributeInfo.dataType().getTypeCategory();
+            Object value = updatedEntity.get(property);
+
+            switch (attrTypeCategory) {
+            case CLASS:
+                Id id = new Id((String) value, 0, attributeInfo.dataType().getName());
+                instance.set(property, id);
+                break;
+            case PRIMITIVE:
+            case ENUM:
+            case ARRAY:
+            case STRUCT:
+            case MAP:
+                instance.set(property, value);
+                break;
+            default:
+                throw new AtlasException("Update of " + attrTypeCategory + " is not supported");
+            }
+            updatedAttributes.add(attributeInfo);
+        }
+        return updatedAttributes;
+    }
+
+    @Override
+    public void updateEntity(String typeName, String uniqueAttributeName, String attrValue, Referenceable updatedEntity) throws AtlasException {
+
+        ParamChecker.notEmpty(typeName, "typeName cannot be null");
+        ParamChecker.notEmpty(uniqueAttributeName, "uniqueAttributeName cannot be null");
+        ParamChecker.notEmpty(attrValue, "value cannot be null");
+        ParamChecker.notNull(updatedEntity, "updatedEntity cannot be null");
+
+        ITypedReferenceableInstance instance = repository.getEntityDefinition(typeName, uniqueAttributeName, attrValue);
+        if(instance == null) {
+            throw new EntityNotFoundException(String.format("Entity of type %s with unique attribute(%s:%s)  not found ", typeName, uniqueAttributeName, attrValue));
+        }
+        updateInstance(instance, updatedEntity);
+        repository.createOrUpdateEntities(instance);
     }
 
     private void validateTypeExists(String entityType) throws AtlasException {

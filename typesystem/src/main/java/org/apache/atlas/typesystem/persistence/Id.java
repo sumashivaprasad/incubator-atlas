@@ -148,6 +148,11 @@ public class Id implements ITypedReferenceableInstance {
     }
 
     @Override
+    public void clear(String attrName) throws AtlasException {
+        throw new AtlasException("Get/Set/UnSet not supported on an Id object");
+    }
+
+    @Override
     public FieldMapping fieldMapping() {
         return null;
     }

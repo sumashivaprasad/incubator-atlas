@@ -148,7 +148,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
     @Override
     @GraphTransaction
-    public String[] createEntities(ITypedReferenceableInstance... entities) throws RepositoryException,
+    public String[] createOrUpdateEntities(ITypedReferenceableInstance... entities) throws RepositoryException,
             EntityExistsException {
         LOG.info("adding entities={}", entities);
         try {
@@ -191,6 +191,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     private Vertex getVertexForGUID(String guid) throws EntityNotFoundException {
         return getVertexForProperty(Constants.GUID_PROPERTY_KEY, guid);
     }
+
 
     private Vertex getVertexForProperty(String propertyKey, Object value) throws EntityNotFoundException {
         Vertex instanceVertex = GraphHelper.findVertex(titanGraph, propertyKey, value);
@@ -377,56 +378,76 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         }
     }
 
-    @Override
-    public void updateEntity(String guid, Referenceable entityUpdated) throws RepositoryException {
-        try {
-            Vertex instanceVertex = getVertexForGUID(guid);
-            String typeName = instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
-            ClassType type = typeSystem.getDataType(ClassType.class, typeName);
-            ITypedReferenceableInstance instance = type.convert(entityUpdated, Multiplicity.OPTIONAL);
-            for (String property : entityUpdated.getValuesMap().keySet()) {
-                AttributeInfo attributeInfo = type.fieldMapping.fields.get(property);
-                if (attributeInfo == null) {
-                    throw new AtlasException("Invalid property " + property + " for entity " + typeName);
-                }
-                instanceToGraphMapper
-                    .mapAttributesToVertex(getIdFromVertex(typeName, instanceVertex), instance, instanceVertex,
-                        new HashMap<Id, Vertex>(), attributeInfo, attributeInfo.dataType());
-            }
-        } catch (RepositoryException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RepositoryException(e);
-        }
-    }
-
-    @Override
-    public void updateEntity(String typeName, String uniqueAttributeName, String uniqueAttributeValue, Referenceable entityUpdated) throws RepositoryException {
-        try {
-            ClassType classType = typeSystem.getDataType(ClassType.class, typeName);
-            AttributeInfo uniqAttrInfo = classType.fieldMapping.fields.get(uniqueAttributeName);
-            if (!uniqAttrInfo.isUnique) {
-                throw new RepositoryException("Attribute Name provided is not unique : " + uniqAttrInfo);
-            }
-            String propertyKey = getFieldNameInVertex(classType, uniqAttrInfo);
-            Vertex instanceVertex = getVertexForProperty(propertyKey, uniqueAttributeValue);
-            ClassType type = typeSystem.getDataType(ClassType.class, typeName);
-            ITypedReferenceableInstance instance = type.convert(entityUpdated, Multiplicity.OPTIONAL);
-            for (String property : entityUpdated.getValuesMap().keySet()) {
-                AttributeInfo attributeInfo = type.fieldMapping.fields.get(property);
-                if (attributeInfo == null) {
-                    throw new AtlasException("Invalid property " + property + " for entity " + typeName);
-                }
-                instanceToGraphMapper
-                    .mapAttributesToVertex(getIdFromVertex(typeName, instanceVertex), instance, instanceVertex,
-                        new HashMap<Id, Vertex>(), attributeInfo, attributeInfo.dataType());
-            }
-        } catch (RepositoryException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RepositoryException(e);
-        }
-    }
+//    @Override
+//    @GraphTransaction
+//    public void updateEntity(String guid, Referenceable entityUpdated) throws RepositoryException {
+//        try {
+//            Vertex instanceVertex = getVertexForGUID(guid);
+//            String typeName = instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
+//            ClassType type = typeSystem.getDataType(ClassType.class, typeName);
+//            Map<String, AttributeInfo> updatedAttributes = new HashMap<>();
+//            ITypedReferenceableInstance instance = getPartialTypedReferenceable(type, entityUpdated, updatedAttributes);
+//            instanceToGraphMapper
+//                .mapInstanceToVertex(getIdFromVertex(typeName, instanceVertex), instance, instanceVertex,
+//                updatedAttributes, new HashMap<Id, Vertex>(), false);
+//        } catch (RepositoryException e) {
+//            throw e;
+//        } catch (Exception e) {
+//            throw new RepositoryException(e);
+//        }
+//    }
+//
+//    private ITypedReferenceableInstance getPartialTypedReferenceable(ClassType type, Referenceable entity, Map<String, AttributeInfo> updatedAttributes) throws AtlasException {
+//        ITypedReferenceableInstance instance = type.createInstance();
+//        for (String property : entity.getValuesMap().keySet()) {
+//            AttributeInfo attributeInfo = type.fieldMapping.fields.get(property);
+//            if (attributeInfo == null) {
+//                throw new AtlasException("Invalid property " + property + " for entity " + entity);
+//            }
+//
+//            DataTypes.TypeCategory attrTypeCategory = attributeInfo.dataType().getTypeCategory();
+//            Object value = entity.get(property);
+//
+//            switch(attrTypeCategory) {
+//            case CLASS:
+//                Id id = new Id((String)value, 0, attributeInfo.dataType().getName());
+//                instance.set(property, id);
+//                break;
+//            case TRAIT:
+//                throw new RepositoryException("Update of " + attrTypeCategory + " is not supported");
+//            default:
+//                instance.set(property, value);
+//            }
+//
+//            instance.set(property, entity.get(property));
+//            updatedAttributes.put(property, attributeInfo);
+//        }
+//        return instance;
+//    }
+//
+//    @Override
+//    @GraphTransaction
+//    public void updateEntity(String typeName, String uniqueAttributeName, String uniqueAttributeValue, Referenceable entityUpdated) throws RepositoryException {
+//        try {
+//            ClassType classType = typeSystem.getDataType(ClassType.class, typeName);
+//            AttributeInfo uniqAttrInfo = classType.fieldMapping.fields.get(uniqueAttributeName);
+//            if (!uniqAttrInfo.isUnique) {
+//                throw new RepositoryException("Attribute Name provided is not unique : " + uniqAttrInfo);
+//            }
+//            String propertyKey = getFieldNameInVertex(classType, uniqAttrInfo);
+//            Vertex instanceVertex = getVertexForProperty(propertyKey, uniqueAttributeValue);
+//            ClassType type = typeSystem.getDataType(ClassType.class, typeName);
+//            Map<String, AttributeInfo> updatedAttributes = new HashMap<>();
+//            ITypedReferenceableInstance instance = getPartialTypedReferenceable(type, entityUpdated, updatedAttributes);
+//            instanceToGraphMapper
+//                .mapInstanceToVertex(getIdFromVertex(typeName, instanceVertex), instance, instanceVertex,
+//                    updatedAttributes, new HashMap<Id, Vertex>(), false);
+//        } catch (RepositoryException e) {
+//            throw e;
+//        } catch (Exception e) {
+//            throw new RepositoryException(e);
+//        }
+//    }
 
     public Id getIdFromVertex(String dataTypeName, Vertex vertex) {
         return new Id(vertex.<String>getProperty(Constants.GUID_PROPERTY_KEY),
@@ -487,6 +508,11 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
                         idToInstanceMap.put(id, ref);
                     }
+                } else {
+                    //Updating entity
+                    if(ref != null) {
+                        idToInstanceMap.put(id, ref);
+                    }
                 }
             }
         }
@@ -494,38 +520,36 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         private List<ITypedReferenceableInstance> createVerticesForClassType(
                 List<ITypedReferenceableInstance> typedInstances) throws AtlasException {
 
-            List<ITypedReferenceableInstance> instancesCreated = new ArrayList<>();
+            List<ITypedReferenceableInstance> instances = new ArrayList<>();
             for (ITypedReferenceableInstance typedInstance : typedInstances) {
                 final Id id = typedInstance.getId();
                 if (!idToVertexMap.containsKey(id)) {
                     Vertex instanceVertex;
+                    ClassType classType = typeSystem.getDataType(ClassType.class, typedInstance.getTypeName());
                     if (id.isAssigned()) {  // has a GUID
                         instanceVertex = getVertexForGUID(id.id);
                     } else {
                         //Check if there is already an instance with the same unique attribute value
-                        ClassType classType = typeSystem.getDataType(ClassType.class, typedInstance.getTypeName());
                         instanceVertex = instanceToGraphMapper.getVertexForInstanceByUniqueAttribute(classType, typedInstance);
                         if (instanceVertex == null) {
                             instanceVertex = GraphHelper.createVertexWithIdentity(titanGraph, typedInstance,
                                     classType.getAllSuperTypeNames());
-                            instancesCreated.add(typedInstance);
-
-                            instanceToGraphMapper.mapInstanceToVertex(id, typedInstance, instanceVertex,
-                                    classType.fieldMapping().fields, idToVertexMap, true);
-
                         }
                     }
 
+                    instanceToGraphMapper.mapInstanceToVertex(id, typedInstance, instanceVertex,
+                        classType.fieldMapping().fields, idToVertexMap, true);
+                    instances.add(typedInstance);
                     idToVertexMap.put(id, instanceVertex);
                 }
             }
-            return instancesCreated;
+            return instances;
         }
     }
 
     private final class TypedInstanceToGraphMapper {
 
-        private String[] mapTypedInstanceToGraph(ITypedReferenceableInstance[] typedInstances)
+        private String[] mapTypedInstanceToGraph(ITypedReferenceableInstance... typedInstances)
                 throws AtlasException {
             EntityProcessor entityProcessor = new EntityProcessor();
             List<String> guids = new ArrayList<>();
@@ -780,7 +804,11 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 //handles both int and string for enum
                 EnumValue enumValue =
                         (EnumValue) dataType.convert(typedInstance.get(attributeInfo.name), Multiplicity.REQUIRED);
-                GraphHelper.setProperty(instanceVertex, propertyName, enumValue.value);
+
+                Object oldPropertyValue = instanceVertex.getProperty(attributeInfo.name);
+                if(oldPropertyValue == null || !oldPropertyValue.equals(attributeInfo.name)) {
+                    GraphHelper.setProperty(instanceVertex, propertyName, enumValue.value);
+                }
                 break;
 
             case ARRAY:
@@ -859,30 +887,31 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 values.add(entryId);
             }
 
-            removeUnusedReferences(instanceVertex, propertyName, values, elementType);
+            removeUnusedReferences(instanceVertex, propertyName, values, attributeInfo, elementType);
             // for dereference on way out
             GraphHelper.setProperty(instanceVertex, propertyName, values);
         }
 
-        private void removeUnusedReferences(Vertex instanceVertex, String propertyName, Collection<?> curValues, IDataType<?> elementType) {
+        private void removeUnusedReferences(Vertex instanceVertex, String propertyName, Collection<?> curValues, AttributeInfo attributeInfo, IDataType<?> elementType) {
             //Remove edges for array property values which do not exist any more
             List<String> origValues = instanceVertex.getProperty(propertyName);
             if (origValues != null) {
                 origValues.removeAll(curValues);
                 for (String edgeId : origValues) {
-                    removeUnusedReference(instanceVertex, edgeId, elementType);
+                    removeUnusedReference(instanceVertex, edgeId, attributeInfo, elementType);
                 }
             }
         }
 
-        private void removeUnusedReference(Vertex instanceVertex, String edgeId, IDataType<?> elementType) {
+        private void removeUnusedReference(Vertex instanceVertex, String edgeId, AttributeInfo attributeInfo, IDataType<?> elementType) {
             //Remove edges for array property values which do not exist any more
             switch (elementType.getTypeCategory()) {
             case STRUCT:
                 GraphHelper.removeRelation(titanGraph, edgeId, true);
                 break;
             case CLASS:
-                GraphHelper.removeRelation(titanGraph, edgeId, false);
+                final boolean cascade = attributeInfo.isComposite ? true : false;
+                GraphHelper.removeRelation(titanGraph, edgeId, cascade);
                 break;
             }
         }
@@ -908,7 +937,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 //Delete unused references
                 Object origValue = instanceVertex.getProperty(myPropertyName);
                 if (origValue != null) {
-                    removeUnusedReference(instanceVertex, (String) origValue, elementType);
+                    removeUnusedReference(instanceVertex, (String) origValue, attributeInfo, elementType);
                 }
 
                 //Add/Update new property value
@@ -916,7 +945,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             }
 
             //Remove unused keys
-            removeUnusedReferences(instanceVertex, propertyName, collection.keySet(), elementType);
+            removeUnusedReferences(instanceVertex, propertyName, collection.keySet(), attributeInfo, elementType);
 
             // for dereference on way out
             GraphHelper.setProperty(instanceVertex, propertyName, new ArrayList(collection.keySet()));
@@ -1048,7 +1077,11 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 //Convert Property value to Long  while persisting
                 propertyValue = dateVal.getTime();
             }
-            GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
+
+            Object oldPropertyValue = instanceVertex.getProperty(vertexPropertyName);
+            if(oldPropertyValue == null || !oldPropertyValue.equals(propertyValue)) {
+                GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
+            }
         }
     }
 

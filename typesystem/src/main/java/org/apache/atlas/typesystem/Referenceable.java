@@ -89,4 +89,63 @@ public class Referenceable extends Struct implements IReferenceableInstance {
     public IStruct getTrait(String typeName) {
         return traits.get(typeName);
     }
+
+//    public boolean equals(Object o) {
+//        if(this == o) {
+//            return true;
+//        }
+//        if(o == null) {
+//            return false;
+//        }
+//        if (o.getClass() != getClass()) {
+//            return false;
+//        }
+//
+//        if(!super.equals(o)) {
+//            return false;
+//        }
+//
+//        Referenceable obj = (Referenceable)o;
+//        if(!id.equals(obj.getId())) {
+//            return false;
+//        }
+//
+//        if (!traitNames.equals(getTraits())) {
+//            return false;
+//        }
+//
+//        return true;
+//    }
+
+    public boolean equalsContents(Object o) {
+        if(this == o) {
+            return true;
+        }
+        if(o == null) {
+            return false;
+        }
+        if (o.getClass() != getClass()) {
+            return false;
+        }
+
+        if(!super.equalsContents(o)) {
+            return false;
+        }
+
+        Referenceable obj = (Referenceable)o;
+        if (!traitNames.equals(obj.getTraits())) {
+            return false;
+        }
+
+        return true;
+    }
+
+//    @Override
+//    public int hashCode() {
+//        int result = super.hashCode();
+//        result = 31 * result + id.hashCode();
+//        result = 31 * result + traits.hashCode();
+//        result = 31 * result + traitNames.hashCode();
+//        return result;
+//    }
 }

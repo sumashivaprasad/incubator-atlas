@@ -67,7 +67,7 @@ public interface MetadataService {
      * @param entityDefinition definition
      * @return guid
      */
-    String createEntities(String entityDefinition) throws AtlasException;
+    String createOrUpdateEntities(String entityDefinition) throws AtlasException;
 
     /**
      * Return the definition for the given guid.
@@ -114,6 +114,17 @@ public interface MetadataService {
     void updateEntity(String guid, Referenceable updatedEntity) throws AtlasException;
 
     // Trait management functions
+
+    /**
+     * Updates entity identified by a qualified name
+     *
+     * @param typeName
+     * @param uniqueAttributeName
+     * @param attrValue
+     * @param updatedEntity
+     * @throws AtlasException
+     */
+    void updateEntity(String typeName, String uniqueAttributeName, String attrValue, Referenceable updatedEntity) throws AtlasException;
 
     /**
      * Gets the list of trait names for a given entity represented by a guid.

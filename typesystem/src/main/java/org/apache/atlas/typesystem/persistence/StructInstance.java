@@ -229,6 +229,30 @@ public class StructInstance implements ITypedStruct {
         }
         int nullPos = fieldMapping.fieldNullPos.get(attrName);
         nullFlags[nullPos] = true;
+
+        int pos = fieldMapping.fieldPos.get(attrName);
+
+        if (i.dataType() == DataTypes.BIGINTEGER_TYPE) {
+            bigIntegers[pos] = null;
+        } else if (i.dataType() == DataTypes.BIGDECIMAL_TYPE) {
+            bigDecimals[pos] = null;
+        } else if (i.dataType() == DataTypes.DATE_TYPE) {
+            dates[pos] = null;
+        } else if (i.dataType() == DataTypes.STRING_TYPE) {
+            strings[pos] = null;
+        } else if (i.dataType().getTypeCategory() == DataTypes.TypeCategory.ARRAY) {
+            arrays[pos] = null;
+        } else if (i.dataType().getTypeCategory() == DataTypes.TypeCategory.MAP) {
+            maps[pos] = null;
+        } else if (i.dataType().getTypeCategory() == DataTypes.TypeCategory.STRUCT
+            || i.dataType().getTypeCategory() == DataTypes.TypeCategory.TRAIT) {
+            structs[pos] = null;
+        } else if (i.dataType().getTypeCategory() == DataTypes.TypeCategory.CLASS) {
+                ids[pos] = null;
+                referenceables[pos] = null;
+        } else {
+            throw new AtlasException(String.format("Unknown datatype %s", i.dataType()));
+        }
     }
 
     /*
