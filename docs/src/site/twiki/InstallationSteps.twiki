@@ -121,11 +121,12 @@ and change it to look as below
 export METADATA_SERVER_OPTS="-Djava.awt.headless=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc="
 </verbatim>
 
-* Configuring SOLR as the Indexing Backend for the Graph Repository
+*Configuring SOLR as the Indexing Backend for the Graph Repository*
 
 By default, Atlas uses Titan as the graph repository and is the only graph repository implementation available currently.
 For configuring Titan to work with Solr, please follow the instructions below
 <verbatim>
+
 * Install solr if not already running. Versions of SOLR supported are 4.8.1 or 5.2.1.
 
 * Start solr in cloud mode.

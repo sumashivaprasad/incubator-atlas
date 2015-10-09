@@ -185,7 +185,7 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
             }
         }
 
-        return new ReferenceableInstance(id == null ? new Id(getName()) : id, getName(), fieldMapping,
+        ReferenceableInstance instance = new ReferenceableInstance(id == null ? new Id(getName()) : id, getName(), fieldMapping,
                 new boolean[fieldMapping.fields.size()],
                 fieldMapping.numBools == 0 ? null : new boolean[fieldMapping.numBools],
                 fieldMapping.numBytes == 0 ? null : new byte[fieldMapping.numBytes],
@@ -203,6 +203,13 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
                 fieldMapping.numStructs == 0 ? null : new StructInstance[fieldMapping.numStructs],
                 fieldMapping.numReferenceables == 0 ? null : new ReferenceableInstance[fieldMapping.numReferenceables],
                 fieldMapping.numReferenceables == 0 ? null : new Id[fieldMapping.numReferenceables], b.build());
+
+        if(r != null) {
+            for (String attrName : fieldMapping.fields.keySet()) {
+                instance.set(attrName, r.get(attrName));
+            }
+        }
+        return instance;
     }
 
     @Override

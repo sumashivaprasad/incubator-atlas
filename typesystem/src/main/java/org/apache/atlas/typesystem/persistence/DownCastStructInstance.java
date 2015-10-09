@@ -53,7 +53,7 @@ public class DownCastStructInstance implements IStruct {
     }
 
     @Override
-    public void clear(String attrName) throws AtlasException {
+    public void setNull(String attrName) throws AtlasException {
         throw new UnsupportedOperationException("unset on attributes are not allowed");
     }
 

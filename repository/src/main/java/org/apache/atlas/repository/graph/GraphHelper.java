@@ -31,6 +31,7 @@ import org.apache.atlas.typesystem.persistence.Id;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
@@ -110,7 +111,13 @@ public final class GraphHelper {
 
     public static void setProperty(Vertex vertex, String propertyName, Object value) {
         LOG.debug("Setting property {} = \"{}\" to vertex {}", propertyName, value, vertex);
-        vertex.setProperty(propertyName, value);
+        if(value == null || (value instanceof Collection && ((Collection) value).isEmpty())) {
+            if(vertex.getProperty(propertyName) != null) {
+                vertex.removeProperty(propertyName);
+            }
+        } else {
+            vertex.setProperty(propertyName, value);
+        }
     }
 
     public static void addProperty(Vertex vertex, String propertyName, Object value) {

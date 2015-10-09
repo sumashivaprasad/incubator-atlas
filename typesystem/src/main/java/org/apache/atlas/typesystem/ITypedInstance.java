@@ -37,8 +37,6 @@ public interface ITypedInstance extends IInstance {
 
     FieldMapping fieldMapping();
 
-    void setNull(String attrName) throws AtlasException;
-
     boolean getBoolean(String attrName) throws AtlasException;
 
     byte getByte(String attrName) throws AtlasException;

@@ -33,6 +33,8 @@ import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
+import org.apache.atlas.typesystem.types.ClassType;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.testng.Assert;
@@ -42,6 +44,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,10 +107,11 @@ public class DefaultMetadataServiceTest {
         Referenceable entity = new Referenceable(TestUtils.TABLE_TYPE);
         String tableName = RandomStringUtils.randomAlphanumeric(10);
         entity.set("name", tableName);
-        entity.set("description", "us db");
+        entity.set("description", "random table");
         entity.set("type", "type");
         entity.set("tableType", "MANAGED");
         entity.set("database", db);
+        entity.set("created", new Date());
         return entity;
     }
 
@@ -159,7 +163,9 @@ public class DefaultMetadataServiceTest {
         //Update entity, add new array attribute VALUE
         //LIST OF PRIMITIVES
         final List<String> colNameList = ImmutableList.of("col1", "col2");
-        Referenceable tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{ put("columnNames", colNameList); }});
+        Referenceable tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columnNames", colNameList);
+        }});
         metadataService.updateEntity(tableId, tableUpdated);
 
         String tableDefinitionJson =
@@ -170,7 +176,9 @@ public class DefaultMetadataServiceTest {
 
         //LIST OF PRIMITIVES UPDATED
         final List<String> updatedColNameList = ImmutableList.of("col2", "col3");
-        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{ put("columnNames", updatedColNameList); }});
+        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columnNames", updatedColNameList);
+        }});
         metadataService.updateEntity(tableId, tableUpdated);
 
         tableDefinitionJson =
@@ -186,7 +194,9 @@ public class DefaultMetadataServiceTest {
         values.put("type", "type");
         Referenceable ref = new Referenceable("column_type", values);
         columns.add(ref);
-        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{ put("columns", columns); }});
+        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columns", columns);
+        }});
         metadataService.updateEntity(tableId, tableUpdated);
 
         tableDefinitionJson =
@@ -202,33 +212,43 @@ public class DefaultMetadataServiceTest {
         values.put("name", "col2");
         values.put("type", "type");
         columns.add(ref);
-        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{ put("columns", columns); }});
+        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columns", columns);
+        }});
         metadataService.updateEntity(tableId, tableUpdated);
 
         tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         arrClsColumns = (List) tableDefinition.get("columns");
+        Assert.assertEquals(arrClsColumns.size(), columns.size());
         Assert.assertTrue(arrClsColumns.get(0).equalsContents(columns.get(0)));
 
+        //Update required attribute
+        try {
+            Assert.assertEquals(tableDefinition.get("description"), "random table");
+            table.setNull("description");
 
-        //Remove array value
-        values.clear();
-        columns.clear();
+            ClassType tableType = TypeSystem.getInstance().getDataType(ClassType.class, TestUtils.TABLE_TYPE);
+            ITypedReferenceableInstance instance = tableType.createInstanceWithTraits(null, table, null);
+            String updatedEntityJson = InstanceSerialization.toJson(instance, true);
+            metadataService.createOrUpdateEntities(updatedEntityJson);
+            Assert.fail("Expected exception while updating required attribute to null");
+        } catch (Exception e) {
+        }
 
-        values.put("name", "col2");
-        values.put("type", "type");
-        columns.add(ref);
-        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{ put("columns", columns); }});
-        metadataService.updateEntity(tableId, tableUpdated);
+        //Update optional Attribute
+        Assert.assertNotNull(tableDefinition.get("created"));
+        table.set("description", "random table");
+        table.setNull("created");
+
+        String newtableId = createInstance(table);
+        Assert.assertEquals(newtableId, tableId);
 
         tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-        arrClsColumns = (List) tableDefinition.get("columns");
-        Assert.assertTrue(arrClsColumns.get(0).equalsContents(columns.get(0)));
-
-        ITypedReferenceableInstance instance =
+        Assert.assertNull(tableDefinition.get("created"));
 
     }
 

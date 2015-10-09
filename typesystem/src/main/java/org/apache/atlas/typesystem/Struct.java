@@ -58,7 +58,7 @@ public class Struct implements IStruct {
     }
 
     @Override
-    public void clear(String attrName) throws AtlasException {
+    public void setNull(String attrName) throws AtlasException {
         values.remove(attrName);
     }
 
@@ -91,37 +91,4 @@ public class Struct implements IStruct {
 
         return true;
     }
-
-//    @Override
-//    public boolean equals(Object o) {
-//        if (this == o) {
-//            return true;
-//        }
-//
-//        if (o == null) {
-//            return false;
-//        }
-//
-//        if (o.getClass() != getClass()) {
-//            return false;
-//        }
-//
-//        Struct obj = (Struct)o;
-//        if(!typeName.equals(obj.getTypeName())) {
-//            return false;
-//        }
-//
-//        if(!values.equals(obj.getValuesMap())) {
-//            return false;
-//        }
-//
-//        return true;
-//    }
-//
-//    @Override
-//    public int hashCode() {
-//        int result = typeName.hashCode();
-//        result = 31 * result + values.hashCode();
-//        return result;
-//    }
 }

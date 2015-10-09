@@ -38,8 +38,9 @@ Advanced configuration
 Refer http://s3.thinkaurelius.com/docs/titan/0.5.4/titan-config-ref.html#_storage_hbase
 
 ---++++ Graph Search Index
+
 This section sets up the graph db - titan - to use an search indexing system. The example
-configuration below setsup to use an embedded Elastic search indexing system.
+configuration below sets up to use an embedded Elastic search indexing system.
 
 <verbatim>
 atlas.graph.index.search.backend=elasticsearch
@@ -47,6 +48,15 @@ atlas.graph.index.search.directory=data/es
 atlas.graph.index.search.elasticsearch.client-only=false
 atlas.graph.index.search.elasticsearch.local-mode=true
 atlas.graph.index.search.elasticsearch.create.sleep=2000
+</verbatim>
+
+---+++++ Solr
+Please note that Solr installation in Cloud mode is a prerequisite before configuring Solr as the search indexing backend. Refer InstallationSteps section for Solr installation/configuration.
+
+<verbatim>
+ atlas.graph.index.search.backend=solr5
+ atlas.graph.index.search.solr.mode=cloud
+ atlas.graph.index.search.solr.zookeeper-url=<the ZK quorum setup for solr as comma separated value> eg: 10.1.6.4:2181,10.1.6.5:2181
 </verbatim>
 
 ---+++ Hive Lineage Configs

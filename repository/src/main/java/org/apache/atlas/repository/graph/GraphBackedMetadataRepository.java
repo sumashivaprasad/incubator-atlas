@@ -615,11 +615,14 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
         private String getFullTextForAttribute(IDataType type, Object value, boolean followReferences)
         throws AtlasException {
+            if(value == null) {
+                return null;
+            }
             switch (type.getTypeCategory()) {
             case PRIMITIVE:
-                return String.valueOf(value);
-
+                    return String.valueOf(value);
             case ENUM:
+
                 return ((EnumValue) value).value;
 
             case ARRAY:
@@ -791,9 +794,9 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             LOG.debug("mapping attribute {} = {}", attributeInfo.name, attrValue);
             final String propertyName = getQualifiedName(typedInstance, attributeInfo);
             String edgeLabel = getEdgeLabel(typedInstance, attributeInfo);
-            if (attrValue == null) {
-                return;
-            }
+//            if (attrValue == null) {
+//                return;
+//            }
 
             switch (dataType.getTypeCategory()) {
             case PRIMITIVE:
@@ -806,7 +809,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                         (EnumValue) dataType.convert(typedInstance.get(attributeInfo.name), Multiplicity.REQUIRED);
 
                 Object oldPropertyValue = instanceVertex.getProperty(attributeInfo.name);
-                if(oldPropertyValue == null || !oldPropertyValue.equals(attributeInfo.name)) {
+                if(oldPropertyValue == null || !oldPropertyValue.equals(enumValue.value)) {
                     GraphHelper.setProperty(instanceVertex, propertyName, enumValue.value);
                 }
                 break;
@@ -837,16 +840,24 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
         private Pair<Vertex,Edge> mapStructToVertex(Id id, ITypedInstance typedInstance, Vertex instanceVertex, AttributeInfo attributeInfo, Map<Id, Vertex> idToVertexMap, String edgeLabel) throws AtlasException {
             Vertex structInstanceVertex = null;
+            ITypedStruct structValue = (ITypedStruct) typedInstance.get(attributeInfo.name);
             Edge relEdge = null;
             final Iterable<Edge> edges = instanceVertex.getEdges(Direction.OUT, edgeLabel);
             if(edges != null && edges.iterator().hasNext()) {
                 //Already existing vertex. Update
                 relEdge = edges.iterator().next();
                 structInstanceVertex = relEdge.getVertex(Direction.IN);
-                mapStructInstanceToVertex(structInstanceVertex, id, (ITypedStruct) typedInstance.get(attributeInfo.name),
-                    idToVertexMap);
 
+                if (structValue == null) {
+                    //Delete edge and remove struct vertex
+                    removeUnusedReference(instanceVertex, relEdge.getId().toString(), attributeInfo, attributeInfo.dataType());
+                } else {
+                    mapStructInstanceToVertex(structInstanceVertex, id, structValue, idToVertexMap);
+                }
             } else {
+                if (structValue == null) {
+                    return null;
+                }
                 // add a new vertex for the struct or trait instance
                 structInstanceVertex = createVertexForStruct(typedInstance, attributeInfo, id);
                 mapStructInstanceToVertex(structInstanceVertex, id, (ITypedStruct) typedInstance.get(attributeInfo.name),
@@ -872,22 +883,22 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             LOG.debug("Mapping instance {} to vertex {} for name {}", typedInstance.getTypeName(), instanceVertex,
                     attributeInfo.name);
             List list = (List) typedInstance.get(attributeInfo.name);
-            if (list == null || list.isEmpty()) {
-                return;
-            }
 
             String propertyName = getQualifiedName(typedInstance, attributeInfo);
             IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
+            List<String> values = new ArrayList<>();
 
-            List<String> values = new ArrayList<>(list.size());
-            for (int index = 0; index < list.size(); index++) {
-                String entryId =
+            if(list != null) {
+                for (int index = 0; index < list.size(); index++) {
+                    String entryId =
                         mapCollectionEntryToVertex(id, instanceVertex, attributeInfo, idToVertexMap, elementType,
-                                list.get(index), propertyName);
-                values.add(entryId);
+                            list.get(index), propertyName);
+                    values.add(entryId);
+                }
             }
 
             removeUnusedReferences(instanceVertex, propertyName, values, attributeInfo, elementType);
+
             // for dereference on way out
             GraphHelper.setProperty(instanceVertex, propertyName, values);
         }
@@ -922,8 +933,8 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     attributeInfo.name);
             @SuppressWarnings("unchecked") Map<Object, Object> collection =
                     (Map<Object, Object>) typedInstance.get(attributeInfo.name);
-            if (collection == null || collection.isEmpty()) {
-                return;
+            if (collection == null) {
+                collection = new HashMap<>();
             }
 
             String propertyName = getQualifiedName(typedInstance, attributeInfo);
@@ -934,11 +945,11 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 String value = mapCollectionEntryToVertex(id, instanceVertex, attributeInfo, idToVertexMap, elementType,
                         entry.getValue(), myPropertyName);
 
-                //Delete unused references
-                Object origValue = instanceVertex.getProperty(myPropertyName);
-                if (origValue != null) {
-                    removeUnusedReference(instanceVertex, (String) origValue, attributeInfo, elementType);
-                }
+//                //Delete unused references
+//                Object origValue = instanceVertex.getProperty(myPropertyName);
+//                if (origValue != null && !origValue.equals(value)) {
+//                    removeUnusedReference(instanceVertex, (String) origValue, attributeInfo, elementType);
+//                }
 
                 //Add/Update new property value
                 GraphHelper.setProperty(instanceVertex, myPropertyName, value);
@@ -958,7 +969,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             switch (elementType.getTypeCategory()) {
             case PRIMITIVE:
             case ENUM:
-                return value.toString();
+                return value != null ? value.toString() : null;
 
             case ARRAY:
             case MAP:
@@ -968,7 +979,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
             case STRUCT:
                 final Pair<Vertex, Edge> vertexEdgePair = mapStructToVertex(id, (ITypedStruct) value, instanceVertex, attributeInfo, idToVertexMap, edgeLabel);
-                return vertexEdgePair.getRight().getId().toString();
+                return (vertexEdgePair != null) ? vertexEdgePair.getRight().getId().toString() : null;
 
             case CLASS:
                 return mapClassReferenceAsEdge(instanceVertex, idToVertexMap, edgeLabel,
@@ -1046,41 +1057,44 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         private void mapPrimitiveToVertex(ITypedInstance typedInstance, Vertex instanceVertex,
                 AttributeInfo attributeInfo) throws AtlasException {
             Object attrValue = typedInstance.get(attributeInfo.name);
-            if (attrValue == null) {
-                return; // add only if instance has this attribute
-            }
 
             final String vertexPropertyName = getQualifiedName(typedInstance, attributeInfo);
-            Object propertyValue = null;
-            if (attributeInfo.dataType() == DataTypes.STRING_TYPE) {
-                propertyValue = typedInstance.getString(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.SHORT_TYPE) {
-                propertyValue = typedInstance.getShort(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.INT_TYPE) {
-                propertyValue = typedInstance.getInt(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.BIGINTEGER_TYPE) {
-                propertyValue = typedInstance.getBigInt(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.BOOLEAN_TYPE) {
-                propertyValue = typedInstance.getBoolean(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.BYTE_TYPE) {
-                propertyValue = typedInstance.getByte(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.LONG_TYPE) {
-                propertyValue = typedInstance.getLong(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.FLOAT_TYPE) {
-                propertyValue = typedInstance.getFloat(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.DOUBLE_TYPE) {
-                propertyValue = typedInstance.getDouble(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.BIGDECIMAL_TYPE) {
-                propertyValue = typedInstance.getBigDecimal(attributeInfo.name);
-            } else if (attributeInfo.dataType() == DataTypes.DATE_TYPE) {
-                final Date dateVal = typedInstance.getDate(attributeInfo.name);
-                //Convert Property value to Long  while persisting
-                propertyValue = dateVal.getTime();
-            }
-
             Object oldPropertyValue = instanceVertex.getProperty(vertexPropertyName);
-            if(oldPropertyValue == null || !oldPropertyValue.equals(propertyValue)) {
-                GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
+            if (attrValue == null && oldPropertyValue != null) {
+                //Update to null
+                GraphHelper.setProperty(instanceVertex, vertexPropertyName, attrValue);
+            } else {
+                Object propertyValue = null;
+                if (attributeInfo.dataType() == DataTypes.STRING_TYPE) {
+                    propertyValue = typedInstance.getString(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.SHORT_TYPE) {
+                    propertyValue = typedInstance.getShort(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.INT_TYPE) {
+                    propertyValue = typedInstance.getInt(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.BIGINTEGER_TYPE) {
+                    propertyValue = typedInstance.getBigInt(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.BOOLEAN_TYPE) {
+                    propertyValue = typedInstance.getBoolean(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.BYTE_TYPE) {
+                    propertyValue = typedInstance.getByte(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.LONG_TYPE) {
+                    propertyValue = typedInstance.getLong(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.FLOAT_TYPE) {
+                    propertyValue = typedInstance.getFloat(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.DOUBLE_TYPE) {
+                    propertyValue = typedInstance.getDouble(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.BIGDECIMAL_TYPE) {
+                    propertyValue = typedInstance.getBigDecimal(attributeInfo.name);
+                } else if (attributeInfo.dataType() == DataTypes.DATE_TYPE) {
+                    final Date dateVal = typedInstance.getDate(attributeInfo.name);
+                    //Convert Property value to Long  while persisting
+                    propertyValue = dateVal.getTime();
+                }
+
+
+                if (oldPropertyValue == null || !oldPropertyValue.equals(propertyValue)) {
+                    GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
+                }
             }
         }
     }

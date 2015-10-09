@@ -533,7 +533,7 @@ public class HiveLineageServiceTest {
         System.out.println("Submitting new entity= " + entityJSON);
         JSONArray jsonArray = new JSONArray();
         jsonArray.put(entityJSON);
-        String response = metadataService.createEntities(jsonArray.toString());
+        String response = metadataService.createOrUpdateEntities(jsonArray.toString());
         String guid = new JSONArray(response).getString(0);
         System.out.println("created instance for type " + typeName + ", guid: " + guid);
 

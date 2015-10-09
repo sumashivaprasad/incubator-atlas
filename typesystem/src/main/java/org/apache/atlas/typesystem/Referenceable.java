@@ -90,33 +90,12 @@ public class Referenceable extends Struct implements IReferenceableInstance {
         return traits.get(typeName);
     }
 
-//    public boolean equals(Object o) {
-//        if(this == o) {
-//            return true;
-//        }
-//        if(o == null) {
-//            return false;
-//        }
-//        if (o.getClass() != getClass()) {
-//            return false;
-//        }
-//
-//        if(!super.equals(o)) {
-//            return false;
-//        }
-//
-//        Referenceable obj = (Referenceable)o;
-//        if(!id.equals(obj.getId())) {
-//            return false;
-//        }
-//
-//        if (!traitNames.equals(getTraits())) {
-//            return false;
-//        }
-//
-//        return true;
-//    }
 
+    /**
+     * Matches traits, values associated with this Referenceable and skips the id match
+     * @param o The Referenceable which needs to be matched with
+     * @return
+     */
     public boolean equalsContents(Object o) {
         if(this == o) {
             return true;
@@ -139,13 +118,4 @@ public class Referenceable extends Struct implements IReferenceableInstance {
 
         return true;
     }
-
-//    @Override
-//    public int hashCode() {
-//        int result = super.hashCode();
-//        result = 31 * result + id.hashCode();
-//        result = 31 * result + traits.hashCode();
-//        result = 31 * result + traitNames.hashCode();
-//        return result;
-//    }
 }
