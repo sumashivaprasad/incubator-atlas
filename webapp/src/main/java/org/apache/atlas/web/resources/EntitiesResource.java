@@ -71,7 +71,7 @@ public class EntitiesResource {
             final String entities = Servlets.getRequestPayload(request);
             LOG.debug("submitting entities {} ", AtlasClient.toString(new JSONArray(entities)));
 
-            final String guids = metadataService.createEntities(entities);
+            final String guids = metadataService.createOrUpdateEntities(entities);
 
             UriBuilder ub = uriInfo.getAbsolutePathBuilder();
             URI locationURI = ub.path(guids).build();

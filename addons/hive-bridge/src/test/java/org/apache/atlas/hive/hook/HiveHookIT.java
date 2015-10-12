@@ -338,7 +338,7 @@ public class HiveHookIT {
     }
 
     private String assertEntityIsRegistered(final String query) throws Exception {
-        waitFor(2000, new Predicate() {
+        waitFor(5000, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
                 JSONArray results = dgiCLient.search(query);

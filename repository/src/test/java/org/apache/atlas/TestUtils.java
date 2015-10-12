@@ -168,6 +168,8 @@ public final class TestUtils {
     public static final String DATABASE_TYPE = "hive_database";
     public static final String DATABASE_NAME = "foo";
     public static final String TABLE_TYPE = "hive_table";
+    public static final String PARTITION_TYPE = "partition_type";
+    public static final String SERDE_TYPE = "serdeType";
     public static final String TABLE_NAME = "bar";
     public static final String CLASSIFICATION = "classification";
     public static final String PII = "PII";

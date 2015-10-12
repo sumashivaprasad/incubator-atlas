@@ -67,6 +67,14 @@ public class Struct implements IStruct {
         return values;
     }
 
+    /**
+     * equalContents instead of equals since values is a mutable attribute and could lead
+     * to incorrect behaviour when added to collections and mutated after that
+     * i.e when the attribute is mutated collections.contains(struct) returns false
+     * due to hashcode having changed for the struct.
+     * @param o
+     * @return
+     */
     public boolean equalsContents(Object o) {
         if (this == o) {
             return true;

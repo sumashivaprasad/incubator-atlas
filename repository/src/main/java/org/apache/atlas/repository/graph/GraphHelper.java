@@ -113,6 +113,7 @@ public final class GraphHelper {
         LOG.debug("Setting property {} = \"{}\" to vertex {}", propertyName, value, vertex);
         if(value == null || (value instanceof Collection && ((Collection) value).isEmpty())) {
             if(vertex.getProperty(propertyName) != null) {
+                LOG.info("Removing property - {} value from vertex {}", propertyName, vertex);
                 vertex.removeProperty(propertyName);
             }
         } else {
@@ -125,13 +126,16 @@ public final class GraphHelper {
         ((TitanVertex)vertex).addProperty(propertyName, value);
     }
 
-    public static void removeRelation(TitanGraph titanGraph, String edgeId, boolean cascade) {
+    public static Edge removeRelation(TitanGraph titanGraph, String edgeId, boolean cascade) {
         final Edge edge = titanGraph.getEdge(edgeId);
         if (cascade) {
            Vertex referredVertex = edge.getVertex(Direction.IN);
            titanGraph.removeVertex(referredVertex);
+           LOG.info("Removed vertex {}", referredVertex);
         }
         titanGraph.removeEdge(edge);
+        LOG.info("Removed edge {}", edge);
+        return edge;
     }
 
 /*
