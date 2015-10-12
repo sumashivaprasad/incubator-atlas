@@ -191,7 +191,8 @@ public final class TestUtils {
 
         StructTypeDefinition structTypeDefinition = new StructTypeDefinition("serdeType",
                 new AttributeDefinition[]{createRequiredAttrDef("name", DataTypes.STRING_TYPE),
-                        createRequiredAttrDef("serde", DataTypes.STRING_TYPE)});
+                        createRequiredAttrDef("serde", DataTypes.STRING_TYPE),
+                        createOptionalAttrDef("description", DataTypes.STRING_TYPE)});
 
         EnumValue values[] = {new EnumValue("MANAGED", 1), new EnumValue("EXTERNAL", 2),};
 

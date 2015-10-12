@@ -29,6 +29,7 @@ import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.TypesDef;
@@ -276,6 +277,7 @@ public class DefaultMetadataServiceTest {
         Struct serdeInstance = new Struct(TestUtils.SERDE_TYPE);
         serdeInstance.set("name", "serde1Name");
         serdeInstance.set("serde", "test");
+        serdeInstance.set("description", "testDesc");
         table.set("serde1", serdeInstance);
 
         String newtableId = createInstance(table);
@@ -284,19 +286,25 @@ public class DefaultMetadataServiceTest {
         String tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-//        Assert.assertTrue(serdeInstance.equalsContents(tableDefinition.get("serde1")));
         Assert.assertNotNull(tableDefinition.get("serde1"));
-        Assert.assertEquals(tableDefinition.get("serde1"), serdeInstance);
+        Assert.assertTrue(serdeInstance.equalsContents(tableDefinition.get("serde1")));
 
-
+        //update struct attribute
         serdeInstance.set("serde", "testUpdated");
-        newtableId = createInstance(table);
+        createInstance(table);
         tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
-        Assert.assertEquals(tableDefinition.get("serde1"), serdeInstance);
+        Assert.assertTrue(serdeInstance.equalsContents(tableDefinition.get("serde1")));
 
+        //set to null
+        serdeInstance.setNull("description");
+        createInstance(table);
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(tableId);
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        Assert.assertNull(((Struct)tableDefinition.get("serde1")).get("description"));
     }
 
     @Test
@@ -323,24 +331,70 @@ public class DefaultMetadataServiceTest {
         String tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-//        Assert.assertTrue(serdeInstance.equalsContents(tableDefinition.get("serde1")));
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
         List<Struct> partitionsActual = (List<Struct>) tableDefinition.get("partitions");
         Assert.assertEquals(partitionsActual.size(), 2);
         Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
 
+        //add a new element to array of struct
+        final Struct partition3 = new Struct(TestUtils.PARTITION_TYPE);
+        partition3.set("name", "part3");
+        partitions.add(partition3);
+        table.set("partitions", partitions);
+        newtableId = createInstance(table);
+        Assert.assertEquals(newtableId, tableId);
+
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertNotNull(tableDefinition.get("partitions"));
+        partitionsActual = (List<Struct>) tableDefinition.get("partitions");
+        Assert.assertEquals(partitionsActual.size(), 3);
+        Assert.assertTrue(partitions.get(2).equalsContents(partitionsActual.get(2)));
 
 
         //remove one of the struct values
+        partitions.remove(1);
+        table.set("partitions", partitions);
+        newtableId = createInstance(table);
+        Assert.assertEquals(newtableId, tableId);
 
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
+        Assert.assertNotNull(tableDefinition.get("partitions"));
+        partitionsActual = (List<Struct>) tableDefinition.get("partitions");
+        Assert.assertEquals(partitionsActual.size(), 2);
+        Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
+        Assert.assertTrue(partitions.get(1).equalsContents(partitionsActual.get(1)));
 
         //Update struct value within array of struct
+        partition1.set("name", "part4");
+        newtableId = createInstance(table);
+        Assert.assertEquals(newtableId, tableId);
 
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
-        // Update struct to null
+        Assert.assertNotNull(tableDefinition.get("partitions"));
+        partitionsActual = (List<Struct>) tableDefinition.get("partitions");
+        Assert.assertEquals(partitionsActual.size(), 2);
+        Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
 
+        // Remove all elements. Should set array attribute to null
+        partitions.clear();
+        newtableId = createInstance(table);
+        Assert.assertEquals(newtableId, tableId);
+
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertNull(tableDefinition.get("partitions"));
     }
 
 
