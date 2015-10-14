@@ -24,7 +24,11 @@ module.exports = function(grunt) {
     var classPathSep = (process.platform === "win32") ? ';' : ':',
         gitHash = '',
         pkg = grunt.file.readJSON('package.json'),
-        distPath = '../webapp/target/dist';
+        distPath = 'dist',
+        isDashboardDirectory = grunt.file.isDir('public'),
+        modulesPath = 'public/';
+    if (!isDashboardDirectory)
+        modulesPath = '../public/'
 
     grunt.initConfig({
         watch: {
@@ -90,11 +94,11 @@ module.exports = function(grunt) {
         },
         dist: distPath + '/js/app.min.js',
         modules: grunt.file.expand(
-            'public/js/app.js',
-            'public/js/routes.js',
-            'public/modules/**/*Module.js',
-            'public/modules/**/*.js',
-            'public/js/init.js'
+            modulesPath + 'js/app.js',
+            modulesPath + 'js/routes.js',
+            modulesPath + 'modules/**/*Module.js',
+            modulesPath + 'modules/**/*.js',
+            modulesPath + 'js/init.js'
         ).join(' '),
         shell: {
             min: {
@@ -131,7 +135,7 @@ module.exports = function(grunt) {
         copy: {
             dist: {
                 expand: true,
-                cwd: 'public/',
+                cwd: modulesPath,
                 src: ['**', '!js/**/*.js', '!modules/**/*.js'],
                 dest: distPath
             }
@@ -151,7 +155,7 @@ module.exports = function(grunt) {
                         'hostnames': ['*'],
                         'routes': {
                             '/': distPath,
-                            '/api': 'http://162.249.6.50:21000/api'
+                            '/api': 'http://162.212.133.190:21000/api'
                         }
                     }]
                 }

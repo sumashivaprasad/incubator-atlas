@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,26 @@
  * limitations under the License.
  */
 
-drop table if exists t;
-create table t(a int, b string);
-drop table if exists t2;
-create table t2 as select * from t;
+'use strict';
+
+angular.module('dgc.tags').factory('TagsResource', ['$resource', function($resource) {
+    return $resource('/api/atlas/types/:id', {}, {
+        query: {
+            method: 'GET',
+            transformResponse: function(data) {
+                var categories = [];
+                if (data) {
+                    angular.forEach(data.results, function(value) {
+                        categories.push({
+                            text: value
+                        });
+                    });
+                }
+                return categories;
+            },
+            responseType: 'json',
+            isArray: true
+        }
+    });
+
+}]);

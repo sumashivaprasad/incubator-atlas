@@ -25,11 +25,11 @@ import com.google.common.collect.ImmutableList
 import com.thinkaurelius.titan.core.{TitanFactory, TitanGraph}
 import com.tinkerpop.blueprints.Vertex
 import com.typesafe.config.{Config, ConfigFactory}
+import org.apache.atlas.repository.graph.TitanGraphProvider
 import org.apache.atlas.typesystem.types._
 import org.apache.commons.configuration.{Configuration, ConfigurationException, MapConfiguration}
 import org.apache.commons.io.FileUtils
 import org.json.JSONObject
-import org.scalatest.{Assertions, BeforeAndAfterAll, FunSuite}
 import org.skyscreamer.jsonassert.JSONAssert
 
 
@@ -49,9 +49,9 @@ trait GraphUtils {
     }
 
 
-    def titanGraph(conf: Config) = {
+    def titanGraph(conf: Configuration) = {
         try {
-            val g = TitanFactory.open(getConfiguration(conf))
+            val g = TitanFactory.open(conf)
             val mgmt = g.getManagementSystem
             val typname = mgmt.makePropertyKey("typeName").dataType(classOf[String]).make()
             mgmt.buildIndex("byTypeName", classOf[Vertex]).addKey(typname).buildCompositeIndex()
@@ -79,28 +79,42 @@ object QueryTestsUtils extends GraphUtils {
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 attrDef("owner", DataTypes.STRING_TYPE),
-                attrDef("createTime", DataTypes.INT_TYPE)
+                attrDef("createTime", DataTypes.INT_TYPE),
+                attrDef("clusterName", DataTypes.STRING_TYPE)
             ))
 
-        def storageDescClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "StorageDesc", null,
+        def hiveOrderDef = new StructTypeDefinition("HiveOrder",
+            Array(
+                attrDef("col", DataTypes.STRING_TYPE),
+                attrDef("order", DataTypes.INT_TYPE)
+            ))
+
+        def storageDescClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "StorageDescriptor", null,
             Array(
                 attrDef("inputFormat", DataTypes.STRING_TYPE),
-                attrDef("outputFormat", DataTypes.STRING_TYPE)
+                attrDef("outputFormat", DataTypes.STRING_TYPE),
+                new AttributeDefinition("sortCols", DataTypes.arrayTypeName("HiveOrder"), Multiplicity.REQUIRED, false, null)
             ))
 
         def columnClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Column", null,
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 attrDef("dataType", DataTypes.STRING_TYPE),
-                new AttributeDefinition("sd", "StorageDesc", Multiplicity.REQUIRED, false, null)
+                new AttributeDefinition("sd", "StorageDescriptor", Multiplicity.REQUIRED, false, null)
             ))
 
         def tblClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Table", null,
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 new AttributeDefinition("db", "DB", Multiplicity.REQUIRED, false, null),
-                new AttributeDefinition("sd", "StorageDesc", Multiplicity.REQUIRED, false, null),
+                new AttributeDefinition("sd", "StorageDescriptor", Multiplicity.REQUIRED, false, null),
                 attrDef("created", DataTypes.DATE_TYPE)
+            ))
+
+        def partitionClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Partition", null,
+            Array(
+                new AttributeDefinition("values", DataTypes.arrayTypeName(DataTypes.STRING_TYPE.getName), Multiplicity.REQUIRED, false, null),
+                new AttributeDefinition("table", "Table", Multiplicity.REQUIRED, false, null)
             ))
 
         def loadProcessClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "LoadProcess", null,
@@ -128,19 +142,17 @@ object QueryTestsUtils extends GraphUtils {
             Array[AttributeDefinition]())
 
         TypeSystem.getInstance().defineTypes(ImmutableList.of[EnumTypeDefinition],
-            ImmutableList.of[StructTypeDefinition],
+            ImmutableList.of[StructTypeDefinition](hiveOrderDef),
             ImmutableList.of[HierarchicalTypeDefinition[TraitType]](dimTraitDef, piiTraitDef,
                 metricTraitDef, etlTraitDef, jdbcTraitDef),
             ImmutableList.of[HierarchicalTypeDefinition[ClassType]](dbClsDef, storageDescClsDef, columnClsDef, tblClsDef,
-                loadProcessClsDef, viewClsDef))
+                partitionClsDef, loadProcessClsDef, viewClsDef))
 
         ()
     }
 
-    def setupTestGraph: TitanGraph = {
-        var conf = ConfigFactory.load()
-        conf = conf.getConfig("graphRepo")
-        val g = titanGraph(conf)
+    def setupTestGraph(gp: TitanGraphProvider): TitanGraph = {
+        val g = gp.get
         val manager: ScriptEngineManager = new ScriptEngineManager
         val engine: ScriptEngine = manager.getEngineByName("gremlin-groovy")
         val bindings: Bindings = engine.createBindings
@@ -157,8 +169,6 @@ object QueryTestsUtils extends GraphUtils {
 }
 
 trait BaseGremlinTest {
-  self : FunSuite with BeforeAndAfterAll =>
-
   val STRUCT_NAME_REGEX = (TypeUtils.TEMP_STRUCT_NAME_PREFIX + "\\d+").r
   def validateJson(r: GremlinQueryResult, expected: String = null): Unit = {
     val rJ = r.toJson

@@ -20,7 +20,10 @@
 
 angular.module('dgc.home').controller('HeaderController', ['$scope', '$modal', function($scope, $modal) {
 
-    $scope.menu = [];
+    $scope.menu = [{
+        title: "Tags",
+        state: "tags"
+    }];
 
     $scope.isCollapsed = true;
     $scope.isLoggedIn = function() {
