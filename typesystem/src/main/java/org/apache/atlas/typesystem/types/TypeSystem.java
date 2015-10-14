@@ -538,13 +538,7 @@ public class TypeSystem {
             for (AttributeInfo info : recursiveRefs) {
                 info.setDataType(dataType(info.dataType().getName()));
             }
-            for (DataTypes.ArrayType arrType : recursiveArrayTypes) {
-                arrType.setElemType(dataType(arrType.getElemType().getName()));
-            }
-            for (DataTypes.MapType mapType : recursiveMapTypes) {
-                mapType.setKeyType(dataType(mapType.getKeyType().getName()));
-                mapType.setValueType(dataType(mapType.getValueType().getName()));
-            }
+            //TODO - What needs to be done here for maps and arrays ?
         }
 
         Map<String, IDataType> defineTypes() throws AtlasException {

@@ -726,9 +726,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             LOG.debug("mapping attribute {} = {}", attributeInfo.name, attrValue);
             final String propertyName = getQualifiedName(typedInstance, attributeInfo);
             String edgeLabel = getEdgeLabel(typedInstance, attributeInfo);
-//            if (attrValue == null) {
-//                return;
-//            }
 
             switch (dataType.getTypeCategory()) {
             case PRIMITIVE:
@@ -776,9 +773,9 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             Edge relEdge = null;
             final Iterable<Edge> edges = instanceVertex.getEdges(Direction.OUT, edgeLabel);
             Iterator<Edge> iter = edges.iterator();
+            //Assuming that array to struct edges are already cleaned up by now and that struct mappsing are singletons
             if(edges != null && iter.hasNext()) {
                 //Already existing vertex. Update
-                //TODO - Handle MULTI edges where attribute has MULTIPLICITY - COLLECTION/SET
                 relEdge = edges.iterator().next();
                 structInstanceVertex = relEdge.getVertex(Direction.IN);
 
@@ -817,34 +814,31 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             LOG.debug("Mapping instance {} to vertex {} for name {}", typedInstance.getTypeName(), instanceVertex,
                     attributeInfo.name);
             List list = (List) typedInstance.get(attributeInfo.name);
-
-
             String propertyName = getQualifiedName(typedInstance, attributeInfo);
             final String edgeLabel = EDGE_LABEL_PREFIX + propertyName;
             IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
 
-            removeUnusedReferences(instanceVertex, propertyName, attributeInfo, elementType);
+            List<String> currentEdgeIds = instanceVertex.getProperty(propertyName);
+            if (currentEdgeIds != null) {
+                for(String edgeId : currentEdgeIds) {
+                    removeUnusedReference(instanceVertex, edgeId, attributeInfo, elementType);
+                }
+            }
+
             List<String> values = new ArrayList<>();
             if (list != null) {
                 for (int index = 0; index < list.size(); index++) {
                     String entryId =
                         mapCollectionEntryToVertex(id, instanceVertex, attributeInfo, idToVertexMap, elementType,
                             list.get(index), edgeLabel + "_" + index);
-                    values.add(entryId);
+                    if(entryId != null) {
+                        values.add(entryId);
+                    }
+
                 }
             }
             // for dereference on way out
             GraphHelper.setProperty(instanceVertex, propertyName, values);
-        }
-
-        private void removeUnusedReferences(Vertex instanceVertex, String propertyName, AttributeInfo attributeInfo, IDataType<?> elementType) {
-            //Remove edges for array property values which do not exist any more
-            List<String> origValues = instanceVertex.getProperty(propertyName);
-            if (origValues != null) {
-                for (String edgeId : origValues) {
-                    removeUnusedReference(instanceVertex, edgeId, attributeInfo, elementType);
-                }
-            }
         }
 
         private Edge removeUnusedReference(Vertex instanceVertex, String edgeId, AttributeInfo attributeInfo, IDataType<?> elementType) {
@@ -853,12 +847,13 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             switch (elementType.getTypeCategory()) {
             case STRUCT:
                 removedRelation = GraphHelper.removeRelation(titanGraph, edgeId, true);
+                //Remove the vertex from state so that further processing no longer uses this
                 vertexToInstanceMap.remove(removedRelation.getVertex(Direction.IN));
                 break;
             case CLASS:
-                final boolean cascade = attributeInfo.isComposite ? true : false;
-                removedRelation = GraphHelper.removeRelation(titanGraph, edgeId, cascade);
-                if (cascade) {
+                removedRelation = GraphHelper.removeRelation(titanGraph, edgeId, attributeInfo.isComposite);
+                if (attributeInfo.isComposite) {
+                    //Remove the vertex from state so that further processing no longer uses this
                     vertexToInstanceMap.remove(removedRelation.getVertex(Direction.IN));
                 }
                 break;
@@ -890,7 +885,17 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             }
 
             //Remove unused keys
-            removeUnusedReferences(instanceVertex, propertyName,  attributeInfo, elementType);
+            List<Object> origKeys = instanceVertex.getProperty(propertyName);
+            if (origKeys != null) {
+                origKeys.removeAll(collection.keySet());
+                for (Object unusedKey : origKeys) {
+                    String edgeLabel = EDGE_LABEL_PREFIX + propertyName + "." + unusedKey.toString();
+                    if (instanceVertex.getEdges(Direction.OUT, edgeLabel).iterator().hasNext()) {
+                        Edge edge = instanceVertex.getEdges(Direction.OUT, edgeLabel).iterator().next();
+                        removeUnusedReference(instanceVertex, edge.getId().toString(), attributeInfo, ((DataTypes.MapType) attributeInfo.dataType()).getValueType());
+                    }
+                }
+            }
 
             // for dereference on way out
             GraphHelper.setProperty(instanceVertex, propertyName, new ArrayList(collection.keySet()));

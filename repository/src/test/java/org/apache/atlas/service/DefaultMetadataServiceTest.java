@@ -36,6 +36,7 @@ import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.types.ClassType;
+import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -157,6 +158,31 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(actualDb.getId().id, dbId);
     }
 
+    @Test(enabled=false)
+    public void testUpdateEnums() throws Exception {
+        //TODO - Fix ATLAS-220 and enable this test
+        Referenceable db = createDBEntity();
+        String id = createInstance(db);
+
+        Referenceable table = createTableEntity(db);
+        String tableId = createInstance(table);
+
+        String tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        EnumValue enumStr = (EnumValue) tableDefinition.get("tableType");
+
+        Assert.assertEquals(enumStr.value, "EXTERNAL");
+
+        table.set("tableType", "MANAGED");
+        createInstance(table);
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        enumStr = (EnumValue) tableDefinition.get("tableType");
+
+        Assert.assertEquals(enumStr.value, "MANAGED");
+    }
 
     @Test
     public void testUpdateEntityWithMap() throws Exception {
@@ -165,6 +191,66 @@ public class DefaultMetadataServiceTest {
 
         Referenceable table = createTableEntity(db);
         String tableId = createInstance(table);
+
+        final Map<String, Struct> partsMap = new HashMap<String, Struct>();
+        partsMap.put("part0", new Struct("partition_type",
+            new HashMap<String, Object>() {{
+                put("name", "test");
+            }}));
+
+        table.set("partitionsMap", partsMap);
+
+        createInstance(table);
+        String tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertTrue(partsMap.get("part0").equalsContents(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part0")));
+
+        //update map - add a map key
+        partsMap.put("part1", new Struct("partition_type",
+            new HashMap<String, Object>() {{
+                put("name", "test1");
+            }}));
+        table.set("partitionsMap", partsMap);
+
+        createInstance(table);
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertEquals(((Map<String, Struct>)tableDefinition.get("partitionsMap")).size(), 2);
+        Assert.assertTrue(partsMap.get("part1").equalsContents(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part1")));
+
+        //update map - remove a key and add another key
+        partsMap.remove("part0");
+        partsMap.put("part2", new Struct("partition_type",
+            new HashMap<String, Object>() {{
+                put("name", "test2");
+            }}));
+        table.set("partitionsMap", partsMap);
+
+        createInstance(table);
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertEquals(((Map<String, Struct>)tableDefinition.get("partitionsMap")).size(), 2);
+        Assert.assertNull(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part0"));
+        Assert.assertTrue(partsMap.get("part2").equalsContents(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part2")));
+
+
+        //update struct value for existing map key
+        Struct partition2 = (Struct)partsMap.get("part2");
+        partition2.set("name", "test2Updated");
+        createInstance(table);
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertEquals(((Map<String, Struct>)tableDefinition.get("partitionsMap")).size(), 2);
+        Assert.assertNull(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part0"));
+        Assert.assertTrue(partsMap.get("part2").equalsContents(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part2")));
     }
 
     @Test
@@ -204,7 +290,7 @@ public class DefaultMetadataServiceTest {
     }
 
     @Test
-    public void testUpdateEntityArrayOfClassWithIds() throws Exception {
+    public void testUpdateEntityArrayOfClass() throws Exception {
 
         Referenceable db = createDBEntity();
         String id = createInstance(db);
@@ -230,7 +316,8 @@ public class DefaultMetadataServiceTest {
         List<Referenceable> arrClsColumns = (List) tableDefinition.get("columns");
         Assert.assertTrue(arrClsColumns.get(0).equalsContents(columns.get(0)));
 
-        //Remove a class reference/Id and insert another id
+        //Remove a class reference/Id and insert another reference
+        //Also covers isComposite case since columns is a composite
         values.clear();
         columns.clear();
 
@@ -238,10 +325,8 @@ public class DefaultMetadataServiceTest {
         values.put("type", "type");
         ref = new Referenceable("column_type", values);
         columns.add(ref);
-        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
-            put("columns", columns);
-        }});
-        metadataService.updateEntity(tableId, tableUpdated);
+        table.set("columns", columns);
+        createInstance(table);
 
         tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
@@ -261,10 +346,6 @@ public class DefaultMetadataServiceTest {
         Assert.assertNull(tableDefinition.get("columns"));
     }
 
-    @Test
-    public void testUpdateEntityArrayOfClassWithComposite() throws Exception {
-
-    }
 
     @Test
     public void testStructs() throws Exception {
@@ -353,7 +434,6 @@ public class DefaultMetadataServiceTest {
         partitionsActual = (List<Struct>) tableDefinition.get("partitions");
         Assert.assertEquals(partitionsActual.size(), 3);
         Assert.assertTrue(partitions.get(2).equalsContents(partitionsActual.get(2)));
-
 
         //remove one of the struct values
         partitions.remove(1);

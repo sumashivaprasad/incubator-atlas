@@ -127,14 +127,15 @@ public final class GraphHelper {
     }
 
     public static Edge removeRelation(TitanGraph titanGraph, String edgeId, boolean cascade) {
+        LOG.debug("Removing edge with id {}", edgeId);
         final Edge edge = titanGraph.getEdge(edgeId);
+        titanGraph.removeEdge(edge);
+        LOG.info("Removed edge {}", edge);
         if (cascade) {
            Vertex referredVertex = edge.getVertex(Direction.IN);
            titanGraph.removeVertex(referredVertex);
            LOG.info("Removed vertex {}", referredVertex);
         }
-        titanGraph.removeEdge(edge);
-        LOG.info("Removed edge {}", edge);
         return edge;
     }
 

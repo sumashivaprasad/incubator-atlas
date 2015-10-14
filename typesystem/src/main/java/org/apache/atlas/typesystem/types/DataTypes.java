@@ -605,7 +605,8 @@ public class DataTypes {
                         Map.Entry e = it.next();
                         b.put(keyType.convert(e.getKey(),
                                         TypeSystem.getInstance().allowNullsInCollections() ? Multiplicity.OPTIONAL :
-                                                Multiplicity.REQUIRED), valueType.convert(e.getValue(),
+                                                Multiplicity.REQUIRED),
+                                        valueType.convert(e.getValue(),
                                         TypeSystem.getInstance().allowNullsInCollections() ? Multiplicity.OPTIONAL :
                                                 Multiplicity.REQUIRED));
                     }
