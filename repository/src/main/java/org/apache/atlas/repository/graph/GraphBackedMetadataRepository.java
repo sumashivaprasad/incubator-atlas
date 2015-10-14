@@ -793,7 +793,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                         idToVertexMap, false);
                 }
             } else {
-
                 if (typedInstance == null) {
                     return null;
                 }
@@ -940,12 +939,14 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             final Iterable<Edge> edges = instanceVertex.getEdges(Direction.OUT, edgeLabel);
             Edge edge = null;
             if (edges != null && edges.iterator().hasNext()) {
-                //Edge already exists
-                //TODO - Handle MULTI edges where attribute has MULTIPLICITY - COLLECTION/SET
+                //Edge already exists. Assuming arra to class edges are cleaned up and theres only one edge from current vertex to the class vertex
                 edge = edges.iterator().next();
             }
 
-            if (typedReference != null) {
+            if(edge != null && typedReference == null) {
+                // Remove edge if the class reference is updated to null
+                removeUnusedReference(instanceVertex, edge.getId().toString(), attributeInfo, elementType);
+            } else if (edge == null && typedReference != null) {
                 Vertex referenceVertex;
                 Id id = typedReference instanceof Id ? (Id) typedReference : typedReference.getId();
                 if (id.isAssigned()) {
@@ -959,9 +960,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     edge = GraphHelper.addEdge(titanGraph, instanceVertex, referenceVertex, edgeLabel);
                     return String.valueOf(edge.getId());
                 }
-            } else if(edge != null) {
-                // Remove edge if the class reference is null
-                removeUnusedReference(instanceVertex, edge.getId().toString(), attributeInfo, elementType);
             } else {
                 // Do nothing since edge already exists
                 return edge.getId().toString();
