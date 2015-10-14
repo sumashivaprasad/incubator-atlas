@@ -317,11 +317,4 @@ object InstanceSerialization {
     val _s = read[_Reference](jsonStr)
     asJava(_s).asInstanceOf[Referenceable]
   }
-
-//  def fromJsonArray[T](jsonStr: String, withBigDecimals : Boolean = false): java.util.List[T] = {
-//    implicit val formats = buildFormat(withBigDecimals)
-//    implicit val Manifest[Array[T]] = Manifest.arrayType
-//    val _s = read[Array[T]](jsonStr)
-//    asJava(_s).asInstanceOf[java.util.List[T]]
-//  }
 }

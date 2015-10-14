@@ -126,12 +126,7 @@ export METADATA_SERVER_OPTS="-Djava.awt.headless=true -Djava.security.krb5.realm
 By default, Atlas uses Titan as the graph repository and is the only graph repository implementation available currently.
 For configuring Titan to work with Solr, please follow the instructions below
 <verbatim>
-<<<<<<< HEAD
-
-* Install solr if not already running. Versions of SOLR supported are 4.8.1 or 5.2.1.
-=======
 * Install solr if not already running. Version of SOLR supported is 5.2.1.
->>>>>>> fdafb3598b077d72b48380d1b4839f30b3469602
 
 * Start solr in cloud mode.
   SolrCloud mode uses a ZooKeeper Service as a highly available, central location for cluster management.

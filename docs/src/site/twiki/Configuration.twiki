@@ -50,12 +50,8 @@ atlas.graph.index.search.elasticsearch.local-mode=true
 atlas.graph.index.search.elasticsearch.create.sleep=2000
 </verbatim>
 
-<<<<<<< HEAD
----+++++ Solr
-Please note that Solr installation in Cloud mode is a prerequisite before configuring Solr as the search indexing backend. Refer InstallationSteps section for Solr installation/configuration.
-=======
 ---++++ Graph Search Index - Solr
->>>>>>> fdafb3598b077d72b48380d1b4839f30b3469602
+Please note that Solr installation in Cloud mode is a prerequisite before configuring Solr as the search indexing backend. Refer InstallationSteps section for Solr installation/configuration.
 
 <verbatim>
  atlas.graph.index.search.backend=solr5

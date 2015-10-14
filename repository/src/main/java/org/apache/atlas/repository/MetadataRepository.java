@@ -139,12 +139,8 @@ public interface MetadataRepository {
     void deleteTrait(String guid, String traitNameToBeDeleted) throws RepositoryException;
 
     /**
-<<<<<<< HEAD
      * Adds/Updates the property to the entity that corresponds to the GUID
      * Supports only primitive attribute/Class Id updations.
-=======
-     * Adds/Updates the property to/in the entity that corresponds to the GUID
->>>>>>> fdafb3598b077d72b48380d1b4839f30b3469602
      * @param guid entity id
      * @param property property name
      * @param value    property value
