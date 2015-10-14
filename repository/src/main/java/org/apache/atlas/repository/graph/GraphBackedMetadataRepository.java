@@ -272,8 +272,9 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             final String typeName = getTypeName(instanceVertex);
 
             instanceToGraphMapper
-                    .mapTraitInstanceToVertex(traitInstance, getIdFromVertex(typeName, instanceVertex), typeName,
-                            instanceVertex, Collections.<Id, Vertex>emptyMap());
+                .mapTraitInstanceToVertex(traitInstance, getIdFromVertex(typeName, instanceVertex), typeSystem.getDataType(ClassType.class, typeName),
+                    instanceVertex, Collections.<Id, Vertex>emptyMap());
+
 
             // update the traits in entity once adding trait instance is successful
             GraphHelper.addProperty(instanceVertex, Constants.TRAIT_NAMES_PROPERTY_KEY, traitName);
@@ -969,22 +970,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             return null;
         }
 
-        private Vertex mapStructInstanceToVertex(Id id, ITypedStruct structInstance, AttributeInfo attributeInfo,
-                Map<Id, Vertex> idToVertexMap) throws AtlasException {
-            // add a new vertex for the struct or trait instance
-            Vertex structInstanceVertex = GraphHelper
-                    .createVertexWithoutIdentity(titanGraph, structInstance.getTypeName(), id,
-                            Collections.<String>emptySet()); // no super types for struct type
-            LOG.debug("created vertex {} for struct {} value {}", structInstanceVertex, attributeInfo.name,
-                    structInstance);
-
-            // map all the attributes to this newly created vertex
-            mapInstanceToVertex(id, structInstance, structInstanceVertex, structInstance.fieldMapping().fields,
-                    idToVertexMap, false);
-
-            return structInstanceVertex;
-        }
-
         private void mapTraitInstanceToVertex(ITypedStruct traitInstance, Id typedInstanceId,
             IDataType entityType, Vertex parentInstanceVertex, Map<Id, Vertex> idToVertexMap)
         throws AtlasException {
@@ -1237,7 +1222,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 final String edgeLabel = EDGE_LABEL_PREFIX + keyPropertyName;
                 final Object keyValue = instanceVertex.getProperty(keyPropertyName);
                 values.put(key,
-                        mapVertexToCollectionEntry(instanceVertex, attributeInfo, valueType, keyValue, edgeLabel));
+                    mapVertexToCollectionEntry(instanceVertex, attributeInfo, valueType, keyValue, edgeLabel));
             }
 
             typedInstance.set(attributeInfo.name, values);
