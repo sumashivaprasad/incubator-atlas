@@ -19,20 +19,31 @@
 package org.apache.atlas.repository.graph;
 
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.TitanProperty;
 import com.thinkaurelius.titan.core.TitanVertex;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.Constants;
+import org.apache.atlas.repository.EntityNotFoundException;
+import org.apache.atlas.typesystem.ITypedInstance;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.types.AttributeInfo;
+import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.HierarchicalType;
+import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,6 +53,9 @@ import java.util.UUID;
 public final class GraphHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphHelper.class);
+    public static final String EDGE_LABEL_PREFIX = "__";
+
+    private static final TypeSystem typeSystem = TypeSystem.getInstance();
 
     private GraphHelper() {
     }
@@ -54,6 +68,7 @@ public final class GraphHelper {
         // add identity
         final String guid = UUID.randomUUID().toString();
         setProperty(vertexWithIdentity, Constants.GUID_PROPERTY_KEY, guid);
+
 
         return vertexWithIdentity;
     }
@@ -137,6 +152,66 @@ public final class GraphHelper {
            LOG.info("Removed vertex {}", referredVertex);
         }
         return edge;
+    }
+
+    public static Vertex getVertexForGUID(TitanGraph titanGraph, String guid) throws EntityNotFoundException {
+        return getVertexForProperty(titanGraph, Constants.GUID_PROPERTY_KEY, guid);
+    }
+
+
+    public static Vertex getVertexForProperty(TitanGraph titanGraph, String propertyKey, Object value) throws EntityNotFoundException {
+        Vertex instanceVertex = GraphHelper.findVertex(titanGraph, propertyKey, value);
+        if (instanceVertex == null) {
+            LOG.debug("Could not find a vertex with {}={}", propertyKey, value);
+            throw new EntityNotFoundException("Could not find an entity in the repository with " + propertyKey + "="
+                + value);
+        } else {
+            LOG.debug("Found a vertex {} with {}={}", instanceVertex, propertyKey, value);
+        }
+
+        return instanceVertex;
+    }
+
+    public static String getQualifiedFieldName(ITypedInstance typedInstance, AttributeInfo attributeInfo) throws AtlasException {
+        IDataType dataType = typeSystem.getDataType(IDataType.class, typedInstance.getTypeName());
+        return getQualifiedFieldName(dataType, attributeInfo.name);
+    }
+
+    public static String getQualifiedFieldName(IDataType dataType, String attributeName) throws AtlasException {
+        return dataType.getTypeCategory() == DataTypes.TypeCategory.STRUCT ? dataType.getName() + "." + attributeName
+            // else class or trait
+            : ((HierarchicalType) dataType).getQualifiedName(attributeName);
+    }
+
+    public static String getTraitLabel(String typeName, String attrName) {
+        return typeName + "." + attrName;
+    }
+
+    public static List<String> getTraitNames(Vertex entityVertex) {
+        ArrayList<String> traits = new ArrayList<>();
+        for (TitanProperty property : ((TitanVertex) entityVertex).getProperties(Constants.TRAIT_NAMES_PROPERTY_KEY)) {
+            traits.add((String) property.getValue());
+        }
+
+        return traits;
+    }
+
+    public static String getEdgeLabel(ITypedInstance typedInstance, AttributeInfo aInfo) throws AtlasException {
+        IDataType dataType = typeSystem.getDataType(IDataType.class, typedInstance.getTypeName());
+        return getEdgeLabel(dataType.getName(), aInfo.name);
+    }
+
+    public static String getEdgeLabel(String typeName, String attrName) {
+        return GraphHelper.EDGE_LABEL_PREFIX + typeName + "." + attrName;
+    }
+
+    public static Id getIdFromVertex(String dataTypeName, Vertex vertex) {
+        return new Id(vertex.<String>getProperty(Constants.GUID_PROPERTY_KEY),
+            vertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY), dataTypeName);
+    }
+
+    public static String getTypeName(Vertex instanceVertex) {
+        return instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
     }
 
 /*

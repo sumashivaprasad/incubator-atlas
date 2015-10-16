@@ -75,7 +75,7 @@ public class ReferenceableInstance extends StructInstance implements ITypedRefer
      * @nopub
      * @param id
      */
-    void replaceWithNewId(Id id) {
+    public void replaceWithNewId(Id id) {
         this.id = id;
     }
 

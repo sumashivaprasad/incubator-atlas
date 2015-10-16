@@ -61,7 +61,6 @@ import java.util.List;
  * of the Type they correspond with.
  */
 @Path("entity")
-@Singleton
 public class EntityResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(EntityResource.class);

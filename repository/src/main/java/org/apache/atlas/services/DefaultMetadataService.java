@@ -40,6 +40,7 @@ import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -74,7 +75,6 @@ import java.util.Map;
  * Simple wrapper over TypeSystem and MetadataRepository services with hooks
  * for listening to changes to the repository.
  */
-@Singleton
 public class DefaultMetadataService implements MetadataService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultMetadataService.class);
@@ -245,12 +245,12 @@ public class DefaultMetadataService implements MetadataService {
      * @return guids - json array of guids
      */
     @Override
-    public String createOrUpdateEntities(String entityInstanceDefinition) throws AtlasException {
+    public String createEntities(String entityInstanceDefinition) throws AtlasException {
         ParamChecker.notEmpty(entityInstanceDefinition, "Entity instance definition cannot be empty");
 
         ITypedReferenceableInstance[] typedInstances = deserializeClassInstances(entityInstanceDefinition);
 
-        final String[] guids = repository.createOrUpdateEntities(typedInstances);
+        final String[] guids = repository.createEntities(typedInstances);
 
         onEntityAddedToRepo(Arrays.asList(typedInstances));
         return new JSONArray(Arrays.asList(guids)).toString();
@@ -348,12 +348,12 @@ public class DefaultMetadataService implements MetadataService {
         if(instance == null) {
             throw new EntityNotFoundException(String.format("Entity with guid %s not found ", guid));
         }
-        updateInstance(instance, updatedEntity);
-        repository.createOrUpdateEntities(instance);
+
+        updateTypedInstance(instance, updatedEntity);
+        repository.updateEntity(guid, instance);
     }
 
-    private List<AttributeInfo> updateInstance(ITypedReferenceableInstance instance, Referenceable updatedEntity) throws AtlasException {
-        List<AttributeInfo> updatedAttributes = new ArrayList<>();
+    private void updateTypedInstance(ITypedReferenceableInstance instance, Referenceable updatedEntity) throws AtlasException {
         ClassType type = typeSystem.getDataType(ClassType.class, instance.getTypeName());
         for (String property : updatedEntity.getValuesMap().keySet()) {
             AttributeInfo attributeInfo = type.fieldMapping.fields.get(property);
@@ -376,12 +376,12 @@ public class DefaultMetadataService implements MetadataService {
             case MAP:
                 instance.set(property, value);
                 break;
+            case TRAIT:
+                //TODO - handle trait updates as well?
             default:
                 throw new AtlasException("Update of " + attrTypeCategory + " is not supported");
             }
-            updatedAttributes.add(attributeInfo);
         }
-        return updatedAttributes;
     }
 
     @Override
@@ -396,8 +396,8 @@ public class DefaultMetadataService implements MetadataService {
         if(instance == null) {
             throw new EntityNotFoundException(String.format("Entity of type %s with unique attribute(%s:%s)  not found ", typeName, uniqueAttributeName, attrValue));
         }
-        updateInstance(instance, updatedEntity);
-        repository.createOrUpdateEntities(instance);
+        updateTypedInstance(instance, updatedEntity);
+        repository.updateEntity(uniqueAttributeName, uniqueAttributeName, instance);
     }
 
     private void validateTypeExists(String entityType) throws AtlasException {

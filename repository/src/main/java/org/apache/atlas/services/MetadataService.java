@@ -67,7 +67,7 @@ public interface MetadataService {
      * @param entityDefinition definition
      * @return guid
      */
-    String createOrUpdateEntities(String entityDefinition) throws AtlasException;
+    String createEntities(String entityDefinition) throws AtlasException;
 
     /**
      * Return the definition for the given guid.

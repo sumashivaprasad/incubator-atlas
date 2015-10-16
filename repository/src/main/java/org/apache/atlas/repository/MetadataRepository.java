@@ -81,7 +81,7 @@ public interface MetadataRepository {
      * @throws RepositoryException
      * @throws EntityExistsException
      */
-    String[] createOrUpdateEntities(ITypedReferenceableInstance... entities) throws RepositoryException, EntityExistsException;
+    String[] createEntities(ITypedReferenceableInstance... entities) throws RepositoryException, EntityExistsException;
 
     /**
      * Fetch the complete definition of an entity given its GUID.
@@ -146,6 +146,21 @@ public interface MetadataRepository {
      * @param value    property value
      */
     void updateEntity(String guid, String property, String value) throws RepositoryException;
+
+    /**
+     * Adds the property to the entity that corresponds to the GUID
+     * @param guid entity id
+     * @param entityUpdated The updated entity values
+     */
+    void updateEntity(String guid, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
+
+    /**
+     * Adds the property to the entity that corresponds to the GUID
+     * @param uniqAttributeName
+     * @param uniqAttributeValue
+     * @param entityUpdated The updated entity values
+     */
+    void updateEntity(String uniqAttributeName, String uniqAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
 
 
     /**

@@ -54,7 +54,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         // allow for dynamic binding of the metadata repo & graph service
 
         // bind the MetadataRepositoryService interface to an implementation
-        bind(MetadataRepository.class).to(GraphBackedMetadataRepository.class).asEagerSingleton();
+        bind(MetadataRepository.class).to(GraphBackedMetadataRepository.class);
 
         bind(TypeSystem.class).in(Singleton.class);
 
@@ -66,7 +66,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         typesChangeListenerBinder.addBinding().to(GraphBackedSearchIndexer.class);
 
         // bind the MetadataService interface to an implementation
-        bind(MetadataService.class).to(DefaultMetadataService.class).asEagerSingleton();
+        bind(MetadataService.class).to(DefaultMetadataService.class);
 
         // bind the DiscoveryService interface to an implementation
         bind(DiscoveryService.class).to(GraphBackedDiscoveryService.class).asEagerSingleton();
