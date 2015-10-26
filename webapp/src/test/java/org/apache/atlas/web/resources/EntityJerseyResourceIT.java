@@ -220,7 +220,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         WebResource resource = service.path("api/atlas/entity").path(guid);
 
         return resource.queryParam("property", property).queryParam("value", value).accept(Servlets.JSON_MEDIA_TYPE)
-                .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.PUT, ClientResponse.class);
+                .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.POST, ClientResponse.class);
     }
 
     private ClientResponse getEntityDefinition(String guid) {

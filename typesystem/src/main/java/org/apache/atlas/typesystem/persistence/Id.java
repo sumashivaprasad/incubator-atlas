@@ -20,6 +20,7 @@ package org.apache.atlas.typesystem.persistence;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.ParamChecker;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.types.FieldMapping;
@@ -37,6 +38,8 @@ public class Id implements ITypedReferenceableInstance {
     public final int version;
 
     public Id(String id, int version, String className) {
+        ParamChecker.notEmpty(className, "id");
+        ParamChecker.notEmpty(className, "className");
         this.id = id;
         this.className = className;
         this.version = version;

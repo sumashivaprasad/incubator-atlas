@@ -75,6 +75,7 @@ import java.util.Map;
  * Simple wrapper over TypeSystem and MetadataRepository services with hooks
  * for listening to changes to the repository.
  */
+@Singleton
 public class DefaultMetadataService implements MetadataService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultMetadataService.class);
@@ -339,19 +340,68 @@ public class DefaultMetadataService implements MetadataService {
         repository.updateEntity(guid, property, value);
     }
 
+    /**
+     * Updates an entity, instance of the type based on the guid set.
+     *
+     * @param entityInstanceDefinition json array of entity definitions
+     * @return guids - json array of guids
+     */
     @Override
-    public void updateEntity(String guid, Referenceable updatedEntity) throws AtlasException {
+    public String updateEntities(String entityInstanceDefinition) throws AtlasException {
+
+        ParamChecker.notEmpty(entityInstanceDefinition, "Entity instance definition cannot be empty");
+        ITypedReferenceableInstance[] typedInstances = deserializeClassInstances(entityInstanceDefinition);
+
+        onEntityAddedToRepo(Arrays.asList(typedInstances));
+        String[] guids = repository.updateEntities(typedInstances);
+
+        return new JSONArray(Arrays.asList(guids)).toString();
+    }
+
+    @Override
+    public String updateEntity(String guid, Referenceable updatedEntity) throws AtlasException {
         ParamChecker.notEmpty(guid, "guid cannot be null");
         ParamChecker.notNull(updatedEntity, "updatedEntity cannot be null");
 
         ITypedReferenceableInstance instance = repository.getEntityDefinition(guid);
-        if(instance == null) {
+        if (instance == null) {
             throw new EntityNotFoundException(String.format("Entity with guid %s not found ", guid));
         }
-
         updateTypedInstance(instance, updatedEntity);
-        repository.updateEntity(guid, instance);
+        String[] guids = repository.updateEntities(instance);
+
+        return new JSONArray(Arrays.asList(guids)).toString();
     }
+
+//    /**
+//     * Updates an entity, with partial updates
+//     *
+//     * @param entityInstanceDefinition json array of entity definitions
+//     * @return guids - json array of guids
+//     */
+//    @Override
+//    public String[] updateEntities(String entityInstanceDefinition) throws AtlasException {
+//
+//        final String[] guids = repository.createEntities(typedInstances);
+//
+//        ParamChecker.notEmpty(entityInstanceDefinition, "Entity instance definition cannot be empty");
+//
+//        ITypedReferenceableInstance[] typedInstances = deserializeClassInstances(entityInstanceDefinition);
+//
+//        ParamChecker.notEmpty(guid, "guid cannot be null");
+//        ParamChecker.notNull(updatedEntity, "updatedEntity cannot be null");
+//
+//        ITypedReferenceableInstance instance = repository.getEntityDefinition(guid);
+//        if(instance == null) {
+//            throw new EntityNotFoundException(String.format("Entity with guid %s not found ", guid));
+//        }
+//
+//        updateTypedInstance(instance, updatedEntity);
+//        onEntityAddedToRepo(Arrays.asList(typedInstances));
+//        repository.updateEntity(instance);
+//
+//        return new JSONArray(Arrays.asList(guids)).toString();
+//    }
 
     private void updateTypedInstance(ITypedReferenceableInstance instance, Referenceable updatedEntity) throws AtlasException {
         ClassType type = typeSystem.getDataType(ClassType.class, instance.getTypeName());

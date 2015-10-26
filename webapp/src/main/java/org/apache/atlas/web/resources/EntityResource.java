@@ -39,6 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -171,6 +172,7 @@ public class EntityResource {
     }
 
     /**
+     * Complete update of an entity - the values not specified will be replaced with null/removed
      * Updates entity identified by its GUID
      *
      * @param guid
@@ -207,7 +209,15 @@ public class EntityResource {
     }
 
 
-    @PUT
+    /**
+     * Supports Partial updates
+     * Adds/Updates property to the given entty identified by its unique attribute
+     * @param entityType the entity type
+     * @param attribute the unique attribute used to identify the entity
+     * @param value the unique attributes value
+     * @return response payload as json
+     */
+    @POST
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public Response update(@QueryParam("type") String entityType,
@@ -240,13 +250,14 @@ public class EntityResource {
     }
 
     /**
-     * Adds property to the given entity id
+     * Supports Partial updates
+     * Adds/Updates property to the given entity id
      * @param guid entity id
      * @param property property to add
      * @param value property's value
      * @return response payload as json
      */
-    @PUT
+    @POST
     @Path("{guid}")
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)

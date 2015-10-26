@@ -27,9 +27,11 @@ import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
+import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.EntityNotFoundException;
+import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
@@ -118,7 +120,7 @@ public class GraphBackedMetadataRepositoryTest {
         ClassType deptType = typeSystem.getDataType(ClassType.class, "Department");
         ITypedReferenceableInstance hrDept2 = deptType.convert(hrDept, Multiplicity.REQUIRED);
 
-        String[] guids = repositoryService.createOrUpdateEntities(hrDept2);
+        String[] guids = repositoryService.createEntities(hrDept2);
         Assert.assertNotNull(guids);
         Assert.assertEquals(guids.length, 1);
         guid = guids[0];
@@ -173,13 +175,13 @@ public class GraphBackedMetadataRepositoryTest {
         ITypedReferenceableInstance db = dbType.convert(databaseInstance, Multiplicity.REQUIRED);
         System.out.println("db = " + db);
 
-        String dbGUID = repositoryService.createOrUpdateEntities(db)[0];
+        String dbGUID = repositoryService.createEntities(db)[0];
         System.out.println("added db = " + dbGUID);
 
         Referenceable dbInstance = new Referenceable(dbGUID, TestUtils.DATABASE_TYPE, databaseInstance.getValuesMap());
 
         ITypedReferenceableInstance table = createHiveTableInstance(dbInstance);
-        String tableGUID = repositoryService.createOrUpdateEntities(table)[0];
+        String tableGUID = repositoryService.createEntities(table)[0];
         System.out.println("added table = " + tableGUID);
     }
 
@@ -342,13 +344,13 @@ public class GraphBackedMetadataRepositoryTest {
         }
 
         Id expected = new Id(guid, tableVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY), TestUtils.TABLE_TYPE);
-        Assert.assertEquals(repositoryService.getIdFromVertex(TestUtils.TABLE_TYPE, tableVertex), expected);
+        Assert.assertEquals(GraphHelper.getIdFromVertex(TestUtils.TABLE_TYPE, tableVertex), expected);
     }
 
     @Test(dependsOnMethods = "testCreateEntity")
     public void testGetTypeName() throws Exception {
         Vertex tableVertex = getTableEntityVertex();
-        Assert.assertEquals(repositoryService.getTypeName(tableVertex), TestUtils.TABLE_TYPE);
+        Assert.assertEquals(GraphHelper.getTypeName(tableVertex), TestUtils.TABLE_TYPE);
     }
 
     @Test(dependsOnMethods = "testCreateEntity")
@@ -415,6 +417,9 @@ public class GraphBackedMetadataRepositoryTest {
     public void testBug37860() throws Exception {
         String dslQuery = "hive_table as t where name = 'bar' "
             + "database where name = 'foo' and description = 'foo database' select t";
+
+        TestUtils.dumpGraph(graphProvider.get());
+
         System.out.println("Executing dslQuery = " + dslQuery);
         String jsonResults = discoveryService.searchByDSL(dslQuery);
         Assert.assertNotNull(jsonResults);
@@ -445,6 +450,8 @@ public class GraphBackedMetadataRepositoryTest {
         //Weird: with lucene, the test passes without sleep
         //but with elasticsearch, doesn't work without sleep. why??
         long sleepInterval = 1000;
+
+        TestUtils.dumpGraph(graphProvider.get());
 
         //person in hr department whose name is john
         Thread.sleep(sleepInterval);
@@ -560,7 +567,7 @@ public class GraphBackedMetadataRepositoryTest {
         ClassType deptType = typeSystem.getDataType(ClassType.class, "Department");
         ITypedReferenceableInstance hrDept2 = deptType.convert(hrDept, Multiplicity.REQUIRED);
 
-        String[] guids = repositoryService.createOrUpdateEntities(hrDept2);
+        String[] guids = repositoryService.createEntities(hrDept2);
         Assert.assertNotNull(guids);
         Assert.assertEquals(guids.length, 1);
         Assert.assertNotNull(guids[0]);

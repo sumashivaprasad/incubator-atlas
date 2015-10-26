@@ -30,6 +30,7 @@ import org.apache.atlas.query.TypeUtils;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
+import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.persistence.Id;
@@ -43,6 +44,7 @@ import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +57,7 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
 
     private final GraphBackedMetadataRepository metadataRepository;
 
+    @Inject
     public DefaultGraphPersistenceStrategy(MetadataRepository metadataRepository) {
         this.metadataRepository = (GraphBackedMetadataRepository) metadataRepository;
     }
@@ -90,7 +93,7 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
 
     @Override
     public List<String> traitNames(TitanVertex vertex) {
-        return metadataRepository.getTraitNames(vertex);
+        return GraphHelper.getTraitNames(vertex);
     }
 
     @Override
@@ -100,7 +103,7 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
 
     @Override
     public Id getIdFromVertex(String dataTypeName, TitanVertex vertex) {
-        return metadataRepository.getIdFromVertex(dataTypeName, vertex);
+        return GraphHelper.getIdFromVertex(dataTypeName, vertex);
     }
 
     @Override

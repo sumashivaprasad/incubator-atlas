@@ -41,7 +41,7 @@ import java.util.List;
 public class HiveLineageServiceTest extends BaseHiveRepositoryTest {
 
     @Inject
-    private GraphBackedDiscoveryService discoveryService;
+    private DiscoveryService discoveryService;
 
     @Inject
     private HiveLineageService hiveLineageService;

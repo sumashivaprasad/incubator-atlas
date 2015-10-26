@@ -24,7 +24,7 @@ import org.apache.atlas.BaseHiveRepositoryTest;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
-import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
+import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
@@ -55,7 +55,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseHiveRepositoryTest {
     private GraphProvider<TitanGraph> graphProvider;
 
     @Inject
-    private GraphBackedMetadataRepository repositoryService;
+    private MetadataRepository repositoryService;
 
     @Inject
     private GraphBackedDiscoveryService discoveryService;
@@ -70,7 +70,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseHiveRepositoryTest {
         ClassType deptType = typeSystem.getDataType(ClassType.class, "Department");
         ITypedReferenceableInstance hrDept2 = deptType.convert(hrDept, Multiplicity.REQUIRED);
 
-        repositoryService.createOrUpdateEntities(hrDept2);
+        repositoryService.createEntities(hrDept2);
     }
 
     @AfterClass
@@ -282,6 +282,6 @@ public class GraphBackedDiscoveryServiceTest extends BaseHiveRepositoryTest {
         ClassType deptType = TypeSystem.getInstance().getDataType(ClassType.class, "D");
         ITypedReferenceableInstance typedInstance = deptType.convert(instance, Multiplicity.REQUIRED);
 
-        repositoryService.createOrUpdateEntities(typedInstance);
+        repositoryService.createEntities(typedInstance);
     }
 }

@@ -242,7 +242,9 @@ public final class TestUtils {
                         new AttributeDefinition("serde1", "serdeType", Multiplicity.OPTIONAL, false, null),
                         new AttributeDefinition("serde2", "serdeType", Multiplicity.OPTIONAL, false, null),
                         // class reference
-                        new AttributeDefinition("database", DATABASE_TYPE, Multiplicity.REQUIRED, true, null));
+                        new AttributeDefinition("database", DATABASE_TYPE, Multiplicity.REQUIRED, false, null),
+                        //class reference as composite
+                        new AttributeDefinition("databaseComposite", DATABASE_TYPE, Multiplicity.OPTIONAL, true, null));
 
         HierarchicalTypeDefinition<TraitType> piiTypeDefinition =
                 createTraitTypeDef(PII, ImmutableList.<String>of());

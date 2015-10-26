@@ -33,18 +33,17 @@ import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
-import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.IDataType;
-import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,21 +55,23 @@ import java.util.List;
  * An implementation backed by a Graph database provided
  * as a Graph Service.
  */
+@Singleton
 public class GraphBackedMetadataRepository implements MetadataRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphBackedMetadataRepository.class);
 
-    private final TypedInstanceToGraphMapper instanceToGraphMapper;
     private final GraphToTypedInstanceMapper graphToInstanceMapper;
 
     private static TypeSystem typeSystem = TypeSystem.getInstance();
+
+    private static final GraphHelper graphHelper = GraphHelper.getInstance();
+
     private final TitanGraph titanGraph;
 
     @Inject
-    public GraphBackedMetadataRepository(GraphProvider<TitanGraph> graphProvider) throws AtlasException {
+    public GraphBackedMetadataRepository(GraphProvider<TitanGraph> graphProvider) {
         this.titanGraph = graphProvider.get();
         this.graphToInstanceMapper = new GraphToTypedInstanceMapper(titanGraph);
-        instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
     }
 
     public GraphToTypedInstanceMapper getGraphToInstanceMapper() {
@@ -120,7 +121,8 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             EntityExistsException {
         LOG.info("adding entities={}", entities);
         try {
-            return instanceToGraphMapper.mapTypedInstanceToGraph(entities);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            return instanceToGraphMapper.mapTypedInstanceToGraph(TypedInstanceToGraphMapper.Operation.CREATE, entities);
         } catch (EntityExistsException e) {
             throw e;
         } catch (AtlasException e) {
@@ -133,7 +135,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     public ITypedReferenceableInstance getEntityDefinition(String guid) throws RepositoryException {
         LOG.info("Retrieving entity with guid={}", guid);
 
-        Vertex instanceVertex = GraphHelper.getVertexForGUID(titanGraph, guid);
+        Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
 
         try {
             return graphToInstanceMapper.mapGraphToTypedInstance(guid, instanceVertex);
@@ -149,7 +151,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         LOG.info("Retrieving entity with type={} and {}={}", entityType, attribute, value);
         IDataType type = typeSystem.getDataType(IDataType.class, entityType);
         String propertyKey = getFieldNameInVertex(type, attribute);
-        Vertex instanceVertex = GraphHelper.getVertexForProperty(titanGraph, propertyKey, value);
+        Vertex instanceVertex = graphHelper.getVertexForProperty(propertyKey, value);
 
         String guid = instanceVertex.getProperty(Constants.GUID_PROPERTY_KEY);
         return graphToInstanceMapper.mapGraphToTypedInstance(guid, instanceVertex);
@@ -185,7 +187,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     @GraphTransaction
     public List<String> getTraitNames(String guid) throws AtlasException {
         LOG.info("Retrieving trait names for entity={}", guid);
-        Vertex instanceVertex = GraphHelper.getVertexForGUID(titanGraph, guid);
+        Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
         return GraphHelper.getTraitNames(instanceVertex);
     }
 
@@ -205,14 +207,15 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         LOG.info("Adding a new trait={} for entity={}", traitName, guid);
 
         try {
-            Vertex instanceVertex = GraphHelper.getVertexForGUID(titanGraph, guid);
+            Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
 
             // add the trait instance as a new vertex
             final String typeName = GraphHelper.getTypeName(instanceVertex);
 
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
             instanceToGraphMapper
                 .mapTraitInstanceToVertex(traitInstance, GraphHelper.getIdFromVertex(typeName, instanceVertex), typeSystem.getDataType(ClassType.class, typeName),
-                    instanceVertex, Collections.<Id, Vertex>emptyMap());
+                    instanceVertex);
 
 
             // update the traits in entity once adding trait instance is successful
@@ -237,7 +240,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     public void deleteTrait(String guid, String traitNameToBeDeleted) throws RepositoryException {
         LOG.info("Deleting trait={} from entity={}", traitNameToBeDeleted, guid);
         try {
-            Vertex instanceVertex = GraphHelper.getVertexForGUID(titanGraph, guid);
+            Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
 
             List<String> traitNames = GraphHelper.getTraitNames(instanceVertex);
             if (!traitNames.contains(traitNameToBeDeleted)) {
@@ -286,7 +289,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         LOG.info("Adding property {} for entity guid {}", property, guid);
 
         try {
-            Vertex instanceVertex = GraphHelper.getVertexForGUID(titanGraph, guid);
+            Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
 
             LOG.debug("Found a vertex {} for guid {}", instanceVertex, guid);
             String typeName = instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
@@ -311,9 +314,10 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     throw new RepositoryException("Update of " + attrTypeCategory + " is not supported");
             }
 
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
             instanceToGraphMapper
                     .mapAttributesToVertex(GraphHelper.getIdFromVertex(typeName, instanceVertex), instance, instanceVertex,
-                            new HashMap<Id, Vertex>(), attributeInfo, attributeInfo.dataType());
+                            attributeInfo, attributeInfo.dataType());
         } catch (RepositoryException e) {
             throw e;
         } catch (Exception e) {
@@ -322,23 +326,26 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     }
 
     @Override
-    public void updateEntity(ITypedReferenceableInstance entityUpdated) throws RepositoryException {
-        LOG.info("updating entity {}", entityUpdated);
+    @GraphTransaction
+    public String[] updateEntities(ITypedReferenceableInstance... entitiesUpdated) throws RepositoryException {
+        LOG.info("updating entity {}", entitiesUpdated);
         try {
-            instanceToGraphMapper.updateGraph(entityUpdated);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            return instanceToGraphMapper.mapTypedInstanceToGraph(TypedInstanceToGraphMapper.Operation.UPDATE, entitiesUpdated);
         } catch (AtlasException e) {
             throw new RepositoryException(e);
         }
     }
 
     @Override
-    public void updateEntity(String uniqueAttributeName, String uniqueAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException {
+    @GraphTransaction
+    public String[] updateEntity(String uniqueAttributeName, Object uniqueAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException {
         LOG.info("updating entity {}", entityUpdated);
         try {
-            instanceToGraphMapper.updateGraph(uniqueAttributeName, uniqueAttributeValue, entityUpdated);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            return instanceToGraphMapper.updateGraphByUniqueAttribute(uniqueAttributeName, uniqueAttributeValue, entityUpdated);
         } catch (AtlasException e) {
             throw new RepositoryException(e);
         }
     }
-
 }

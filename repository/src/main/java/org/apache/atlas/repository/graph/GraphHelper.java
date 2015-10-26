@@ -18,6 +18,8 @@
 
 package org.apache.atlas.repository.graph;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanProperty;
 import com.thinkaurelius.titan.core.TitanVertex;
@@ -29,10 +31,12 @@ import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.EntityNotFoundException;
+import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedInstance;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
+import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.HierarchicalType;
 import org.apache.atlas.typesystem.types.IDataType;
@@ -57,12 +61,21 @@ public final class GraphHelper {
 
     private static final TypeSystem typeSystem = TypeSystem.getInstance();
 
-    private GraphHelper() {
+    private static final GraphHelper INSTANCE = new GraphHelper(TitanGraphProvider.getGraphInstance());
+
+    private TitanGraph titanGraph;
+
+    private GraphHelper(TitanGraph titanGraph) {
+        this.titanGraph = titanGraph;
     }
 
-    public static Vertex createVertexWithIdentity(Graph graph, ITypedReferenceableInstance typedInstance,
+    public static GraphHelper getInstance() {
+        return INSTANCE;
+    }
+
+    public Vertex createVertexWithIdentity(ITypedReferenceableInstance typedInstance,
                                                   Set<String> superTypeNames) {
-        final Vertex vertexWithIdentity = createVertexWithoutIdentity(graph, typedInstance.getTypeName(),
+        final Vertex vertexWithIdentity = createVertexWithoutIdentity(typedInstance.getTypeName(),
                 typedInstance.getId(), superTypeNames);
 
         // add identity
@@ -73,10 +86,10 @@ public final class GraphHelper {
         return vertexWithIdentity;
     }
 
-    public static Vertex createVertexWithoutIdentity(Graph graph, String typeName, Id typedInstanceId,
+    public Vertex createVertexWithoutIdentity(String typeName, Id typedInstanceId,
                                                      Set<String> superTypeNames) {
         LOG.debug("Creating vertex for type {} id {}", typeName, typedInstanceId._getId());
-        final Vertex vertexWithoutIdentity = graph.addVertex(null);
+        final Vertex vertexWithoutIdentity = titanGraph.addVertex(null);
 
         // add type information
         setProperty(vertexWithoutIdentity, Constants.ENTITY_TYPE_PROPERTY_KEY, typeName);
@@ -95,19 +108,33 @@ public final class GraphHelper {
         return vertexWithoutIdentity;
     }
 
-    public static Edge addEdge(TitanGraph titanGraph, Vertex fromVertex, Vertex toVertex, String edgeLabel) {
+    public Edge addEdge(Vertex fromVertex, Vertex toVertex, String edgeLabel) {
         LOG.debug("Adding edge for {} -> label {} -> {}", fromVertex, edgeLabel, toVertex);
 
         return titanGraph.addEdge(null, fromVertex, toVertex, edgeLabel);
     }
 
-    public static Vertex findVertex(TitanGraph titanGraph, String propertyKey, Object value) {
+    public Vertex findVertex(String propertyKey, Object value) {
         LOG.debug("Finding vertex for {}={}", propertyKey, value);
 
         GraphQuery query = titanGraph.query().has(propertyKey, value);
         Iterator<Vertex> results = query.vertices().iterator();
         // returning one since entityType, qualifiedName should be unique
         return results.hasNext() ? results.next() : null;
+    }
+
+    public static Iterable<Edge> getOutGoingEdgesByLabel(Vertex instanceVertex, String edgeLabel) {
+        if(instanceVertex != null && edgeLabel != null) {
+            return instanceVertex.getEdges(Direction.OUT, edgeLabel);
+        }
+        return null;
+    }
+
+    public Edge getOutGoingEdgeById(String edgeId) {
+        if(edgeId != null) {
+            return titanGraph.getEdge(edgeId);
+        }
+        return null;
     }
 
     public static String vertexString(final Vertex vertex) {
@@ -141,7 +168,7 @@ public final class GraphHelper {
         ((TitanVertex)vertex).addProperty(propertyName, value);
     }
 
-    public static Edge removeRelation(TitanGraph titanGraph, String edgeId, boolean cascade) {
+    public Edge removeRelation(String edgeId, boolean cascade) {
         LOG.debug("Removing edge with id {}", edgeId);
         final Edge edge = titanGraph.getEdge(edgeId);
         titanGraph.removeEdge(edge);
@@ -154,13 +181,13 @@ public final class GraphHelper {
         return edge;
     }
 
-    public static Vertex getVertexForGUID(TitanGraph titanGraph, String guid) throws EntityNotFoundException {
-        return getVertexForProperty(titanGraph, Constants.GUID_PROPERTY_KEY, guid);
+    public Vertex getVertexForGUID(String guid) throws EntityNotFoundException {
+        return getVertexForProperty(Constants.GUID_PROPERTY_KEY, guid);
     }
 
 
-    public static Vertex getVertexForProperty(TitanGraph titanGraph, String propertyKey, Object value) throws EntityNotFoundException {
-        Vertex instanceVertex = GraphHelper.findVertex(titanGraph, propertyKey, value);
+    public Vertex getVertexForProperty(String propertyKey, Object value) throws EntityNotFoundException {
+        Vertex instanceVertex = findVertex(propertyKey, value);
         if (instanceVertex == null) {
             LOG.debug("Could not find a vertex with {}={}", propertyKey, value);
             throw new EntityNotFoundException("Could not find an entity in the repository with " + propertyKey + "="
@@ -214,7 +241,35 @@ public final class GraphHelper {
         return instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
     }
 
-/*
+    /**
+     * For the given type, finds an unique attribute and checks if there is an existing instance with the same
+     * unique value
+     *
+     * @param classType
+     * @param instance
+     * @return
+     * @throws AtlasException
+     */
+    public Vertex getVertexForInstanceByUniqueAttribute(ClassType classType, IReferenceableInstance instance)
+        throws AtlasException {
+
+        Vertex result = null;
+        for (AttributeInfo attributeInfo : classType.fieldMapping().fields.values()) {
+            if (attributeInfo.isUnique) {
+                String propertyKey = getQualifiedFieldName(classType, attributeInfo.name);
+                try {
+                    result = getVertexForProperty(propertyKey, instance.get(attributeInfo.name));
+                    LOG.debug("Found vertex by unique attribute : " + propertyKey + "=" + instance.get(attributeInfo.name));
+                } catch (EntityNotFoundException e) {
+                    //Its ok if there is no entity with the same unique value
+                }
+            }
+        }
+
+        return result;
+    }
+
+
     public static void dumpToLog(final Graph graph) {
         LOG.debug("*******************Graph Dump****************************");
         LOG.debug("Vertices of {}", graph);
@@ -228,5 +283,4 @@ public final class GraphHelper {
         }
         LOG.debug("*******************Graph Dump****************************");
     }
-*/
 }

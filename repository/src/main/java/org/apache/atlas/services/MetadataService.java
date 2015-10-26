@@ -106,12 +106,20 @@ public interface MetadataService {
     void updateEntity(String guid, String attribute, String value) throws AtlasException;
 
     /**
-     * Adds the property to the given entity id(guid).
+     * Supports Partial updates of an entity. Users can update a subset of attributes for an entity identified by its guid
+     * Note however that it cannot be used to set attribute values to null or delete attrbute values
      *
-     * @param guid entity id
-     * @param updatedEntity Contains values that needs to be updated onto the original entity
+     * @return List of guids which were updated and ones which were newly created as part of the updated entity
      */
-    void updateEntity(String guid, Referenceable updatedEntity) throws AtlasException;
+    String updateEntity(String guid, Referenceable entity) throws AtlasException;
+
+    /**
+     * Batch API - Adds/Updates the given entity id(guid).
+     *
+     * @param entityJson entity json
+     * @return List of guids which were updated and ones which were newly created as part of the updated entity
+     */
+    String updateEntities(String entityJson) throws AtlasException;
 
     // Trait management functions
 

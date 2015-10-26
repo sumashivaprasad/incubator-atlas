@@ -586,7 +586,7 @@ public class DataTypes {
         }
 
         protected void setValueType(IDataType valueType) {
-            this.keyType = valueType;
+            this.valueType = valueType;
         }
 
         @Override

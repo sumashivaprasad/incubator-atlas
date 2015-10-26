@@ -149,10 +149,9 @@ public interface MetadataRepository {
 
     /**
      * Adds the property to the entity that corresponds to the GUID
-     * @param guid entity id
      * @param entityUpdated The updated entity values
      */
-    void updateEntity(String guid, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
+    String[] updateEntities(ITypedReferenceableInstance... entityUpdated) throws RepositoryException;
 
     /**
      * Adds the property to the entity that corresponds to the GUID
@@ -160,7 +159,7 @@ public interface MetadataRepository {
      * @param uniqAttributeValue
      * @param entityUpdated The updated entity values
      */
-    void updateEntity(String uniqAttributeName, String uniqAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
+    String[] updateEntity(String uniqAttributeName, Object uniqAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
 
 
     /**
