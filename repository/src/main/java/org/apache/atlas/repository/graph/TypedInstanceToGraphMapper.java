@@ -45,10 +45,14 @@ import org.apache.atlas.typesystem.types.ObjectGraphWalker;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.hbase.util.MurmurHash3;
+import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.util.hash.MurmurHash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -62,8 +66,8 @@ public final class TypedInstanceToGraphMapper {
     BiMap<Vertex, ITypedReferenceableInstance> vertexToInstanceMap = HashBiMap.create();
     private final Map<Id, Vertex> idToVertexMap = new HashMap<>();
     private final TypeSystem typeSystem = TypeSystem.getInstance();
-    private final TitanGraph titanGraph;
     private final GraphToTypedInstanceMapper graphToTypedInstanceMapper;
+//    private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "__signature";
 
     private static final GraphHelper graphHelper = GraphHelper.getInstance();
 
@@ -73,8 +77,7 @@ public final class TypedInstanceToGraphMapper {
         DELETE
     }
 
-    public TypedInstanceToGraphMapper(TitanGraph titanGraph, GraphToTypedInstanceMapper graphToTypedInstanceMapper) {
-        this.titanGraph = titanGraph;
+    public TypedInstanceToGraphMapper(GraphToTypedInstanceMapper graphToTypedInstanceMapper) {
         this.graphToTypedInstanceMapper = graphToTypedInstanceMapper;
     }
 
@@ -306,12 +309,14 @@ public final class TypedInstanceToGraphMapper {
             //handles both int and string for enum
             Object oldPropertyValue = instanceVertex.getProperty(attributeInfo.name);
             if (typedInstance.get(attributeInfo.name) == null && oldPropertyValue != null) {
+                //Remove attribute value if current value is not null and new value is set to null
                 GraphHelper.setProperty(instanceVertex, propertyName, null);
-            } else if (typedInstance.get(attributeInfo.name) != null){
+            } else if (typedInstance.get(attributeInfo.name) != null) {
                 EnumValue enumValue =
                     (EnumValue) dataType.convert(typedInstance.get(attributeInfo.name), Multiplicity.REQUIRED);
 
                 if (oldPropertyValue == null || !oldPropertyValue.equals(enumValue.value)) {
+                    //Reset value only if theres a change
                     GraphHelper.setProperty(instanceVertex, propertyName, enumValue.value);
                 }
             }
@@ -327,8 +332,8 @@ public final class TypedInstanceToGraphMapper {
 
         case STRUCT:
             Iterable<Edge> outGoingEdgesByLabel = GraphHelper.getOutGoingEdgesByLabel(instanceVertex, edgeLabel);
-            if(outGoingEdgesByLabel.iterator().hasNext()) {
-                updateStructVertex(id, (ITypedStruct) typedInstance.get(attributeInfo.name), instanceVertex, attributeInfo, outGoingEdgesByLabel.iterator().next());
+            if (outGoingEdgesByLabel.iterator().hasNext()) {
+                updateStructVertex(id, (ITypedStruct) typedInstance.get(attributeInfo.name), instanceVertex, attributeInfo, attributeInfo.dataType(), outGoingEdgesByLabel.iterator().next());
             } else {
                 addStructVertex(id, (ITypedStruct) typedInstance.get(attributeInfo.name), instanceVertex, attributeInfo, edgeLabel);
             }
@@ -340,8 +345,9 @@ public final class TypedInstanceToGraphMapper {
         case CLASS:
             outGoingEdgesByLabel = GraphHelper.getOutGoingEdgesByLabel(instanceVertex, edgeLabel);
             Vertex toVertex = getClassVertex((ITypedReferenceableInstance) typedInstance.get(attributeInfo.name));
-            if(outGoingEdgesByLabel.iterator().hasNext()) {
-                updateClassEdge(id, instanceVertex, outGoingEdgesByLabel.iterator().next(), toVertex, attributeInfo, edgeLabel);
+            if (outGoingEdgesByLabel.iterator().hasNext()) {
+                Id classRefId = getId((ITypedReferenceableInstance) typedInstance.get(attributeInfo.name));
+                updateClassEdge(classRefId, instanceVertex, outGoingEdgesByLabel.iterator().next(), toVertex, attributeInfo, attributeInfo.dataType(), edgeLabel);
             } else {
                 addClassEdge(instanceVertex, toVertex, edgeLabel);
             }
@@ -354,18 +360,25 @@ public final class TypedInstanceToGraphMapper {
 
     /******************************************** STRUCT **************************************************/
 
-    private Pair<Vertex, Edge> updateStructVertex(Id id, ITypedStruct typedInstance, Vertex instanceVertex, AttributeInfo attributeInfo, Edge relEdge) throws AtlasException {
+    private Pair<Vertex, Edge> updateStructVertex(Id id, ITypedStruct typedInstance, Vertex instanceVertex, AttributeInfo attributeInfo, IDataType elemType, Edge relEdge) throws AtlasException {
         //Already existing vertex. Update
         Vertex structInstanceVertex = relEdge.getVertex(Direction.IN);
 
         if (typedInstance == null) {
             //Delete edge and remove struct vertex since struct attribute has been set to null
-            removeUnusedReference(instanceVertex, relEdge.getId().toString(), attributeInfo, attributeInfo.dataType());
+            removeUnusedReference(relEdge.getId().toString(), attributeInfo, elemType);
         } else {
             // Update attributes
             // map all the attributes to this vertex
-            mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields,
-                false);
+//            int newSignature = hash(typedInstance);
+//            String curSignature = structInstanceVertex.getProperty(SIGNATURE_HASH_PROPERTY_KEY);
+//            if(newSignature != Integer.parseInt(curSignature)) {
+                //Update struct vertex instance only if there is a change
+                mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
+//                GraphHelper.setProperty(structInstanceVertex, SIGNATURE_HASH_PROPERTY_KEY, String.valueOf(newSignature));
+//            } else {
+//                LOG.debug("Skipping update of struct vertex since signature matches for " + id + ":" + typedInstance);
+//            }
         }
         return Pair.of(structInstanceVertex, relEdge);
     }
@@ -378,14 +391,15 @@ public final class TypedInstanceToGraphMapper {
         Vertex structInstanceVertex = graphHelper
             .createVertexWithoutIdentity(typedInstance.getTypeName(), id,
                 Collections.<String>emptySet()); // no super types for struct type
-        LOG.debug("created vertex {} for struct {} value {}", structInstanceVertex, attributeInfo.name,
-            typedInstance);
+        LOG.debug("created vertex {} for struct {} value {}", structInstanceVertex, attributeInfo.name, typedInstance);
 
         // map all the attributes to this new vertex
-        mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields,
-            false);
+        mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
         // add an edge to the newly created vertex from the parent
         Edge relEdge = graphHelper.addEdge(instanceVertex, structInstanceVertex, edgeLabel);
+//        int signature = hash(typedInstance);
+//        graphHelper.setProperty(structInstanceVertex, SIGNATURE_HASH_PROPERTY_KEY, String.valueOf(signature));
+
         return Pair.of(structInstanceVertex, relEdge);
     }
 
@@ -395,8 +409,7 @@ public final class TypedInstanceToGraphMapper {
         AttributeInfo attributeInfo) throws AtlasException {
         LOG.debug("Mapping instance {} to vertex {} for name {}", typedInstance.getTypeName(), instanceVertex,
             attributeInfo.name);
-
-        List list = (List) typedInstance.get(attributeInfo.name);
+//        List list = (List) typedInstance.get(attributeInfo.name);
 //        if (list == null || list.isEmpty()) {
 //            return;
 //        }
@@ -437,7 +450,7 @@ public final class TypedInstanceToGraphMapper {
         } else {
             //Remove all edges since list is updated to null
             for(String edgeId : curEntries) {
-                removeUnusedReference(instanceVertex, edgeId, attributeInfo, elementType);
+                removeUnusedReference(edgeId, attributeInfo, elementType);
             }
         }
         return values;
@@ -450,7 +463,7 @@ public final class TypedInstanceToGraphMapper {
 
         List list = (List) typedInstance.get(attributeInfo.name);
         List<String> values = new ArrayList<>();
-        if(list != null) {
+        if (list != null) {
             for (int index = 0; index < list.size(); index++) {
                 String entryId =
                     addOrGetCollectionEntry(id, instanceVertex, attributeInfo, elementType,
@@ -512,7 +525,7 @@ public final class TypedInstanceToGraphMapper {
                 String edgeLabel = GraphHelper.EDGE_LABEL_PREFIX + propertyName + "." + unusedKey.toString();
                 if (instanceVertex.getEdges(Direction.OUT, edgeLabel).iterator().hasNext()) {
                     Edge edge = instanceVertex.getEdges(Direction.OUT, edgeLabel).iterator().next();
-                    removeUnusedReference(instanceVertex, edge.getId().toString(), attributeInfo, ((DataTypes.MapType) attributeInfo.dataType()).getValueType());
+                    removeUnusedReference(edge.getId().toString(), attributeInfo, ((DataTypes.MapType) attributeInfo.dataType()).getValueType());
                 }
             }
         }
@@ -572,7 +585,7 @@ public final class TypedInstanceToGraphMapper {
             Pair<Vertex, Edge> vertexEdgePair = null;
             if (curVal != null) {
                 Edge edge = graphHelper.getOutGoingEdgeById(curVal);
-                vertexEdgePair = updateStructVertex(id, structAttr, instanceVertex, attributeInfo, edge);
+                vertexEdgePair = updateStructVertex(id, structAttr, instanceVertex, attributeInfo, elementType, edge);
             } else {
                 vertexEdgePair = addStructVertex(id, structAttr, instanceVertex, attributeInfo, edgeLabel);
             }
@@ -583,7 +596,8 @@ public final class TypedInstanceToGraphMapper {
             Vertex toVertex = getClassVertex((ITypedReferenceableInstance) newVal);
             if (curVal != null) {
                 Edge edge = graphHelper.getOutGoingEdgeById(curVal);
-                vertexEdgePair = updateClassEdge(id, instanceVertex, edge, toVertex, attributeInfo, edgeLabel);
+                Id classRefId = getId((ITypedReferenceableInstance) newVal);
+                vertexEdgePair = updateClassEdge(classRefId, instanceVertex, edge, toVertex, attributeInfo, elementType, edgeLabel);
             } else {
                 vertexEdgePair = addClassEdge(instanceVertex, toVertex, edgeLabel);
             }
@@ -620,10 +634,17 @@ public final class TypedInstanceToGraphMapper {
         return referenceVertex;
     }
 
+    private Id getId(ITypedReferenceableInstance typedReference) throws EntityNotFoundException {
+        Id id = null;
+        if (typedReference != null) {
+            id = typedReference instanceof Id ? (Id) typedReference : typedReference.getId();
+        }
+        return id;
+    }
 
-    private Pair<Vertex, Edge> updateClassEdge(Id id, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, String edgeLabel) {
-        String edgeId = null;
 
+    private Pair<Vertex, Edge> updateClassEdge(Id id, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, IDataType dataType, String edgeLabel) {
+        Edge newEdge = edge;
         // Update edge if it exists
         Vertex invertex = edge.getVertex(Direction.IN);
         String currentGUID = invertex.getProperty(Constants.GUID_PROPERTY_KEY);
@@ -631,11 +652,11 @@ public final class TypedInstanceToGraphMapper {
         if (!currentId.equals(id)) {
             if (toVertex != null) {
                 // add an edge to the class vertex from the instance
-                edge = graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
+                newEdge = graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
             }
-            removeUnusedReference(instanceVertex, edge.getId().toString(), attributeInfo, attributeInfo.dataType());
+            removeUnusedReference(edge.getId().toString(), attributeInfo, dataType);
         }
-        return Pair.of(toVertex, edge);
+        return Pair.of(toVertex, newEdge);
     }
 
     /******************************************** TRAITS ****************************************************/
@@ -659,6 +680,7 @@ public final class TypedInstanceToGraphMapper {
     }
 
     /******************************************** PRIMITIVES **************************************************/
+
     private void mapPrimitiveToVertex(ITypedInstance typedInstance, Vertex instanceVertex,
         AttributeInfo attributeInfo) throws AtlasException {
         Object attrValue = typedInstance.get(attributeInfo.name);
@@ -707,7 +729,7 @@ public final class TypedInstanceToGraphMapper {
         }
     }
 
-    private Edge removeUnusedReference(Vertex instanceVertex, String edgeId, AttributeInfo attributeInfo, IDataType<?> elementType) {
+    private Edge removeUnusedReference(String edgeId, AttributeInfo attributeInfo, IDataType<?> elementType) {
         //Remove edges for property values which do not exist any more
         Edge removedRelation = null;
         switch (elementType.getTypeCategory()) {
@@ -726,4 +748,57 @@ public final class TypedInstanceToGraphMapper {
         }
         return removedRelation;
     }
+
+//    static int hash(ITypedReferenceableInstance classInstance) throws AtlasException {
+//        if (classInstance instanceof ReferenceableInstance) {
+//            int result = classInstance.getTypeName().hashCode();
+//            result = 31 * result + classInstance.getId().hashCode();
+//            Map<String, Object> values = classInstance.getValuesMap();
+//            result = 31 * result + values.hashCode();
+//            return result;
+//        } else {
+//            return ((Id) classInstance).hashCode();
+//        }
+//    }
+//
+//    static int hash(ITypedStruct structInstance) throws AtlasException {
+//        int result = structInstance.getTypeName().hashCode();
+//        Map<String, Object> values = structInstance.getValuesMap();
+//        result = 31 * result + values.hashCode();
+//        return result;
+//    }
+
+//    static int hash(ITypedReferenceableInstance classInstance, boolean isRecursive) throws AtlasException {
+//        if (classInstance instanceof ReferenceableInstance) {
+//            int result = classInstance.getTypeName().hashCode();
+//            result = 31 * result + classInstance.getId().hashCode();
+//            Map<String, Object> values = classInstance.getValuesMap();
+//            result = 31 * result + values.hashCode();
+//            return result;
+//        } else {
+//            return ((Id) classInstance).hashCode();
+//        }
+//    }
+//
+//    static String hash(ITypedStruct structInstance) throws AtlasException {
+//        final MessageDigest digester = MD5Hash.getDigester();
+//        digester.update(structInstance.getTypeName().getBytes());
+//        Map<String, Object> values = structInstance.getValuesMap();
+//        for(String attr : values.keySet()) {
+//            digester.update(structInstance.get(attr));
+//        }
+//        result = 31 * result + values.hashCode();
+//        return result;
+//    }
+//
+//    public static void main(String[] args) {
+//        System.out.println("hash1 = " + "FB".hashCode());
+//        System.out.println("hash2 = " + "Ea".hashCode());
+//
+//        System.out.println("hash3 = " + MurmurHash3.getInstance().hash("FB".getBytes()));
+//        System.out.println("hash4 = " + MurmurHash3.getInstance().hash("Ea".getBytes()));
+//
+//        System.out.println("hash md5 = " + MD5Hash.digest("FB".getBytes()));
+//        System.out.println("hash md5 = " + MD5Hash.digest("Ea".getBytes()));
+//    }
 }

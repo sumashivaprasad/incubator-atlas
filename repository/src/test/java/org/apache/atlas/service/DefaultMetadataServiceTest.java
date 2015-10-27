@@ -110,14 +110,6 @@ public class DefaultMetadataServiceTest {
         return new JSONArray(response).getString(0);
     }
 
-//    private String updateInstance(String guid, Referenceable entity) throws Exception {
-//        String entityjson = InstanceSerialization.toJson(entity, true);
-//        JSONArray entitiesJson = new JSONArray();
-//        entitiesJson.put(entityjson);
-//        String response = metadataService.updateEntity(guid, entity);
-//        return new JSONArray(response).getString(0);
-//    }
-
     private String updateInstance(Referenceable entity) throws Exception {
         ParamChecker.notNull(entity, "Entity");
         ParamChecker.notNull(entity.getId(), "Entity");
@@ -126,11 +118,6 @@ public class DefaultMetadataServiceTest {
         entitiesJson.put(entityjson);
         String response = metadataService.updateEntities(entitiesJson.toString());
         return new JSONArray(response).getString(0);
-    }
-
-    private void updateInstance(String guid, String property, Object value) throws Exception {
-        String attrValueJson = InstanceSerialization._toJson(value, true);
-        metadataService.updateEntity(guid, property, attrValueJson);
     }
 
     private Referenceable createDBEntity() {
@@ -308,7 +295,6 @@ public class DefaultMetadataServiceTest {
 
     @Test
     public void testUpdateEntityArrayOfClass() throws Exception {
-
         //test array of class with id
         final List<Referenceable> columns = new ArrayList<>();
         Map<String, Object> values = new HashMap<>();
@@ -465,6 +451,26 @@ public class DefaultMetadataServiceTest {
         partitionsActual = (List<Struct>) tableDefinition.get("partitions");
         Assert.assertEquals(partitionsActual.size(), 2);
         Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
+
+        //add a repeated element to array of struct
+        final Struct partition4 = new Struct(TestUtils.PARTITION_TYPE);
+        partition4.set("name", "part4");
+        partitions.add(partition4);
+        table.set("partitions", partitions);
+        newtableId = updateInstance(table);
+        Assert.assertEquals(newtableId, tableId._getId());
+
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertNotNull(tableDefinition.get("partitions"));
+        partitionsActual = (List<Struct>) tableDefinition.get("partitions");
+        Assert.assertEquals(partitionsActual.size(), 3);
+        Assert.assertEquals(partitionsActual.get(2).get("name"), "part4");
+        Assert.assertEquals(partitionsActual.get(0).get("name"), "part4");
+        Assert.assertTrue(partitions.get(2).equalsContents(partitionsActual.get(2)));
+
 
         // Remove all elements. Should set array attribute to null
         partitions.clear();

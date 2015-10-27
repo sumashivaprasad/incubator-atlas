@@ -21,6 +21,7 @@ package org.apache.atlas.web.resources;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.typesystem.IStruct;
@@ -52,6 +53,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.UUID;
@@ -217,10 +219,12 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     }
 
     private ClientResponse addProperty(String guid, String property, String value) {
-        WebResource resource = service.path("api/atlas/entity").path(guid);
+        WebResource resource = service.path("api/atlas/entity").path(guid).path(property);
 
-        return resource.queryParam("property", property).queryParam("value", value).accept(Servlets.JSON_MEDIA_TYPE)
-                .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.POST, ClientResponse.class);
+        MultivaluedMap formData = new MultivaluedMapImpl();
+        formData.add("value", value);
+        return resource.accept(Servlets.JSON_MEDIA_TYPE)
+                .type(Servlets.JSON_MEDIA_TYPE).post(ClientResponse.class, formData);
     }
 
     private ClientResponse getEntityDefinition(String guid) {

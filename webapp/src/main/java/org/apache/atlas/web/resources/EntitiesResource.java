@@ -61,7 +61,7 @@ public class EntitiesResource {
     /**
      * Submits the entity definitions (instances).
      * The body contains the JSONArray of entity json. The service takes care of de-duping the entities based on any
-     * unique attribute for the give type.
+     * unique attribute for the given type.
      */
     @POST
     @Consumes(Servlets.JSON_MEDIA_TYPE)
