@@ -435,11 +435,11 @@ public class DefaultMetadataService implements MetadataService {
     }
 
     @Override
-    public void updateEntity(String typeName, String uniqueAttributeName, String attrValue, Referenceable updatedEntity) throws AtlasException {
+    public String updateEntity(String typeName, String uniqueAttributeName, Object attrValue, Referenceable updatedEntity) throws AtlasException {
 
         ParamChecker.notEmpty(typeName, "typeName cannot be null");
         ParamChecker.notEmpty(uniqueAttributeName, "uniqueAttributeName cannot be null");
-        ParamChecker.notEmpty(attrValue, "value cannot be null");
+        ParamChecker.notNull(attrValue, "value cannot be null");
         ParamChecker.notNull(updatedEntity, "updatedEntity cannot be null");
 
         ITypedReferenceableInstance instance = repository.getEntityDefinition(typeName, uniqueAttributeName, attrValue);
@@ -447,7 +447,7 @@ public class DefaultMetadataService implements MetadataService {
             throw new EntityNotFoundException(String.format("Entity of type %s with unique attribute(%s:%s)  not found ", typeName, uniqueAttributeName, attrValue));
         }
         updateTypedInstance(instance, updatedEntity);
-        repository.updateEntity(uniqueAttributeName, uniqueAttributeName, instance);
+        return repository.updateEntity(uniqueAttributeName, attrValue, instance);
     }
 
     private void validateTypeExists(String entityType) throws AtlasException {

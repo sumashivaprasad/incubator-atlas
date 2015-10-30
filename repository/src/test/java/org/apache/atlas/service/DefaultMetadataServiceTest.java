@@ -37,6 +37,7 @@ import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.TypeSystem;
+import org.apache.atlas.typesystem.types.ValueConversionException;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.testng.Assert;
@@ -178,6 +179,21 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(actualDb.getId().id, dbId);
     }
 
+    @Test
+    public void testUpdateEntityByUniqueAttribute() throws Exception {
+        final List<String> colNameList = ImmutableList.of("col1", "col2");
+        Referenceable tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columnNames", colNameList);
+        }});
+        metadataService.updateEntity(table.getTypeName(), "name", table.get("name"), tableUpdated);
+
+        String tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        List<String> actualColumns = (List) tableDefinition.get("columnNames");
+        Assert.assertEquals(actualColumns, colNameList);
+    }
+
     @Test(enabled=false)
     public void testUpdateEnums() throws Exception {
         //TODO - Fix ATLAS-220 and enable this test
@@ -312,6 +328,32 @@ public class DefaultMetadataServiceTest {
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         List<Referenceable> arrClsColumns = (List) tableDefinition.get("columns");
         Assert.assertTrue(arrClsColumns.get(0).equalsContents(columns.get(0)));
+
+
+        //Add another array element
+        Map<String, Object> values1 = new HashMap<>();
+        values1.put("name", "col3");
+        values1.put("type", "type");
+        Referenceable ref1 = new Referenceable("column_type", values1);
+        columns.add(ref1);
+
+        Map<String, Object> values2 = new HashMap<>();
+        values2.put("name", "col4");
+        values2.put("type", "type");
+        Referenceable ref2 = new Referenceable("column_type", values2);
+        columns.add(ref2);
+
+        table.set("columns", columns);
+        updateInstance(table);
+
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        arrClsColumns = (List) tableDefinition.get("columns");
+        Assert.assertEquals(arrClsColumns.size(), columns.size());
+        Assert.assertTrue(arrClsColumns.get(1).equalsContents(columns.get(1)));
+        Assert.assertTrue(arrClsColumns.get(2).equalsContents(columns.get(2)));
+
 
         //Remove a class reference/Id and insert another reference
         //Also covers isComposite case since columns is a composite
@@ -485,21 +527,18 @@ public class DefaultMetadataServiceTest {
     }
 
 
-    @Test
+    @Test(expectedExceptions = ValueConversionException.class)
     public void testUpdateRequiredAttrToNull() throws Exception {
         //Update required attribute
-        try {
-            String tableDefinitionJson =
-                metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
-            Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        String tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
-            Assert.assertEquals(tableDefinition.get("description"), "random table");
-            table.setNull("description");
+        Assert.assertEquals(tableDefinition.get("description"), "random table");
+        table.setNull("description");
 
-            updateInstance(table);
-            Assert.fail("Expected exception while updating required attribute to null");
-        } catch (Exception e) {
-        }
+        updateInstance(table);
+        Assert.fail("Expected exception while updating required attribute to null");
     }
 
     @Test

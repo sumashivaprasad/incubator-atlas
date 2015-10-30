@@ -26,7 +26,6 @@ import org.apache.atlas.TypeNotFoundException;
 import org.apache.atlas.repository.EntityExistsException;
 import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.services.MetadataService;
-import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.types.ValueConversionException;
@@ -192,7 +191,7 @@ public class EntityResource {
         try {
             ParamChecker.notEmpty(guid, "Guid property cannot be null");
             final String entityJson = Servlets.getRequestPayload(request);
-            LOG.debug("submitting entities {} ", AtlasClient.toString(new JSONArray(entityJson)));
+            LOG.debug("partially updating entity for guid {} : {} ", guid, entityJson);
 
             Referenceable updatedEntity =
                 InstanceSerialization.fromJsonReferenceable(entityJson, true);
@@ -302,7 +301,7 @@ public class EntityResource {
      * Supports updation of only simple primitive attributes like strings, ints, floats, enums, class references and does not support updation of complex types like arrays, maps
      * @param guid entity id
      * @param property property to add
-     * @postparam value property's value
+     * @postbody property's value
      * @return response payload as json
      */
     @POST
@@ -313,7 +312,7 @@ public class EntityResource {
         @Context HttpServletRequest request) {
         try {
             Preconditions.checkNotNull(property, "Entity property cannot be null");
-            String value = request.getParameter("value");
+            String value = Servlets.getRequestPayload(request);
             Preconditions.checkNotNull(value, "Entity value cannot be null");
 
             metadataService.updateEntity(guid, property, value);

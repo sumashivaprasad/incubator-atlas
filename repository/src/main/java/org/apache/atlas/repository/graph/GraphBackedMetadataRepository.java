@@ -43,11 +43,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -121,7 +119,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             EntityExistsException {
         LOG.info("adding entities={}", entities);
         try {
-            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(graphToInstanceMapper);
             return instanceToGraphMapper.mapTypedInstanceToGraph(TypedInstanceToGraphMapper.Operation.CREATE, entities);
         } catch (EntityExistsException e) {
             throw e;
@@ -146,7 +144,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
     @Override
     @GraphTransaction
-    public ITypedReferenceableInstance getEntityDefinition(String entityType, String attribute, String value)
+    public ITypedReferenceableInstance getEntityDefinition(String entityType, String attribute, Object value)
             throws AtlasException {
         LOG.info("Retrieving entity with type={} and {}={}", entityType, attribute, value);
         IDataType type = typeSystem.getDataType(IDataType.class, entityType);
@@ -212,7 +210,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             // add the trait instance as a new vertex
             final String typeName = GraphHelper.getTypeName(instanceVertex);
 
-            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(graphToInstanceMapper);
             instanceToGraphMapper
                 .mapTraitInstanceToVertex(traitInstance, GraphHelper.getIdFromVertex(typeName, instanceVertex), typeSystem.getDataType(ClassType.class, typeName),
                     instanceVertex);
@@ -286,7 +284,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     @Override
     @GraphTransaction
     public void updateEntity(String guid, String property, String value) throws RepositoryException {
-        LOG.info("Adding property {} for entity guid {}", property, guid);
+        LOG.info("Adding property {} for entity guid {} value {}", property, guid, value);
 
         try {
             Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
@@ -314,7 +312,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     throw new RepositoryException("Update of " + attrTypeCategory + " is not supported");
             }
 
-            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(graphToInstanceMapper);
             instanceToGraphMapper
                     .mapAttributesToVertex(GraphHelper.getIdFromVertex(typeName, instanceVertex), instance, instanceVertex,
                             attributeInfo, attributeInfo.dataType());
@@ -330,7 +328,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     public String[] updateEntities(ITypedReferenceableInstance... entitiesUpdated) throws RepositoryException {
         LOG.info("updating entity {}", entitiesUpdated);
         try {
-            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(graphToInstanceMapper);
             return instanceToGraphMapper.mapTypedInstanceToGraph(TypedInstanceToGraphMapper.Operation.UPDATE, entitiesUpdated);
         } catch (AtlasException e) {
             throw new RepositoryException(e);
@@ -339,10 +337,10 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
     @Override
     @GraphTransaction
-    public String[] updateEntity(String uniqueAttributeName, Object uniqueAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException {
-        LOG.info("updating entity {}", entityUpdated);
+    public String updateEntity(String uniqueAttributeName, Object uniqueAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException {
+        LOG.info("updating entity by unique attribute {}", entityUpdated);
         try {
-            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(titanGraph, graphToInstanceMapper);
+            TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(graphToInstanceMapper);
             return instanceToGraphMapper.updateGraphByUniqueAttribute(uniqueAttributeName, uniqueAttributeValue, entityUpdated);
         } catch (AtlasException e) {
             throw new RepositoryException(e);

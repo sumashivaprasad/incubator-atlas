@@ -118,4 +118,12 @@ public class Referenceable extends Struct implements IReferenceableInstance {
 
         return true;
     }
+
+    public String toString() {
+        return "{" +
+            "Id='" + id + '\'' +
+            ", traits=" + traitNames +
+            ", values=" + getValuesMap() +
+            '}';
+    }
 }

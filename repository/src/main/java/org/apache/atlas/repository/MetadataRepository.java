@@ -159,7 +159,7 @@ public interface MetadataRepository {
      * @param uniqAttributeValue
      * @param entityUpdated The updated entity values
      */
-    String[] updateEntity(String uniqAttributeName, Object uniqAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
+    String updateEntity(String uniqAttributeName, Object uniqAttributeValue, ITypedReferenceableInstance entityUpdated) throws RepositoryException;
 
 
     /**
@@ -169,5 +169,5 @@ public interface MetadataRepository {
      * @param value
      * @return entity instance
      */
-    ITypedReferenceableInstance getEntityDefinition(String entityType, String attribute, String value) throws AtlasException;
+    ITypedReferenceableInstance getEntityDefinition(String entityType, String attribute, Object value) throws AtlasException;
 }

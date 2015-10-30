@@ -132,7 +132,7 @@ public interface MetadataService {
      * @param updatedEntity
      * @throws AtlasException
      */
-    void updateEntity(String typeName, String uniqueAttributeName, String attrValue, Referenceable updatedEntity) throws AtlasException;
+    String updateEntity(String typeName, String uniqueAttributeName, Object attrValue, Referenceable updatedEntity) throws AtlasException;
 
     /**
      * Gets the list of trait names for a given entity represented by a guid.

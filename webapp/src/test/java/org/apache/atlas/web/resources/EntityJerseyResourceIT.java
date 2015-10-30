@@ -55,7 +55,10 @@ import org.testng.annotations.Test;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -128,7 +131,6 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSubmitEntityWithBadDateFormat() throws Exception {
-
         try {
             Referenceable tableInstance = createHiveTableInstance("db" + randomString(), "table" + randomString());
             tableInstance.set("lastAccessTime", "2014-07-11");
@@ -176,12 +178,12 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         Assert.fail();
     }
 
-    @Test(dependsOnMethods = "testSubmitEntity", expectedExceptions = IllegalArgumentException.class)
+    @Test(dependsOnMethods = "testSubmitEntity")
     public void testAddNullPropertyValue() throws Exception {
         final String guid = tableId._getId();
         //add property
-        addProperty(guid, "description", null);
-        Assert.fail();
+        ClientResponse clientResponse = addProperty(guid, "description", null);
+        Assert.assertEquals(clientResponse.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
     }
 
     @Test(dependsOnMethods = "testSubmitEntity")
@@ -221,10 +223,8 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     private ClientResponse addProperty(String guid, String property, String value) {
         WebResource resource = service.path("api/atlas/entity").path(guid).path(property);
 
-        MultivaluedMap formData = new MultivaluedMapImpl();
-        formData.add("value", value);
         return resource.accept(Servlets.JSON_MEDIA_TYPE)
-                .type(Servlets.JSON_MEDIA_TYPE).post(ClientResponse.class, formData);
+            .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.POST, ClientResponse.class, value);
     }
 
     private ClientResponse getEntityDefinition(String guid) {
@@ -503,5 +503,66 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         String definition = getEntityDefinition(response);
         Referenceable getReferenceable = InstanceSerialization.fromJsonReferenceable(definition, true);
         Assert.assertEquals(getReferenceable.get(attrName), attrValue);
+    }
+
+    @Test(dependsOnMethods = "testSubmitEntity")
+    public void testPartialUpdate() throws Exception {
+        final List<Referenceable> columns = new ArrayList<>();
+        Map<String, Object> values = new HashMap<>();
+        values.put("name", "col1");
+        values.put("dataType", "string");
+        values.put("comment", "col1 comment");
+
+        Referenceable ref = new Referenceable(BaseResourceIT.COLUMN_TYPE, values);
+        columns.add(ref);
+        Referenceable tableUpdated = new Referenceable(BaseResourceIT.HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columns", columns);
+        }});
+
+        String entityJSON = InstanceSerialization.toJson(tableUpdated, true);
+        System.out.println("Updating entity= " + entityJSON);
+        serviceClient.updateEntity(tableId._getId(), entityJSON);
+
+        ClientResponse response = getEntityDefinition(tableId._getId());
+        String definition = getEntityDefinition(response);
+        Referenceable getReferenceable = InstanceSerialization.fromJsonReferenceable(definition, true);
+        List<Referenceable> refs = (List<Referenceable>) getReferenceable.get("columns");
+
+        Assert.assertTrue(refs.get(0).equalsContents(columns.get(0)));
+    }
+
+    @Test(dependsOnMethods = "testSubmitEntity")
+    public void testCompleteUpdate() throws Exception {
+        final List<Referenceable> columns = new ArrayList<>();
+        Map<String, Object> values1 = new HashMap<>();
+        values1.put("name", "col3");
+        values1.put("dataType", "string");
+        values1.put("comment", "col3 comment");
+
+        Map<String, Object> values2 = new HashMap<>();
+        values2.put("name", "col4");
+        values2.put("dataType", "string");
+        values2.put("comment", "col4 comment");
+
+        Referenceable ref1 = new Referenceable(BaseResourceIT.COLUMN_TYPE, values1);
+        Referenceable ref2 = new Referenceable(BaseResourceIT.COLUMN_TYPE, values2);
+        columns.add(ref1);
+        columns.add(ref2);
+        tableInstance.set("columns", columns);
+
+        String entityJSON = InstanceSerialization.toJson(tableInstance, true);
+        System.out.println("Replacing entity= " + entityJSON);
+        serviceClient.updateEntities(entityJSON);
+
+        ClientResponse response = getEntityDefinition(tableId._getId());
+        String definition = getEntityDefinition(response);
+        Referenceable getReferenceable = InstanceSerialization.fromJsonReferenceable(definition, true);
+        List<Referenceable> refs = (List<Referenceable>) getReferenceable.get("columns");
+        Assert.assertEquals(refs.size(), 2);
+
+        Assert.assertTrue(refs.get(0).equalsContents(columns.get(0)));
+        Assert.assertTrue(refs.get(1).equalsContents(columns.get(1)));
+
+
     }
 }

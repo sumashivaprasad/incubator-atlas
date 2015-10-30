@@ -21,7 +21,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.thinkaurelius.titan.core.SchemaViolationException;
-import com.thinkaurelius.titan.core.TitanGraph;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
@@ -87,10 +86,10 @@ public final class TypedInstanceToGraphMapper {
         List<String> guids = new ArrayList<>();
         for (ITypedReferenceableInstance typedInstance : typedInstances) {
             List<ITypedReferenceableInstance> newTypedInstances = walkAndDiscoverClassInstances(entityProcessor, typedInstance);
-            List<ITypedReferenceableInstance> instancesCreated =
+            List<ITypedReferenceableInstance> instances =
                 createVerticesForClassType(operation, newTypedInstances);
 
-            addAttributesAndTraits(instancesCreated);
+            addOrUpdateAttributesAndTraits(operation, instances);
 
             addFullTextProperty();
 
@@ -112,11 +111,11 @@ public final class TypedInstanceToGraphMapper {
         return discoverInstances(entityProcessor);
     }
 
-    private void addAttributesAndTraits(List<ITypedReferenceableInstance> instancesCreated) throws AtlasException {
+    private void addOrUpdateAttributesAndTraits(Operation operation, List<ITypedReferenceableInstance> instancesCreated) throws AtlasException {
         for (ITypedReferenceableInstance instance : instancesCreated) {
             try {
                 //new vertex, set all the properties
-                addDiscoveredInstance(instance);
+                addOrUpdateAttributesAndTraits(operation, instance);
             } catch (SchemaViolationException e) {
                 throw new EntityExistsException(instance, e);
             }
@@ -131,7 +130,6 @@ public final class TypedInstanceToGraphMapper {
             Id id = typedInstance.getId();
             if (!idToVertexMap.containsKey(id)) {
                 Vertex instanceVertex;
-                //TOD - how to do null updates on classes
                 if (id.isAssigned()) {  // has a GUID
                     instanceVertex = graphHelper.getVertexForGUID(id.id);
                 } else {
@@ -164,17 +162,17 @@ public final class TypedInstanceToGraphMapper {
         return instances;
     }
 
-    public String[] updateGraphByUniqueAttribute(String uniqueAttrName, Object uniqAttrValue, ITypedReferenceableInstance typedInstance)
+    public String updateGraphByUniqueAttribute(String uniqueAttrName, Object uniqAttrValue, ITypedReferenceableInstance typedInstance)
         throws AtlasException {
         EntityProcessor entityProcessor = new EntityProcessor(Operation.UPDATE);
         ITypedReferenceableInstance instanceUpdated =
             updateByUniqueAttribute(uniqueAttrName, uniqAttrValue, typedInstance);
 
         List<ITypedReferenceableInstance> newTypedInstances = walkAndDiscoverClassInstances(entityProcessor, instanceUpdated);
-        List<ITypedReferenceableInstance> instancesCreated =
+        List<ITypedReferenceableInstance> instances =
             createVerticesForClassType(Operation.UPDATE, newTypedInstances);
 
-        addAttributesAndTraits(instancesCreated);
+        addOrUpdateAttributesAndTraits(Operation.UPDATE, instances);
 
         addFullTextProperty();
 
@@ -187,24 +185,14 @@ public final class TypedInstanceToGraphMapper {
         String uniqeAttrName, Object attrValue, ITypedReferenceableInstance typedInstance) throws AtlasException {
 
         final Id id = typedInstance.getId();
-        if (!idToVertexMap.containsKey(id)) {
-            Vertex instanceVertex;
-            ClassType classType = typeSystem.getDataType(ClassType.class, typedInstance.getTypeName());
-            if (id.isAssigned()) {  // has a GUID
-                instanceVertex = graphHelper.getVertexForGUID(id.id);
-            } else {
-                //Check if there is already an instance with the given unique attribute value
-                instanceVertex = graphHelper.getVertexForProperty(uniqeAttrName, attrValue);
-                if (instanceVertex == null) {
-                    throw new EntityNotFoundException(String.format("Entity with unique attribute(%s, %s) not found", uniqeAttrName, attrValue));
-                }
-                mapInstanceToVertex(id, typedInstance, instanceVertex,
-                    classType.fieldMapping().fields, true);
-
-            }
-            idToVertexMap.put(id, instanceVertex);
-            vertexToInstanceMap.put(instanceVertex, typedInstance);
+        ClassType classType = typeSystem.getDataType(ClassType.class, typedInstance.getTypeName());
+        final String propertyName = GraphHelper.getQualifiedFieldName(classType, uniqeAttrName);
+        Vertex instanceVertex = graphHelper.getVertexForProperty(propertyName, attrValue);
+        //Check if there is already an instance with the given unique attribute value
+        if (instanceVertex == null) {
+            throw new EntityNotFoundException(String.format("Entity with unique attribute(%s, %s) not found", uniqeAttrName, attrValue));
         }
+        mapInstanceToVertex(id, typedInstance, instanceVertex, classType.fieldMapping().fields, true);
         return typedInstance;
     }
 
@@ -249,7 +237,7 @@ public final class TypedInstanceToGraphMapper {
     }
 
 
-    private void addDiscoveredInstance(ITypedReferenceableInstance typedInstance)
+    private void addOrUpdateAttributesAndTraits(Operation operation, ITypedReferenceableInstance typedInstance)
         throws AtlasException {
         LOG.debug("Adding/Updating typed instance {}", typedInstance.getTypeName());
 
@@ -266,6 +254,13 @@ public final class TypedInstanceToGraphMapper {
 
         mapInstanceToVertex(id, typedInstance, instanceVertex, fields, false);
 
+        if (Operation.CREATE.equals(operation)) {
+            //TODO - Handle Trait updates
+            addTraits(typedInstance, instanceVertex, classType);
+        }
+    }
+
+    private void addTraits(ITypedReferenceableInstance typedInstance, Vertex instanceVertex, ClassType classType) throws AtlasException {
         for (String traitName : typedInstance.getTraits()) {
             LOG.debug("mapping trait {}", traitName);
             GraphHelper.addProperty(instanceVertex, Constants.TRAIT_NAMES_PROPERTY_KEY, traitName);
@@ -345,14 +340,18 @@ public final class TypedInstanceToGraphMapper {
         case CLASS:
             outGoingEdgesByLabel = GraphHelper.getOutGoingEdgesByLabel(instanceVertex, edgeLabel);
             Vertex toVertex = getClassVertex((ITypedReferenceableInstance) typedInstance.get(attributeInfo.name));
-            if (outGoingEdgesByLabel.iterator().hasNext()) {
-                Id classRefId = getId((ITypedReferenceableInstance) typedInstance.get(attributeInfo.name));
-                updateClassEdge(classRefId, instanceVertex, outGoingEdgesByLabel.iterator().next(), toVertex, attributeInfo, attributeInfo.dataType(), edgeLabel);
+            if(toVertex == null && typedInstance.get(attributeInfo.name) != null) {
+                LOG.error("Could not find vertex for Class Reference " + typedInstance.get(attributeInfo.name));
+                throw new EntityNotFoundException("Could not find vertex for Class Reference " + typedInstance.get(attributeInfo.name));
             } else {
-                addClassEdge(instanceVertex, toVertex, edgeLabel);
+                if (outGoingEdgesByLabel.iterator().hasNext()) {
+                    Id classRefId = getId((ITypedReferenceableInstance) typedInstance.get(attributeInfo.name));
+                    updateClassEdge(classRefId, instanceVertex, outGoingEdgesByLabel.iterator().next(), toVertex, attributeInfo, attributeInfo.dataType(), edgeLabel);
+                } else if(typedInstance.get(attributeInfo.name) != null) {
+                    addClassEdge(instanceVertex, toVertex, edgeLabel);
+                }
             }
             break;
-
         default:
             throw new IllegalArgumentException("Unknown type category: " + dataType.getTypeCategory());
         }
@@ -558,8 +557,13 @@ public final class TypedInstanceToGraphMapper {
 
         case CLASS:
             Vertex toVertex = getClassVertex((ITypedReferenceableInstance) value);
-            vertexEdgePair = addClassEdge(instanceVertex, toVertex, edgeLabel);
-            return (vertexEdgePair != null) ? vertexEdgePair.getRight().getId().toString() : null;
+            if(toVertex == null && value != null) {
+                LOG.error("Could not find vertex for Class Reference " + value);
+                throw new EntityNotFoundException("Could not find vertex for Class Reference " + value);
+            } else if (value != null) {
+                vertexEdgePair = addClassEdge(instanceVertex, toVertex, edgeLabel);
+                return (vertexEdgePair != null) ? vertexEdgePair.getRight().getId().toString() : null;
+            }
         default:
             throw new IllegalArgumentException("Unknown type category: " + elementType.getTypeCategory());
         }
@@ -594,14 +598,19 @@ public final class TypedInstanceToGraphMapper {
 
         case CLASS:
             Vertex toVertex = getClassVertex((ITypedReferenceableInstance) newVal);
-            if (curVal != null) {
-                Edge edge = graphHelper.getOutGoingEdgeById(curVal);
-                Id classRefId = getId((ITypedReferenceableInstance) newVal);
-                vertexEdgePair = updateClassEdge(classRefId, instanceVertex, edge, toVertex, attributeInfo, elementType, edgeLabel);
+            if(toVertex == null && newVal != null) {
+                LOG.error("Could not find vertex for Class Reference " + newVal);
+                throw new EntityNotFoundException("Could not find vertex for Class Reference " + newVal);
             } else {
-                vertexEdgePair = addClassEdge(instanceVertex, toVertex, edgeLabel);
+                if (curVal != null) {
+                    Edge edge = graphHelper.getOutGoingEdgeById(curVal);
+                    Id classRefId = getId((ITypedReferenceableInstance) newVal);
+                    vertexEdgePair = updateClassEdge(classRefId, instanceVertex, edge, toVertex, attributeInfo, elementType, edgeLabel);
+                } else {
+                    vertexEdgePair = addClassEdge(instanceVertex, toVertex, edgeLabel);
+                }
+                return vertexEdgePair.getRight().getId().toString();
             }
-            return vertexEdgePair.getRight().getId().toString();
         default:
             throw new IllegalArgumentException("Unknown type category: " + elementType.getTypeCategory());
         }
@@ -610,13 +619,9 @@ public final class TypedInstanceToGraphMapper {
     /******************************************** CLASS **************************************************/
 
     private Pair<Vertex, Edge> addClassEdge(Vertex instanceVertex, Vertex toVertex, String edgeLabel) throws AtlasException {
-        if (toVertex != null) {
             // add an edge to the class vertex from the instance
-            Edge edge = graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
-            return Pair.of(toVertex, edge);
-        }
-
-        return null;
+          Edge edge = graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
+          return Pair.of(toVertex, edge);
     }
 
     private Vertex getClassVertex(ITypedReferenceableInstance typedReference) throws EntityNotFoundException {
@@ -639,27 +644,36 @@ public final class TypedInstanceToGraphMapper {
         if (typedReference != null) {
             id = typedReference instanceof Id ? (Id) typedReference : typedReference.getId();
         }
+
+        if (id.isUnassigned()) {
+            Vertex classVertex = idToVertexMap.get(id);
+            String guid = classVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+            id = new Id(guid, 0, typedReference.getTypeName());
+        }
         return id;
     }
 
 
     private Pair<Vertex, Edge> updateClassEdge(Id id, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, IDataType dataType, String edgeLabel) {
+        Pair<Vertex, Edge> result = null;
         Edge newEdge = edge;
         // Update edge if it exists
         Vertex invertex = edge.getVertex(Direction.IN);
         String currentGUID = invertex.getProperty(Constants.GUID_PROPERTY_KEY);
         Id currentId = new Id(currentGUID, 0, (String) invertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY));
         if (!currentId.equals(id)) {
-            if (toVertex != null) {
-                // add an edge to the class vertex from the instance
+             // add an edge to the class vertex from the instance
+            if(toVertex != null) {
                 newEdge = graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
+                result = Pair.of(toVertex, newEdge);
             }
             removeUnusedReference(edge.getId().toString(), attributeInfo, dataType);
         }
-        return Pair.of(toVertex, newEdge);
+        return result;
     }
 
     /******************************************** TRAITS ****************************************************/
+
     void mapTraitInstanceToVertex(ITypedStruct traitInstance, Id typedInstanceId,
         IDataType entityType, Vertex parentInstanceVertex)
         throws AtlasException {
