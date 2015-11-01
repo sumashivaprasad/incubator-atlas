@@ -386,11 +386,15 @@ public class DefaultMetadataService implements MetadataService {
 
             switch (attrTypeCategory) {
             case CLASS:
-                Id id = new Id((String) value, 0, attributeInfo.dataType().getName());
-                instance.set(property, id);
+                if (value instanceof Referenceable) {
+                    instance.set(property, value);
+                } else {
+                    Id id = new Id((String) value, 0, attributeInfo.dataType().getName());
+                    instance.set(property, id);
+                }
                 break;
-            case PRIMITIVE:
             case ENUM:
+            case PRIMITIVE:
             case ARRAY:
             case STRUCT:
             case MAP:

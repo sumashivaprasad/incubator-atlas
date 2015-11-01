@@ -446,15 +446,15 @@ public class DefaultMetadataServiceTest {
     }
 
     @Test
-    public void testClass() throws Exception {
+    public void testClassUpdate() throws Exception {
         //Create new db instance
-        Referenceable databaseInstance = new Referenceable(TestUtils.DATABASE_TYPE);
+        final Referenceable databaseInstance = new Referenceable(TestUtils.DATABASE_TYPE);
         databaseInstance.set("name", TestUtils.randomString());
         databaseInstance.set("description", "new database");
 
         String dbId = createInstance(databaseInstance);
 
-        //Add reference property
+        /*Update reference property with Id */
         metadataService.updateEntity(tableId._getId(), "database", dbId);
 
         String tableDefinitionJson =
@@ -462,6 +462,27 @@ public class DefaultMetadataServiceTest {
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertEquals(dbId, (((Id)tableDefinition.get("database"))._getId()));
+
+        /* Update with referenceable - TODO - Fails . Need to fix this */
+        /*final String dbName = TestUtils.randomString();
+        final Referenceable databaseInstance2 = new Referenceable(TestUtils.DATABASE_TYPE);
+        databaseInstance2.set("name", dbName);
+        databaseInstance2.set("description", "new database 2");
+
+        Referenceable updateTable = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("database", databaseInstance2);
+        }});
+        metadataService.updateEntity(tableId._getId(), updateTable);
+
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(tableId._getId());
+        Referenceable tableDefinitionActual = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        String dbDefJson = metadataService.getEntityDefinition(TestUtils.DATABASE_TYPE, "name", dbName);
+        Referenceable dbDef = InstanceSerialization.fromJsonReferenceable(dbDefJson, true);
+
+        Assert.assertNotEquals(dbId, (((Id) tableDefinitionActual.get("database"))._getId()));
+        Assert.assertEquals(dbDef.getId()._getId(), (((Id) tableDefinitionActual.get("database"))._getId())); */
 
     }
 

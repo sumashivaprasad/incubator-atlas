@@ -40,13 +40,11 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
     private  final Logger LOG = LoggerFactory.getLogger(TypedInstanceToGraphMapper.class);
 
     private final Map<Id, IReferenceableInstance> idToInstanceMap;
-    private final TypedInstanceToGraphMapper.Operation operation;
 
     private static final GraphHelper graphHelper = GraphHelper.getInstance();
 
-    public EntityProcessor(TypedInstanceToGraphMapper.Operation op) {
+    public EntityProcessor() {
         idToInstanceMap = new LinkedHashMap<>();
-        this.operation = op;
     }
 
     public void cleanUp() {
@@ -89,7 +87,7 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
         }
     }
 
-    public void addInstanceIfNoExists(ITypedReferenceableInstance ref) {
+    public void addInstanceIfNotExists(ITypedReferenceableInstance ref) {
         if(!idToInstanceMap.containsKey(ref.getId())) {
             idToInstanceMap.put(ref.getId(), ref);
         }

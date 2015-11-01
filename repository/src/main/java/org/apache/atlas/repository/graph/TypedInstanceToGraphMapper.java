@@ -76,12 +76,14 @@ public final class TypedInstanceToGraphMapper {
 
     String[] mapTypedInstanceToGraph(Operation operation, ITypedReferenceableInstance... typedInstances)
         throws AtlasException {
-        EntityProcessor entityProcessor = new EntityProcessor(operation);
+        EntityProcessor entityProcessor = new EntityProcessor();
         List<String> guids = new ArrayList<>();
         for (ITypedReferenceableInstance typedInstance : typedInstances) {
             List<ITypedReferenceableInstance> newTypedInstances = walkAndDiscoverClassInstances(entityProcessor, typedInstance);
             List<ITypedReferenceableInstance> instances =
-                createVerticesForClassType(operation, newTypedInstances);
+                createVerticesForClassType(newTypedInstances);
+
+            addIfNotExists(instances, typedInstance);
 
             addOrUpdateAttributesAndTraits(operation, instances);
 
@@ -98,7 +100,7 @@ public final class TypedInstanceToGraphMapper {
             LOG.debug("Walking the object graph for instance {}", typedInstance.getTypeName());
             entityProcessor.cleanUp();
             new ObjectGraphWalker(typeSystem, entityProcessor, typedInstance).walk();
-            entityProcessor.addInstanceIfNoExists(typedInstance);
+            entityProcessor.addInstanceIfNotExists(typedInstance);
         } catch (AtlasException me) {
             throw new RepositoryException("TypeSystem error when walking the ObjectGraph", me);
         }
@@ -117,8 +119,7 @@ public final class TypedInstanceToGraphMapper {
         }
     }
 
-    private List<ITypedReferenceableInstance> createVerticesForClassType(
-        Operation op, List<ITypedReferenceableInstance> typedInstances) throws AtlasException {
+    private List<ITypedReferenceableInstance> createVerticesForClassType(List<ITypedReferenceableInstance> typedInstances) throws AtlasException {
 
         List<ITypedReferenceableInstance> instances = new ArrayList<>();
         for (ITypedReferenceableInstance typedInstance : typedInstances) {
@@ -138,18 +139,10 @@ public final class TypedInstanceToGraphMapper {
                         //Map only unique attributes
                         mapInstanceToVertex(id, typedInstance, instanceVertex,
                             classType.fieldMapping().fields, true);
-
-                        if(Operation.CREATE.equals(op)) {
-                            //Add only newly created vertices
-                            instances.add(typedInstance);
-                        }
+                        instances.add(typedInstance);
                     }
                 }
 
-                if(Operation.UPDATE.equals(op)) {
-                    //Add all identified vertices for further processing in case of an update
-                    instances.add(typedInstance);
-                }
                 idToVertexMap.put(id, instanceVertex);
                 vertexToInstanceMap.put(instanceVertex, typedInstance);
             }
@@ -159,13 +152,15 @@ public final class TypedInstanceToGraphMapper {
 
     public String updateGraphByUniqueAttribute(String uniqueAttrName, Object uniqAttrValue, ITypedReferenceableInstance typedInstance)
         throws AtlasException {
-        EntityProcessor entityProcessor = new EntityProcessor(Operation.UPDATE);
+        EntityProcessor entityProcessor = new EntityProcessor();
         ITypedReferenceableInstance instanceUpdated =
             updateByUniqueAttribute(uniqueAttrName, uniqAttrValue, typedInstance);
 
         List<ITypedReferenceableInstance> newTypedInstances = walkAndDiscoverClassInstances(entityProcessor, instanceUpdated);
         List<ITypedReferenceableInstance> instances =
-            createVerticesForClassType(Operation.UPDATE, newTypedInstances);
+            createVerticesForClassType(newTypedInstances);
+
+        addIfNotExists(instances, typedInstance);
 
         addOrUpdateAttributesAndTraits(Operation.UPDATE, instances);
 
@@ -174,6 +169,12 @@ public final class TypedInstanceToGraphMapper {
         //Return guid for
         Vertex instanceVertex = vertexToInstanceMap.inverse().get(typedInstance);
         return instanceVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+    }
+
+    private void addIfNotExists(List<ITypedReferenceableInstance> instances, ITypedReferenceableInstance typedInstance) {
+        if (!instances.contains(typedInstance)) {
+            instances.add(typedInstance);
+        }
     }
 
     private ITypedReferenceableInstance updateByUniqueAttribute(
