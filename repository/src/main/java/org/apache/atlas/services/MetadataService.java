@@ -109,7 +109,7 @@ public interface MetadataService {
      * Supports Partial updates of an entity. Users can update a subset of attributes for an entity identified by its guid
      * Note however that it cannot be used to set attribute values to null or delete attrbute values
      *
-     * @return List of guids which were updated and ones which were newly created as part of the updated entity
+     * @return Guid of updated entity
      */
     String updateEntity(String guid, Referenceable entity) throws AtlasException;
 
@@ -130,6 +130,7 @@ public interface MetadataService {
      * @param uniqueAttributeName
      * @param attrValue
      * @param updatedEntity
+     * @return Guid of updated entity
      * @throws AtlasException
      */
     String updateEntity(String typeName, String uniqueAttributeName, Object attrValue, Referenceable updatedEntity) throws AtlasException;

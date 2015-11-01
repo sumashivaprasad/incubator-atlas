@@ -44,14 +44,9 @@ import org.apache.atlas.typesystem.types.ObjectGraphWalker;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.hbase.util.MurmurHash3;
-import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.util.hash.MurmurHash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -66,7 +61,6 @@ public final class TypedInstanceToGraphMapper {
     private final Map<Id, Vertex> idToVertexMap = new HashMap<>();
     private final TypeSystem typeSystem = TypeSystem.getInstance();
     private final GraphToTypedInstanceMapper graphToTypedInstanceMapper;
-//    private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "__signature";
 
     private static final GraphHelper graphHelper = GraphHelper.getInstance();
 
@@ -292,9 +286,6 @@ public final class TypedInstanceToGraphMapper {
         LOG.debug("mapping attribute {} = {}", attributeInfo.name, attrValue);
         final String propertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
         String edgeLabel = GraphHelper.getEdgeLabel(typedInstance, attributeInfo);
-//        if (attrValue == null) {
-//            return;
-//        }
 
         switch (dataType.getTypeCategory()) {
         case PRIMITIVE:
@@ -369,16 +360,7 @@ public final class TypedInstanceToGraphMapper {
             removeUnusedReference(relEdge.getId().toString(), attributeInfo, elemType);
         } else {
             // Update attributes
-            // map all the attributes to this vertex
-//            int newSignature = hash(typedInstance);
-//            String curSignature = structInstanceVertex.getProperty(SIGNATURE_HASH_PROPERTY_KEY);
-//            if(newSignature != Integer.parseInt(curSignature)) {
-                //Update struct vertex instance only if there is a change
-                mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
-//                GraphHelper.setProperty(structInstanceVertex, SIGNATURE_HASH_PROPERTY_KEY, String.valueOf(newSignature));
-//            } else {
-//                LOG.debug("Skipping update of struct vertex since signature matches for " + id + ":" + typedInstance);
-//            }
+            mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
         }
         return Pair.of(structInstanceVertex, relEdge);
     }
@@ -397,8 +379,6 @@ public final class TypedInstanceToGraphMapper {
         mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
         // add an edge to the newly created vertex from the parent
         Edge relEdge = graphHelper.addEdge(instanceVertex, structInstanceVertex, edgeLabel);
-//        int signature = hash(typedInstance);
-//        graphHelper.setProperty(structInstanceVertex, SIGNATURE_HASH_PROPERTY_KEY, String.valueOf(signature));
 
         return Pair.of(structInstanceVertex, relEdge);
     }
@@ -409,10 +389,6 @@ public final class TypedInstanceToGraphMapper {
         AttributeInfo attributeInfo) throws AtlasException {
         LOG.debug("Mapping instance {} to vertex {} for name {}", typedInstance.getTypeName(), instanceVertex,
             attributeInfo.name);
-//        List list = (List) typedInstance.get(attributeInfo.name);
-//        if (list == null || list.isEmpty()) {
-//            return;
-//        }
 
         String propertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
         IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
@@ -486,9 +462,6 @@ public final class TypedInstanceToGraphMapper {
             attributeInfo.name);
         @SuppressWarnings("unchecked") Map<Object, Object> collection =
             (Map<Object, Object>) typedInstance.get(attributeInfo.name);
-//        if (collection == null || collection.isEmpty()) {
-//            return;
-//        }
 
         if (collection == null) {
             collection = new HashMap<>();
@@ -772,60 +745,4 @@ public final class TypedInstanceToGraphMapper {
         }
         return removedRelation;
     }
-
-//    static int hash(ITypedReferenceableInstance classInstance) throws AtlasException {
-//        if (classInstance instanceof ReferenceableInstance) {
-//            int result = classInstance.getTypeName().hashCode();
-//            result = 31 * result + classInstance.getId().hashCode();
-//            Map<String, Object> values = classInstance.getValuesMap();
-//            result = 31 * result + values.hashCode();
-//            return result;
-//        } else {
-//            return ((Id) classInstance).hashCode();
-//        }
-//    }
-//
-//    static int hash(ITypedStruct structInstance) throws AtlasException {
-//        int result = structInstance.getTypeName().hashCode();
-//        Map<String, Object> values = structInstance.getValuesMap();
-//        result = 31 * result + values.hashCode();
-//        return result;
-//    }
-
-//    static int hash(ITypedReferenceableInstance classInstance, boolean isRecursive) throws AtlasException {
-//        if (classInstance instanceof ReferenceableInstance) {
-//            int result = classInstance.getTypeName().hashCode();
-//            result = 31 * result + classInstance.getId().hashCode();
-//            Map<String, Object> values = classInstance.getValuesMap();
-//            result = 31 * result + values.hashCode();
-//            return result;
-//        } else {
-//            return ((Id) classInstance).hashCode();
-//        }
-//    }
-//
-//    static String hash(ITypedStruct structInstance) throws AtlasException {
-//        final MessageDigest digester = MD5Hash.getDigester();
-//        digester.update(structInstance.getTypeName().getBytes());
-////        Map<String, Object> values = structInstance.getValuesMap();
-//        for(AttributeInfo aInfo : structInstance.fieldMapping().fields) {
-//            final Object val = structInstance.get(aInfo.name);
-//            if(val != null) {
-//                digester.update(val);
-//            }
-//            result = 31 * result + values.hashCode();
-//        }
-//        return result;
-//    }
-//
-//    public static void main(String[] args) {
-//        System.out.println("hash1 = " + "FB".hashCode());
-//        System.out.println("hash2 = " + "Ea".hashCode());
-//
-//        System.out.println("hash3 = " + MurmurHash3.getInstance().hash("FB".getBytes()));
-//        System.out.println("hash4 = " + MurmurHash3.getInstance().hash("Ea".getBytes()));
-//
-//        System.out.println("hash md5 = " + MD5Hash.digest("FB".getBytes()));
-//        System.out.println("hash md5 = " + MD5Hash.digest("Ea".getBytes()));
-//    }
 }
