@@ -22,6 +22,7 @@ import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.typesystem.IReferenceableInstance;
+import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
@@ -68,29 +69,9 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
         if (nd.attributeName == null) {
             ref = (IReferenceableInstance) nd.instance;
             id = ref.getId();
-
-            LOG.debug("Processing " + nd + " for " + id);
         } else if (nd.aInfo.dataType().getTypeCategory() == DataTypes.TypeCategory.CLASS) {
-            /* In case of an update Entity , do not attempt to update the related class attributes unless its a composite
-             */
             if (nd.value != null && (nd.value instanceof Id)) {
                 id = (Id) nd.value;
-            }
-
-            if (TypedInstanceToGraphMapper.Operation.UPDATE.equals(operation)) {
-                if (id != null && id.isAssigned() && !nd.aInfo.isComposite) {
-                    // has a GUID and it is not a composite relation. Then do not add instance for updation
-                    return;
-                } else if(ref != null){
-                    //Check if there is already an instance with the same unique attribute value
-                    ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, ref.getTypeName());
-                    Vertex classVertex = graphHelper.getVertexForInstanceByUniqueAttribute(classType, ref);
-                    //Vertex already exists and it is not a composite. Do not add for updation
-                    if(classVertex != null && !nd.aInfo.isComposite) {
-                        LOG.debug("Not processing " + nd + " since it is not a composite attribute for " + id);
-                        return;
-                    }
-                }
             }
         }
 
@@ -101,16 +82,16 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
                         throw new RepositoryException(
                             String.format("Unexpected internal error: Id %s processed again", id));
                     }
-                    LOG.debug("Added " + id + " for processing ");
-                    idToInstanceMap.put(id, ref);
-                }
-            } else {
-                //Updating entity
-                if (ref != null) {
-                    LOG.debug("Added " + id + " for processing ");
+
                     idToInstanceMap.put(id, ref);
                 }
             }
+        }
+    }
+
+    public void addInstanceIfNoExists(ITypedReferenceableInstance ref) {
+        if(!idToInstanceMap.containsKey(ref.getId())) {
+            idToInstanceMap.put(ref.getId(), ref);
         }
     }
 }

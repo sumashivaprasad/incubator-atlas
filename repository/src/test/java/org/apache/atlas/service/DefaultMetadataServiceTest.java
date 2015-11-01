@@ -326,11 +326,35 @@ public class DefaultMetadataServiceTest {
         String tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-        List<Referenceable> arrClsColumns = (List) tableDefinition.get("columns");
+        final List<Referenceable> arrClsColumns = (List) tableDefinition.get("columns");
         Assert.assertTrue(arrClsColumns.get(0).equalsContents(columns.get(0)));
 
+        //Partial update. Add col5 But also update col1
+        Map<String, Object> valuesCol5 = new HashMap<>();
+        valuesCol5.put("name", "col5");
+        valuesCol5.put("type", "type");
+        ref = new Referenceable("column_type", valuesCol5);
+        //update col1
+        arrClsColumns.get(0).set("type", "type1");
 
-        //Add another array element
+        //add col5
+        final List<Referenceable> updateColumns = new ArrayList<>(arrClsColumns);
+        updateColumns.add(ref);
+
+        tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columns", updateColumns);
+        }});
+        metadataService.updateEntity(tableId._getId(), tableUpdated);
+
+        tableDefinitionJson =
+            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        List<Referenceable> arrColumnsList = (List) tableDefinition.get("columns");
+        Assert.assertEquals(arrColumnsList.size(), 2);
+        Assert.assertTrue(arrColumnsList.get(0).equalsContents(updateColumns.get(0)));
+        Assert.assertTrue(arrColumnsList.get(1).equalsContents(updateColumns.get(1)));
+
+        //Complete update. Add  array elements - col3,4
         Map<String, Object> values1 = new HashMap<>();
         values1.put("name", "col3");
         values1.put("type", "type");
@@ -349,10 +373,10 @@ public class DefaultMetadataServiceTest {
         tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-        arrClsColumns = (List) tableDefinition.get("columns");
-        Assert.assertEquals(arrClsColumns.size(), columns.size());
-        Assert.assertTrue(arrClsColumns.get(1).equalsContents(columns.get(1)));
-        Assert.assertTrue(arrClsColumns.get(2).equalsContents(columns.get(2)));
+        arrColumnsList = (List) tableDefinition.get("columns");
+        Assert.assertEquals(arrColumnsList.size(), columns.size());
+        Assert.assertTrue(arrColumnsList.get(1).equalsContents(columns.get(1)));
+        Assert.assertTrue(arrColumnsList.get(2).equalsContents(columns.get(2)));
 
 
         //Remove a class reference/Id and insert another reference
@@ -370,9 +394,9 @@ public class DefaultMetadataServiceTest {
         tableDefinitionJson =
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-        arrClsColumns = (List) tableDefinition.get("columns");
-        Assert.assertEquals(arrClsColumns.size(), columns.size());
-        Assert.assertTrue(arrClsColumns.get(0).equalsContents(columns.get(0)));
+        arrColumnsList = (List) tableDefinition.get("columns");
+        Assert.assertEquals(arrColumnsList.size(), columns.size());
+        Assert.assertTrue(arrColumnsList.get(0).equalsContents(columns.get(0)));
 
         //Update array column to null
         table.setNull("columns");
@@ -419,6 +443,26 @@ public class DefaultMetadataServiceTest {
             metadataService.getEntityDefinition(tableId._getId());
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Assert.assertNull(((Struct)tableDefinition.get("serde1")).get("description"));
+    }
+
+    @Test
+    public void testClass() throws Exception {
+        //Create new db instance
+        Referenceable databaseInstance = new Referenceable(TestUtils.DATABASE_TYPE);
+        databaseInstance.set("name", TestUtils.randomString());
+        databaseInstance.set("description", "new database");
+
+        String dbId = createInstance(databaseInstance);
+
+        //Add reference property
+        metadataService.updateEntity(tableId._getId(), "database", dbId);
+
+        String tableDefinitionJson =
+            metadataService.getEntityDefinition(tableId._getId());
+        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+
+        Assert.assertEquals(dbId, (((Id)tableDefinition.get("database"))._getId()));
+
     }
 
     @Test

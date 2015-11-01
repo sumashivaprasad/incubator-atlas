@@ -104,6 +104,7 @@ public final class TypedInstanceToGraphMapper {
             LOG.debug("Walking the object graph for instance {}", typedInstance.getTypeName());
             entityProcessor.cleanUp();
             new ObjectGraphWalker(typeSystem, entityProcessor, typedInstance).walk();
+            entityProcessor.addInstanceIfNoExists(typedInstance);
         } catch (AtlasException me) {
             throw new RepositoryException("TypeSystem error when walking the ObjectGraph", me);
         }
@@ -111,8 +112,8 @@ public final class TypedInstanceToGraphMapper {
         return discoverInstances(entityProcessor);
     }
 
-    private void addOrUpdateAttributesAndTraits(Operation operation, List<ITypedReferenceableInstance> instancesCreated) throws AtlasException {
-        for (ITypedReferenceableInstance instance : instancesCreated) {
+    private void addOrUpdateAttributesAndTraits(Operation operation, List<ITypedReferenceableInstance> instances) throws AtlasException {
+        for (ITypedReferenceableInstance instance : instances) {
             try {
                 //new vertex, set all the properties
                 addOrUpdateAttributesAndTraits(operation, instance);
@@ -346,7 +347,7 @@ public final class TypedInstanceToGraphMapper {
             } else {
                 if (outGoingEdgesByLabel.iterator().hasNext()) {
                     Id classRefId = getId((ITypedReferenceableInstance) typedInstance.get(attributeInfo.name));
-                    updateClassEdge(classRefId, instanceVertex, outGoingEdgesByLabel.iterator().next(), toVertex, attributeInfo, attributeInfo.dataType(), edgeLabel);
+                    updateClassEdge(classRefId, (ITypedReferenceableInstance) typedInstance.get(attributeInfo.name), instanceVertex, outGoingEdgesByLabel.iterator().next(), toVertex, attributeInfo, attributeInfo.dataType(), edgeLabel);
                 } else if(typedInstance.get(attributeInfo.name) != null) {
                     addClassEdge(instanceVertex, toVertex, edgeLabel);
                 }
@@ -605,7 +606,7 @@ public final class TypedInstanceToGraphMapper {
                 if (curVal != null) {
                     Edge edge = graphHelper.getOutGoingEdgeById(curVal);
                     Id classRefId = getId((ITypedReferenceableInstance) newVal);
-                    vertexEdgePair = updateClassEdge(classRefId, instanceVertex, edge, toVertex, attributeInfo, elementType, edgeLabel);
+                    vertexEdgePair = updateClassEdge(classRefId, (ITypedReferenceableInstance) newVal, instanceVertex, edge, toVertex, attributeInfo, elementType, edgeLabel);
                 } else {
                     vertexEdgePair = addClassEdge(instanceVertex, toVertex, edgeLabel);
                 }
@@ -654,8 +655,8 @@ public final class TypedInstanceToGraphMapper {
     }
 
 
-    private Pair<Vertex, Edge> updateClassEdge(Id id, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, IDataType dataType, String edgeLabel) {
-        Pair<Vertex, Edge> result = null;
+    private Pair<Vertex, Edge> updateClassEdge(Id id, ITypedReferenceableInstance typedInstance, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, IDataType dataType, String edgeLabel) throws AtlasException {
+        Pair<Vertex, Edge> result = Pair.of(toVertex, edge);
         Edge newEdge = edge;
         // Update edge if it exists
         Vertex invertex = edge.getVertex(Direction.IN);
@@ -669,6 +670,15 @@ public final class TypedInstanceToGraphMapper {
             }
             removeUnusedReference(edge.getId().toString(), attributeInfo, dataType);
         }
+
+        if (attributeInfo.isComposite) {
+            //Update the attributes also if composite
+            if (typedInstance.fieldMapping() != null) {
+                //In case of Id instance, fieldMapping is null
+                mapInstanceToVertex(id, typedInstance, toVertex, typedInstance.fieldMapping().fields , false);
+            }
+        }
+
         return result;
     }
 
@@ -797,11 +807,14 @@ public final class TypedInstanceToGraphMapper {
 //    static String hash(ITypedStruct structInstance) throws AtlasException {
 //        final MessageDigest digester = MD5Hash.getDigester();
 //        digester.update(structInstance.getTypeName().getBytes());
-//        Map<String, Object> values = structInstance.getValuesMap();
-//        for(String attr : values.keySet()) {
-//            digester.update(structInstance.get(attr));
+////        Map<String, Object> values = structInstance.getValuesMap();
+//        for(AttributeInfo aInfo : structInstance.fieldMapping().fields) {
+//            final Object val = structInstance.get(aInfo.name);
+//            if(val != null) {
+//                digester.update(val);
+//            }
+//            result = 31 * result + values.hashCode();
 //        }
-//        result = 31 * result + values.hashCode();
 //        return result;
 //    }
 //
