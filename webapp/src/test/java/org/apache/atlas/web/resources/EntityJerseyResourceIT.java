@@ -21,7 +21,6 @@ package org.apache.atlas.web.resources;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.typesystem.IStruct;
@@ -53,7 +52,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -520,7 +518,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         }});
 
         String entityJSON = InstanceSerialization.toJson(tableUpdated, true);
-        System.out.println("Updating entity= " + entityJSON);
+        LOG.debug("Updating entity= " + entityJSON);
         serviceClient.updateEntity(tableId._getId(), entityJSON);
 
         ClientResponse response = getEntityDefinition(tableId._getId());
@@ -529,6 +527,27 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         List<Referenceable> refs = (List<Referenceable>) getReferenceable.get("columns");
 
         Assert.assertTrue(refs.get(0).equalsContents(columns.get(0)));
+
+        //Update by unique attribute
+        values.put("dataType", "int");
+        ref = new Referenceable(BaseResourceIT.COLUMN_TYPE, values);
+        columns.set(0, ref);
+        tableUpdated = new Referenceable(BaseResourceIT.HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+            put("columns", columns);
+        }});
+
+        entityJSON = InstanceSerialization.toJson(tableUpdated, true);
+        LOG.debug("Updating entity= " + entityJSON);
+        serviceClient.updateEntity(BaseResourceIT.HIVE_TABLE_TYPE, "name", (String) tableInstance.get("name"), entityJSON);
+
+        response = getEntityDefinition(tableId._getId());
+        definition = getEntityDefinition(response);
+        getReferenceable = InstanceSerialization.fromJsonReferenceable(definition, true);
+        refs = (List<Referenceable>) getReferenceable.get("columns");
+
+        Assert.assertTrue(refs.get(0).equalsContents(columns.get(0)));
+        Assert.assertEquals(refs.get(0).get("dataType"), "int");
+
     }
 
     @Test(dependsOnMethods = "testSubmitEntity")
@@ -551,7 +570,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         tableInstance.set("columns", columns);
 
         String entityJSON = InstanceSerialization.toJson(tableInstance, true);
-        System.out.println("Replacing entity= " + entityJSON);
+        LOG.debug("Replacing entity= " + entityJSON);
         serviceClient.updateEntities(entityJSON);
 
         ClientResponse response = getEntityDefinition(tableId._getId());
@@ -562,7 +581,5 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
         Assert.assertTrue(refs.get(0).equalsContents(columns.get(0)));
         Assert.assertTrue(refs.get(1).equalsContents(columns.get(1)));
-
-
     }
 }

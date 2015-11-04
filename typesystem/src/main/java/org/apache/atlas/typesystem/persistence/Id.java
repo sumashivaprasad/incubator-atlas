@@ -23,10 +23,15 @@ import org.apache.atlas.AtlasException;
 import org.apache.atlas.ParamChecker;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.FieldMapping;
+import org.apache.atlas.typesystem.types.TypeSystem;
+import org.apache.atlas.utils.MD5Utils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
@@ -250,5 +255,14 @@ public class Id implements ITypedReferenceableInstance {
 
     public void setString(String attrName, String val) throws AtlasException {
         throw new AtlasException("Get/Set not supported on an Id object");
+    }
+
+    @Override
+    public String getSignatureHash() throws AtlasException {
+        final MessageDigest digester = MD5Utils.getDigester();
+        digester.update(id.getBytes(Charset.forName("UTF-8")));
+        digester.update(className.getBytes(Charset.forName("UTF-8")));
+        byte[] digest = digester.digest();
+        return MD5Utils.toString(digest);
     }
 }

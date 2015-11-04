@@ -30,9 +30,11 @@ import org.apache.atlas.typesystem.types.EnumType;
 import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.FieldMapping;
 import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.atlas.typesystem.types.StructType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeUtils;
 import org.apache.atlas.typesystem.types.ValueConversionException;
+import org.apache.atlas.utils.MD5Utils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -66,23 +68,6 @@ public class StructInstance implements ITypedStruct {
     public final ReferenceableInstance[] referenceables;
     public final Id[] ids;
 
-    private byte[] digest;
-    public static final int MD5_LEN = 16;
-
-    private static final ThreadLocal<MessageDigest> DIGESTER_FACTORY =
-        new ThreadLocal<MessageDigest>() {
-            @Override
-            protected MessageDigest initialValue() {
-                try {
-                    return MessageDigest.getInstance("MD5");
-                } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
-
-
-
     public StructInstance(String dataTypeName, FieldMapping fieldMapping, boolean[] nullFlags, boolean[] bools,
             byte[] bytes, short[] shorts, int[] ints, long[] longs, float[] floats, double[] doubles,
             BigDecimal[] bigDecimals, BigInteger[] bigIntegers, Date[] dates, String[] strings,
@@ -112,21 +97,7 @@ public class StructInstance implements ITypedStruct {
         for (int i = 0; i < nullFlags.length; i++) {
             nullFlags[i] = true;
         }
-
-        this.digest = new byte[MD5_LEN];
     }
-
-    /**
-     * Create a thread local MD5 digester
-     */
-    private static MessageDigest getDigester() {
-        MessageDigest digester = DIGESTER_FACTORY.get();
-        digester.reset();
-        return digester;
-    }
-
-    /** Returns the digest bytes. */
-    public byte[] getDigest() { return digest; }
 
     @Override
     public String getTypeName() {
@@ -203,62 +174,6 @@ public class StructInstance implements ITypedStruct {
         } else {
             throw new AtlasException(String.format("Unknown datatype %s", i.dataType()));
         }
-    }
-
-    public String getSignatureHash() throws AtlasException {
-        final MessageDigest digester = getDigester();
-        for(AttributeInfo aInfo : fieldMapping.fields.values()) {
-            Object attrVal = get(aInfo.name);
-            if (attrVal != null) {
-                switch (aInfo.dataType().getTypeCategory()) {
-                case PRIMITIVE:
-                    if(aInfo.dataType() == DataTypes.STRING_TYPE) {
-                        digester.update(((String) attrVal).getBytes(Charset.forName("UTF-8")));
-                    } else {
-                        digester.update(attrVal.toString().getBytes(Charset.forName("UTF-8")));
-                    }
-                    break;
-                case ENUM:
-                    //TODO
-                    break;
-                case STRUCT:
-                    StructInstance struct = ((StructInstance) attrVal);
-                    digester.update(struct.getSignatureHash().getBytes(Charset.forName("UTF-8")));
-                    break;
-                case CLASS:
-                    StructInstance clsInstance = ((StructInstance) attrVal);
-                    digester.update(clsInstance.getSignatureHash().getBytes(Charset.forName("UTF-8")));
-                    break;
-                case ARRAY:
-                    DataTypes.ArrayType arrType = (DataTypes.ArrayType) aInfo.dataType();
-                    IDataType elemType = arrType.getElemType();
-                    List vals = (List) attrVal;
-                    for (Object listElem : vals) {
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        digest = getDigester().digest();
-        return toString(digest);
-
-    }
-
-    private static final char[] HEX_DIGITS =
-        {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
-
-    public String toString(byte[] digest) {
-        StringBuilder buf = new StringBuilder(MD5_LEN*2);
-        for (int i = 0; i < MD5_LEN; i++) {
-            int b = digest[i];
-            buf.append(HEX_DIGITS[(b >> 4) & 0xf]);
-            buf.append(HEX_DIGITS[b & 0xf]);
-        }
-        return buf.toString();
     }
 
     public Object get(String attrName) throws AtlasException {
@@ -845,5 +760,14 @@ public class StructInstance implements ITypedStruct {
         } catch (AtlasException me) {
             throw new RuntimeException(me);
         }
+    }
+
+    @Override
+    public String getSignatureHash() throws AtlasException {
+        final MessageDigest digester = MD5Utils.getDigester();
+        StructType structType = TypeSystem.getInstance().getDataType(StructType.class, getTypeName());
+        structType.updateSignatureHash(digester, this);
+        byte[] digest = digester.digest();
+        return MD5Utils.toString(digest);
     }
 }

@@ -338,11 +338,8 @@ public class AtlasClient {
      * @param property  property key
      * @param value     property value
      */
-    public JSONObject updateEntity(String guid, String property, String value) throws AtlasServiceException {
-        WebResource resource = getResource(API.UPDATE_ENTITY, guid);
-        resource = resource.queryParam(ATTRIBUTE_NAME, property);
-        resource = resource.queryParam(ATTRIBUTE_VALUE, value);
-        return callAPIWithResource(API.UPDATE_ENTITY, resource, Response.Status.OK);
+    public JSONObject updateEntityAttribute(String guid, String property, String value) throws AtlasServiceException {
+        return callAPI(API.UPDATE_ENTITY_PARTIAL, value, Response.Status.OK, property);
     }
 
     /**
@@ -353,6 +350,22 @@ public class AtlasClient {
     */
     public JSONObject updateEntity(String guid, String entityJson) throws AtlasServiceException {
         return callAPI(API.UPDATE_ENTITY_PARTIAL, entityJson, Response.Status.OK, guid);
+    }
+
+    /**
+     * Supports Partial updates
+     * Updates properties set in the definition for the entity corresponding to guid
+     * @param entityType Type of the entity being updated
+     * @param uniqueAttributeName Attribute Name that uniquely identifies the entity
+     * @param uniqueAttributeValue Attribute Value that uniquely identifies the entity
+     * @param entityJson json of the entity definition
+     */
+    public JSONObject updateEntity(String entityType, String uniqueAttributeName, String uniqueAttributeValue, String entityJson) throws AtlasServiceException {
+        WebResource resource = getResource(API.UPDATE_ENTITY_PARTIAL);
+        resource = resource.queryParam(TYPE, entityType);
+        resource = resource.queryParam(ATTRIBUTE_NAME, uniqueAttributeName);
+        resource = resource.queryParam(ATTRIBUTE_VALUE, uniqueAttributeValue);
+        return callAPIWithResource(API.UPDATE_ENTITY_PARTIAL, resource, entityJson, Response.Status.OK);
     }
 
     /**

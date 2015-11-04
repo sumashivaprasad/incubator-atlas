@@ -17,8 +17,6 @@
  */
 package org.apache.atlas.repository.graph;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.thinkaurelius.titan.core.SchemaViolationException;
 import com.tinkerpop.blueprints.Direction;
@@ -62,6 +60,8 @@ public final class TypedInstanceToGraphMapper {
     private final GraphToTypedInstanceMapper graphToTypedInstanceMapper;
 
     private static final GraphHelper graphHelper = GraphHelper.getInstance();
+
+    private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "__signature";
 
     public enum Operation {
         CREATE,
@@ -199,7 +199,7 @@ public final class TypedInstanceToGraphMapper {
     private void addFullTextProperty(List<ITypedReferenceableInstance> instances) throws AtlasException {
         FullTextMapper fulltextMapper = new FullTextMapper(graphToTypedInstanceMapper);
         for (ITypedReferenceableInstance typedInstance : instances) { // Traverse
-            Vertex instanceVertex = idToVertexMap.get(typedInstance.getId());
+            Vertex instanceVertex = getClassVertex(typedInstance);
             String fullText = fulltextMapper.mapRecursive(instanceVertex, true);
             GraphHelper.setProperty(instanceVertex, Constants.ENTITY_TEXT_PROPERTY_KEY, fullText);
         }
@@ -359,7 +359,17 @@ public final class TypedInstanceToGraphMapper {
             removeUnusedReference(relEdge.getId().toString(), attributeInfo, elemType);
         } else {
             // Update attributes
+            String newSignature = typedInstance.getSignatureHash();
             mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
+
+            String curSignature = structInstanceVertex.getProperty(SIGNATURE_HASH_PROPERTY_KEY);
+            if (!newSignature.equals(curSignature)) {
+                //Update struct vertex instance only if there is a change
+                LOG.debug("Updating struct {} since signature has changed {} {} ", typedInstance, curSignature, newSignature);
+                mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
+                GraphHelper.setProperty(structInstanceVertex, SIGNATURE_HASH_PROPERTY_KEY, String.valueOf(newSignature));
+            }
+
         }
         return Pair.of(structInstanceVertex, relEdge);
     }
@@ -627,7 +637,7 @@ public final class TypedInstanceToGraphMapper {
     }
 
 
-    private Pair<Vertex, Edge> updateClassEdge(Id id, ITypedReferenceableInstance typedInstance, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, IDataType dataType, String edgeLabel) throws AtlasException {
+    private Pair<Vertex, Edge> updateClassEdge(Id id, final ITypedReferenceableInstance typedInstance, Vertex instanceVertex, Edge edge, Vertex toVertex, AttributeInfo attributeInfo, IDataType dataType, String edgeLabel) throws AtlasException {
         Pair<Vertex, Edge> result = Pair.of(toVertex, edge);
         Edge newEdge = edge;
         // Update edge if it exists
@@ -648,6 +658,8 @@ public final class TypedInstanceToGraphMapper {
             if (typedInstance.fieldMapping() != null) {
                 //In case of Id instance, fieldMapping is null
                 mapInstanceToVertex(id, typedInstance, toVertex, typedInstance.fieldMapping().fields , false);
+                //Update full text for the updated composite vertex
+                addFullTextProperty(new ArrayList<ITypedReferenceableInstance>() {{ add(typedInstance); }});
             }
         }
 

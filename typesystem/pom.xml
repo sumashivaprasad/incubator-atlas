@@ -110,8 +110,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
+            <groupId>org.apache.atlas</groupId>
+            <artifactId>atlas-common</artifactId>
         </dependency>
 
         <dependency>

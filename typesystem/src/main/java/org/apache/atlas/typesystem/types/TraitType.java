@@ -23,6 +23,7 @@ import org.apache.atlas.AtlasException;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedStruct;
 
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,8 @@ public class TraitType extends HierarchicalType<TraitType, IStruct>
         if( !(val instanceof  ITypedStruct)) {
             throw new IllegalArgumentException("Unexpected value type " + val.getClass().getSimpleName() + ". Expected instance of ITypedStruct");
         }
+        digester.update(getName().getBytes(Charset.forName("UTF-8")));
+
         if(fieldMapping.fields != null && val != null) {
             IStruct typedValue = (IStruct) val;
             for (AttributeInfo aInfo : fieldMapping.fields.values()) {

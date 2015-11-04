@@ -274,7 +274,7 @@ public class EntityResource {
             ParamChecker.notEmpty(attribute, "attribute name cannot be null");
             ParamChecker.notEmpty(value, "attribute value cannot be null");
             final String entityJson = Servlets.getRequestPayload(request);
-            LOG.debug("submitting entities {} ", AtlasClient.toString(new JSONArray(entityJson)));
+            LOG.debug("Partially updating entity by unique attribute {} {} {} {} ", entityType, attribute, value, entityJson);
 
             Referenceable updatedEntity =
                 InstanceSerialization.fromJsonReferenceable(entityJson, true);
