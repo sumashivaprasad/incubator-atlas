@@ -68,6 +68,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     private final String DATABASE_NAME = "db" + randomString();
     private final String TABLE_NAME = "table" + randomString();
+    private static final String ENTITIES = "api/atlas/entities";
     private static final String TRAITS = "traits";
 
     private Referenceable tableInstance;
@@ -92,6 +93,26 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         } catch (IllegalArgumentException e) {
             Assert.fail("Response is not a guid, " + guid);
         }
+    }
+
+    @Test
+    public void testSubmitSingleEntity() throws Exception {
+        Referenceable databaseInstance = new Referenceable(DATABASE_TYPE);
+        databaseInstance.set("name", randomString());
+        databaseInstance.set("description", randomString());
+
+        ClientResponse clientResponse =
+                service.path(ENTITIES).accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
+                        .method(HttpMethod.POST, ClientResponse.class,
+                                InstanceSerialization.toJson(databaseInstance, true));
+        Assert.assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
+
+        String responseAsString = clientResponse.getEntity(String.class);
+        Assert.assertNotNull(responseAsString);
+
+        JSONObject response = new JSONObject(responseAsString);
+        Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
+        Assert.assertNotNull(response.get(AtlasClient.GUID));
     }
 
     @DataProvider
@@ -219,14 +240,14 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     }
 
     private ClientResponse addProperty(String guid, String property, String value) {
-        WebResource resource = service.path("api/atlas/entity").path(guid).path(property);
+        WebResource resource = service.path(ENTITIES).path(guid).path(property);
 
         return resource.accept(Servlets.JSON_MEDIA_TYPE)
             .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.POST, ClientResponse.class, value);
     }
 
     private ClientResponse getEntityDefinition(String guid) {
-        WebResource resource = service.path("api/atlas/entity").path(guid);
+        WebResource resource = service.path(ENTITIES).path(guid);
         return resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
                 .method(HttpMethod.GET, ClientResponse.class);
     }
@@ -242,7 +263,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testGetInvalidEntityDefinition() throws Exception {
-        WebResource resource = service.path("api/atlas/entity").path("blah");
+        WebResource resource = service.path(ENTITIES).path("blah");
 
         ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
                 .method(HttpMethod.GET, ClientResponse.class);
@@ -266,7 +287,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     @Test
     public void testGetEntityListForBadEntityType() throws Exception {
         ClientResponse clientResponse =
-                service.path("api/atlas/entities").queryParam("type", "blah").accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).queryParam("type", "blah").accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.GET, ClientResponse.class);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
 
@@ -284,7 +305,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         String typeName = addNewType();
 
         ClientResponse clientResponse =
-                service.path("api/atlas/entities").queryParam("type", typeName).accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).queryParam("type", typeName).accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.GET, ClientResponse.class);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
 
@@ -314,7 +335,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     public void testGetTraitNames() throws Exception {
         final String guid = tableId._getId();
         ClientResponse clientResponse =
-                service.path("api/atlas/entity").path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE).method(HttpMethod.GET, ClientResponse.class);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
 
@@ -344,7 +365,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
         final String guid = tableId._getId();
         ClientResponse clientResponse =
-                service.path("api/atlas/entity").path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE)
                         .method(HttpMethod.POST, ClientResponse.class, traitInstanceAsJSON);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
@@ -367,7 +388,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
         final String guid = tableId._getId();
         ClientResponse clientResponse =
-                service.path("api/atlas/entity").path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE)
                         .method(HttpMethod.POST, ClientResponse.class, traitInstanceAsJSON);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
@@ -390,7 +411,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
         final String guid = tableId._getId();
         ClientResponse clientResponse =
-                service.path("api/atlas/entity").path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).path(guid).path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE)
                         .method(HttpMethod.POST, ClientResponse.class, traitInstanceAsJSON);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
@@ -431,7 +452,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         LOG.debug("traitInstanceAsJSON = " + traitInstanceAsJSON);
 
         ClientResponse clientResponse =
-                service.path("api/atlas/entity").path("random").path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
+                service.path(ENTITIES).path("random").path(TRAITS).accept(Servlets.JSON_MEDIA_TYPE)
                         .type(Servlets.JSON_MEDIA_TYPE)
                         .method(HttpMethod.POST, ClientResponse.class, traitInstanceAsJSON);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
@@ -441,7 +462,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     public void testDeleteTrait() throws Exception {
         final String guid = tableId._getId();
 
-        ClientResponse clientResponse = service.path("api/atlas/entity").path(guid).path(TRAITS).path(traitName)
+        ClientResponse clientResponse = service.path(ENTITIES).path(guid).path(TRAITS).path(traitName)
                 .accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
                 .method(HttpMethod.DELETE, ClientResponse.class);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
@@ -459,7 +480,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     public void testDeleteTraitNonExistent() throws Exception {
         final String traitName = "blah_trait";
 
-        ClientResponse clientResponse = service.path("api/atlas/entity").path("random").path(TRAITS).path(traitName)
+        ClientResponse clientResponse = service.path(ENTITIES).path("random").path(TRAITS).path(traitName)
                 .accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
                 .method(HttpMethod.DELETE, ClientResponse.class);
         Assert.assertEquals(clientResponse.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
