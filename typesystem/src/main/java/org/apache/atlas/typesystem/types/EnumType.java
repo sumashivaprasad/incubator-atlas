@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.atlas.AtlasException;
 import scala.math.BigInt;
 
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+
 public class EnumType extends AbstractDataType<EnumValue> {
 
     public final TypeSystem typeSystem;
@@ -74,6 +77,13 @@ public class EnumType extends AbstractDataType<EnumValue> {
     @Override
     public DataTypes.TypeCategory getTypeCategory() {
         return DataTypes.TypeCategory.ENUM;
+    }
+
+    @Override
+    public void updateSignatureHash(MessageDigest digester, Object val) throws AtlasException {
+        if (val != null) {
+            digester.update(fromValue((String) val).toString().getBytes(Charset.forName("UTF-8")));
+        }
     }
 
     public EnumValue fromOrdinal(int o) {

@@ -34,6 +34,7 @@ import org.apache.atlas.typesystem.persistence.StructInstance;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -213,5 +214,21 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     @Override
     public List<String> getNames(AttributeInfo info) {
         return infoToNameMap.get(info);
+    }
+
+    @Override
+    public void updateSignatureHash(MessageDigest digester, Object val) throws AtlasException {
+        if( !(val instanceof  ITypedReferenceableInstance)) {
+            throw new IllegalArgumentException("Unexpected value type " + val.getClass().getSimpleName() + ". Expected instance of ITypedStruct");
+        }
+        if(fieldMapping.fields != null && val != null) {
+            IReferenceableInstance typedValue = (IReferenceableInstance) val;
+            for (AttributeInfo aInfo : fieldMapping.fields.values()) {
+                Object attrVal = typedValue.get(aInfo.name);
+                if(attrVal != null) {
+                    aInfo.dataType().updateSignatureHash(digester, attrVal);
+                }
+            }
+        }
     }
 }

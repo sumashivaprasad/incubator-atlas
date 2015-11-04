@@ -20,6 +20,8 @@ package org.apache.atlas.typesystem.types;
 
 import org.apache.atlas.AtlasException;
 
+import java.security.MessageDigest;
+
 public interface IDataType<T> {
     String getName();
 
@@ -28,4 +30,6 @@ public interface IDataType<T> {
     DataTypes.TypeCategory getTypeCategory();
 
     void output(T val, Appendable buf, String prefix) throws AtlasException;
+
+    void updateSignatureHash(MessageDigest digester, Object val) throws AtlasException;
 }

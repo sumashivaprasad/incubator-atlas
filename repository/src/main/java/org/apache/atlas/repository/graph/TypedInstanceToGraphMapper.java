@@ -57,7 +57,6 @@ import java.util.Map;
 public final class TypedInstanceToGraphMapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(TypedInstanceToGraphMapper.class);
-    BiMap<Vertex, ITypedReferenceableInstance> vertexToInstanceMap = HashBiMap.create();
     private final Map<Id, Vertex> idToVertexMap = new HashMap<>();
     private final TypeSystem typeSystem = TypeSystem.getInstance();
     private final GraphToTypedInstanceMapper graphToTypedInstanceMapper;
@@ -87,7 +86,7 @@ public final class TypedInstanceToGraphMapper {
 
             addOrUpdateAttributesAndTraits(operation, instances);
 
-            addFullTextProperty();
+            addFullTextProperty(instances);
 
             //Return guid for
             addToGuids(typedInstance, guids);
@@ -144,7 +143,6 @@ public final class TypedInstanceToGraphMapper {
                 }
 
                 idToVertexMap.put(id, instanceVertex);
-                vertexToInstanceMap.put(instanceVertex, typedInstance);
             }
         }
         return instances;
@@ -164,10 +162,10 @@ public final class TypedInstanceToGraphMapper {
 
         addOrUpdateAttributesAndTraits(Operation.UPDATE, instances);
 
-        addFullTextProperty();
+        addFullTextProperty(instances);
 
         //Return guid for
-        Vertex instanceVertex = vertexToInstanceMap.inverse().get(typedInstance);
+        Vertex instanceVertex = idToVertexMap.get(typedInstance.getId());
         return instanceVertex.getProperty(Constants.GUID_PROPERTY_KEY);
     }
 
@@ -198,9 +196,9 @@ public final class TypedInstanceToGraphMapper {
         guids.add(guid);
     }
 
-    private void addFullTextProperty() throws AtlasException {
+    private void addFullTextProperty(List<ITypedReferenceableInstance> instances) throws AtlasException {
         FullTextMapper fulltextMapper = new FullTextMapper(graphToTypedInstanceMapper);
-        for (ITypedReferenceableInstance typedInstance : vertexToInstanceMap.values()) { // Traverse
+        for (ITypedReferenceableInstance typedInstance : instances) { // Traverse
             Vertex instanceVertex = idToVertexMap.get(typedInstance.getId());
             String fullText = fulltextMapper.mapRecursive(instanceVertex, true);
             GraphHelper.setProperty(instanceVertex, Constants.ENTITY_TEXT_PROPERTY_KEY, fullText);
@@ -734,14 +732,9 @@ public final class TypedInstanceToGraphMapper {
         case STRUCT:
             removedRelation = graphHelper.removeRelation(edgeId, true);
             //Remove the vertex from state so that further processing no longer uses this
-            vertexToInstanceMap.remove(removedRelation.getVertex(Direction.IN));
             break;
         case CLASS:
             removedRelation = graphHelper.removeRelation(edgeId, attributeInfo.isComposite);
-            if (attributeInfo.isComposite) {
-                //Remove the vertex from state so that further processing no longer uses this
-                vertexToInstanceMap.remove(removedRelation.getVertex(Direction.IN));
-            }
             break;
         }
         return removedRelation;

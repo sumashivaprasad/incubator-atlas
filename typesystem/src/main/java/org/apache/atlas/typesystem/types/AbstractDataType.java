@@ -21,6 +21,7 @@ package org.apache.atlas.typesystem.types;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.atlas.AtlasException;
 
+import java.security.MessageDigest;
 import java.util.Map;
 
 abstract class AbstractDataType<T> implements IDataType<T> {
