@@ -258,8 +258,7 @@ public class Id implements ITypedReferenceableInstance {
     }
 
     @Override
-    public String getSignatureHash() throws AtlasException {
-        final MessageDigest digester = MD5Utils.getDigester();
+    public String getSignatureHash(MessageDigest digester) throws AtlasException {
         digester.update(id.getBytes(Charset.forName("UTF-8")));
         digester.update(className.getBytes(Charset.forName("UTF-8")));
         byte[] digest = digester.digest();

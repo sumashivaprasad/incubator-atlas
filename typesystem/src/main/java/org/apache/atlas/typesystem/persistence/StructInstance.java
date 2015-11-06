@@ -763,8 +763,7 @@ public class StructInstance implements ITypedStruct {
     }
 
     @Override
-    public String getSignatureHash() throws AtlasException {
-        final MessageDigest digester = MD5Utils.getDigester();
+    public String getSignatureHash(MessageDigest digester) throws AtlasException {
         StructType structType = TypeSystem.getInstance().getDataType(StructType.class, getTypeName());
         structType.updateSignatureHash(digester, this);
         byte[] digest = digester.digest();

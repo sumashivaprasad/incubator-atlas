@@ -41,10 +41,12 @@ import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.ObjectGraphWalker;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
+import org.apache.atlas.utils.MD5Utils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -359,7 +361,8 @@ public final class TypedInstanceToGraphMapper {
             removeUnusedReference(relEdge.getId().toString(), attributeInfo, elemType);
         } else {
             // Update attributes
-            String newSignature = typedInstance.getSignatureHash();
+            final MessageDigest digester = MD5Utils.getDigester();
+            String newSignature = typedInstance.getSignatureHash(digester);
             mapInstanceToVertex(id, typedInstance, structInstanceVertex, typedInstance.fieldMapping().fields, false);
 
             String curSignature = structInstanceVertex.getProperty(SIGNATURE_HASH_PROPERTY_KEY);

@@ -98,8 +98,7 @@ public class ReferenceableInstance extends StructInstance implements ITypedRefer
     }
 
     @Override
-    public String getSignatureHash() throws AtlasException {
-        final MessageDigest digester = MD5Utils.getDigester();
+    public String getSignatureHash(MessageDigest digester) throws AtlasException {
         ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, getTypeName());
         classType.updateSignatureHash(digester, this);
         byte[] digest = digester.digest();
