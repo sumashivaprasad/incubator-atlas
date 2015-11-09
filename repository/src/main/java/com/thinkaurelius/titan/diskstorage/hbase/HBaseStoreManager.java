@@ -1,12 +1,10 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2012-2013 Aurelius LLC
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -498,65 +496,6 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         {
             throw new TemporaryBackendException(e);
         }
-//
-//
-//
-//        try { // first of all, check if table exists, if not - we are done
-//            adm = getAdminInterface();
-//            if (!adm.tableExists(tableName)) {
-//                logger.debug("clearStorage() called before table {} was created, skipping.", tableName);
-//                return;
-//            }
-//        } catch (IOException e) {
-//            throw new TemporaryBackendException(e);
-//        } finally {
-//            IOUtils.closeQuietly(adm);
-//        }
-//
-////        long before = System.currentTimeMillis();
-////        try {
-////            adm.disableTable(tableName);
-////            adm.deleteTable(tableName);
-////        } catch (IOException e) {
-////            throw new PermanentBackendException(e);
-////        }
-////        ensureTableExists(tableName, getCfNameForStoreName(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME), 0);
-////        long after = System.currentTimeMillis();
-////        logger.debug("Dropped and recreated table {} in {} ms", tableName, after - before);
-//
-//        HTable table = null;
-//
-//        try {
-//            table = new HTable(hconf, tableName);
-//
-//            Scan scan = new Scan();
-//            scan.setBatch(100);
-//            scan.setCacheBlocks(false);
-//            scan.setCaching(2000);
-//            scan.setTimeRange(0, Long.MAX_VALUE);
-//            scan.setMaxVersions(1);
-//
-//            ResultScanner scanner = null;
-//
-//            long timestamp = times.getTime(times.getTime());
-//
-//            try {
-//                scanner = table.getScanner(scan);
-//
-//                for (Result res : scanner) {
-//                    Delete d = new Delete(res.getRow());
-//
-//                    d.setTimestamp(timestamp);
-//                    table.delete(d);
-//                }
-//            } finally {
-//                IOUtils.closeQuietly(scanner);
-//            }
-//        } catch (IOException e) {
-//            throw new TemporaryBackendException(e);
-//        } finally {
-//            IOUtils.closeQuietly(table);
-//        }
     }
 
     @Override

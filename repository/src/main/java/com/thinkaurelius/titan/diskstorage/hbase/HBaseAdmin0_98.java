@@ -1,3 +1,17 @@
+/*
+ * Copyright 2012-2013 Aurelius LLC
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.thinkaurelius.titan.diskstorage.hbase;
 
 import java.io.IOException;
@@ -35,18 +49,6 @@ public class HBaseAdmin0_98 implements AdminMask
             log.debug("clearStorage() called before table {} was created, skipping.", tableName);
             return;
         }
-
-//        long before = System.currentTimeMillis();
-//        try {
-//            adm.disableTable(tableName);
-//            adm.deleteTable(tableName);
-//        } catch (IOException e) {
-//            throw new PermanentBackendException(e);
-//        }
-//        ensureTableExists(tableName, getCfNameForStoreName(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME), 0);
-//        long after = System.currentTimeMillis();
-//        logger.debug("Dropped and recreated table {} in {} ms", tableName, after - before);
-
 
         // Unfortunately, linear scanning and deleting tables is faster in HBase < 1 when running integration tests than
         // disabling and deleting tables.
