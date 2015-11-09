@@ -328,7 +328,7 @@
         <tinkerpop.version>2.6.0</tinkerpop.version>
         <titan.version>0.5.4</titan.version>
         <hadoop.version>2.7.0</hadoop.version>
-        <hbase.version>0.98.9-hadoop2</hbase.version>
+        <hbase.version>1.1.2</hbase.version>
         <solr.version>5.1.0</solr.version>
         <kafka.version>0.8.2.0</kafka.version>
         <!-- scala versions -->
@@ -373,7 +373,7 @@
                 <titan.storage.backend>hbase</titan.storage.backend>
                 <titan.index.backend>solr5</titan.index.backend>
                 <solr.zk.address>localhost:9983</solr.zk.address>
-                <titan.storage.hostname>localhost</titan.storage.hostname>
+                <titan.storage.hostname>os-r6-testing-with-hbase-atlas-3.novalocal:2181,os-r6-testing-with-hbase-atlas-2.novalocal:2181</titan.storage.hostname>
             </properties>
         </profile>
 
