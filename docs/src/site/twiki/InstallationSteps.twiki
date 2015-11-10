@@ -121,6 +121,12 @@ and change it to look as below
 export METADATA_SERVER_OPTS="-Djava.awt.headless=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc="
 </verbatim>
 
+* Hbase as the Storage Backend for the Graph Repository
+
+By default, Atlas uses Titan as the graph repository and is the only graph repository implementation available currently.
+The HBase versions currently supported are 0.98.x, 1.0.x, 1.1.x. For configuring ATLAS graph persistence on HBase, please go through the "Configuration - Graph persistence engine - HBase" section
+for more details.
+
 * Configuring SOLR as the Indexing Backend for the Graph Repository
 
 By default, Atlas uses Titan as the graph repository and is the only graph repository implementation available currently.

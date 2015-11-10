@@ -50,17 +50,49 @@ def main():
     web_app_dir = mc.webAppDir(metadata_home)
     mc.expandWebApp(metadata_home)
 
+    #add hbase-site.xml to classpath
+    hbase_conf_dir = mc.hbaseConfDir()
+
     p = os.pathsep
     metadata_classpath = confdir + p \
                        + os.path.join(web_app_dir, "atlas", "WEB-INF", "classes" ) + p \
                        + os.path.join(web_app_dir, "atlas", "WEB-INF", "lib", "*" )  + p \
                        + os.path.join(metadata_home, "libext", "*")
+    if os.path.exists(hbase_conf_dir):
+        metadata_classpath = metadata_classpath + p \
+                            + hbase_conf_dir
 
+    
     metadata_pid_file = mc.pidFile(metadata_home)
-
+    
+            
     if os.path.isfile(metadata_pid_file):
-        print "%s already exists, exiting" % metadata_pid_file
-        sys.exit()
+       #Check if process listed in atlas.pid file is still running
+       pf = file(metadata_pid_file, 'r')
+       pid = pf.read().strip()
+       pf.close() 
+       
+
+       if  mc.ON_POSIX:
+            
+            if mc.unix_exist_pid((int)(pid)):
+                mc.server_already_running(pid)
+            else:
+                 mc.server_pid_not_running(pid)
+              
+              
+       else:
+            if mc.IS_WINDOWS:
+                if mc.win_exist_pid(pid):
+                   mc.server_already_running(pid)
+                else:
+                     mc.server_pid_not_running(pid)
+                   
+            else:
+                #os other than nt or posix - not supported - need to delete the file to restart server if pid no longer exist
+                mc.server_already_running(pid)
+             
+
 
     args = ["-app", os.path.join(web_app_dir, "atlas")]
     args.extend(sys.argv[1:])
