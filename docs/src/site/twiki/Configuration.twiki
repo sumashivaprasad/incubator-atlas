@@ -34,6 +34,11 @@ atlas.graph.storage.hostname=<ZooKeeper Quorum>
 </verbatim>
 
 HBASE_CONF_DIR environment variable needs to be set to point to the Hbase client configuration directory which is added to classpath when Atlas starts up.
+hbase-site.xml needs to have the following properties set according to the cluster setup
+<verbatim>
+#Set below to /hbase-secure if the Hbase server is setup in secure mode
+zookeeper.znode.parent=/hbase-unsecure
+</verbatim>
 
 Advanced configuration
 
