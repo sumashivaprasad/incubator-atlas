@@ -33,7 +33,7 @@ atlas.graph.storage.backend=hbase
 atlas.graph.storage.hostname=<ZooKeeper Quorum>
 </verbatim>
 
-
+HBASE_CONF_DIR environment variable needs to be set to point to the Hbase client configuration directory which is added to classpath when Atlas starts up.
 
 Advanced configuration
 
