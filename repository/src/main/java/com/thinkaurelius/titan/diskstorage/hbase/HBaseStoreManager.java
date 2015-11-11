@@ -135,8 +135,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
      *
      * https://issues.apache.org/jira/browse/HBASE-8170
      */
-    /* Resetting this to 1 since hbase version ih which the bug occurs is quite old */
-    public static final int MIN_REGION_COUNT = 1;
+    public static final int MIN_REGION_COUNT = 3;
 
     /**
      * The total number of HBase regions to create with Titan's table. This

@@ -33,6 +33,8 @@ atlas.graph.storage.backend=hbase
 atlas.graph.storage.hostname=<ZooKeeper Quorum>
 </verbatim>
 
+
+
 Advanced configuration
 
 # If you are planning to use any of the configs mentioned below, they need to be prefixed with "atlas.graph." to take effect in ATLAS

@@ -17,6 +17,7 @@
 # limitations under the License.
 import getpass
 import os
+import re
 import platform
 import subprocess
 from threading import Thread
@@ -61,8 +62,9 @@ def confDir(dir):
     localconf = os.path.join(dir, CONF)
     return os.environ.get(METADATA_CONF, localconf)
 
-def hbaseConfDir():
-    return os.environ.get(HBASE_CONF_DIR)
+def hbaseConfDir(atlasConfDir):
+    parentDir = os.path.dirname(atlasConfDir)
+    return os.environ.get(HBASE_CONF_DIR, os.path.join(parentDir, "hbase", CONF))
 
 def logDir(dir):
     localLog = os.path.join(dir, LOG)
@@ -324,8 +326,14 @@ def win_exist_pid(pid):
     return False
 
 def server_already_running(pid):
-      print "Atlas server is already running under process %s" % pid
-      sys.exit()  
+    print "Atlas server is already running under process %s" % pid
+    sys.exit()  
     
 def server_pid_not_running(pid):
-      print "The Server is no longer running with pid %s" %pid
+    print "The Server is no longer running with pid %s" %pid
+
+def grep(file, value):
+    for line in open(file).readlines():
+        if re.match(value, line):	
+           return line
+    return None
