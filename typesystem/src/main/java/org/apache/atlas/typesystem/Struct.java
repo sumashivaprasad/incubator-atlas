@@ -67,6 +67,13 @@ public class Struct implements IStruct {
         return values;
     }
 
+    @Override
+    public int hashCode() {
+        int result = typeName.hashCode();
+        result = 31 * result + values.hashCode();
+        return result;
+    }
+
     /**
      * equalContents instead of equals since values is a mutable attribute and could lead
      * to incorrect behaviour when added to collections and mutated after that
