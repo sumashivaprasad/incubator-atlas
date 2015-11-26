@@ -18,8 +18,6 @@
 
 package org.apache.atlas.repository.graph;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanProperty;
 import com.thinkaurelius.titan.core.TitanVertex;

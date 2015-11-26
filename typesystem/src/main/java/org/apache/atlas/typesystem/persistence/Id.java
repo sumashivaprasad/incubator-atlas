@@ -20,12 +20,10 @@ package org.apache.atlas.typesystem.persistence;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.ParamChecker;
+import org.apache.atlas.utils.ParamChecker;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
-import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.FieldMapping;
-import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.utils.MD5Utils;
 
 import java.math.BigDecimal;

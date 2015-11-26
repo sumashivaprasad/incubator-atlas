@@ -22,7 +22,7 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
-import org.apache.atlas.ParamChecker;
+import org.apache.atlas.utils.ParamChecker;
 import org.apache.atlas.discovery.graph.DefaultGraphPersistenceStrategy;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.query.Expressions;

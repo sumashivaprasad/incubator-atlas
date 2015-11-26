@@ -49,6 +49,8 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
     protected void configure() {
         // special wiring for Titan Graph
 
+
+
         ThrowingProviderBinder.create(binder()).bind(GraphProvider.class, TitanGraph.class).to(TitanGraphProvider.class)
                 .asEagerSingleton();
 

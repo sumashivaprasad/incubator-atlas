@@ -21,6 +21,7 @@ package org.apache.atlas.typesystem;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.classification.InterfaceAudience;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +42,15 @@ public class Struct implements IStruct {
             this.values.putAll(values);
         }
     }
+
+    /**
+     * No-arg constructor for serialization.
+     */
+    @SuppressWarnings("unused")
+    private Struct() {
+        this("", Collections.<String, Object>emptyMap());
+    }
+
 
     @Override
     public String getTypeName() {

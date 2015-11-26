@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.repository;
+package org.apache.atlas.exception;
 
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.typesystem.IReferenceableInstance;

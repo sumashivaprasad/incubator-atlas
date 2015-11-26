@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
-import org.apache.atlas.ParamChecker;
+import org.apache.atlas.utils.ParamChecker;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.TypeNotFoundException;
@@ -41,9 +41,7 @@ import org.apache.atlas.typesystem.types.ValueConversionException;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -179,7 +177,6 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(actualDb.getId().id, dbId);
     }
 
-    @Test
     public void testUpdateEntityByUniqueAttribute() throws Exception {
         final List<String> colNameList = ImmutableList.of("col1", "col2");
         Referenceable tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
@@ -192,27 +189,6 @@ public class DefaultMetadataServiceTest {
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         List<String> actualColumns = (List) tableDefinition.get("columnNames");
         Assert.assertEquals(actualColumns, colNameList);
-    }
-
-    @Test(enabled=false)
-    public void testUpdateEnums() throws Exception {
-        //TODO - Fix ATLAS-220 and enable this test
-
-        String tableDefinitionJson =
-            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
-        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-        EnumValue enumStr = (EnumValue) tableDefinition.get("tableType");
-
-        Assert.assertEquals(enumStr.value, "EXTERNAL");
-
-        table.set("tableType", "MANAGED");
-        createInstance(table);
-        tableDefinitionJson =
-            metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
-        tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
-        enumStr = (EnumValue) tableDefinition.get("tableType");
-
-        Assert.assertEquals(enumStr.value, "MANAGED");
     }
 
     @Test
@@ -625,6 +601,27 @@ public class DefaultMetadataServiceTest {
             metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Assert.assertNull(tableDefinition.get("created"));
+    }
+
+    @Test
+    public void testCreateEntityWithEnum() throws Exception {
+        Referenceable dbEntity = createDBEntity();
+        String db = createInstance(dbEntity);
+
+        Referenceable table = new Referenceable(TestUtils.TABLE_TYPE);
+        table.set("name", TestUtils.randomString());
+        table.set("description", "random table");
+        table.set("type", "type");
+        table.set("tableType", "MANAGED");
+        table.set("database", dbEntity);
+        createInstance(table);
+
+        String tableDefinitionJson =
+                metadataService.getEntityDefinition(TestUtils.TABLE_TYPE, "name", (String) table.get("name"));
+        Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
+        EnumValue tableType = (EnumValue) tableDefinition.get("tableType");
+
+        Assert.assertEquals(tableType, new EnumValue("MANAGED", 1));
     }
 
     @Test

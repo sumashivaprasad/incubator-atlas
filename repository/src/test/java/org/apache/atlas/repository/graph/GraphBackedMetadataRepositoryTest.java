@@ -27,11 +27,9 @@ import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
-import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.EntityNotFoundException;
-import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
@@ -139,12 +137,12 @@ public class GraphBackedMetadataRepositoryTest {
         Assert.fail();
     }
 
-    @Test
+    @Test(dependsOnMethods = "testSubmitEntity")
     public void testGetEntityList() throws Exception {
         List<String> entityList = repositoryService.getEntityList(TestUtils.ENTITY_TYPE);
         System.out.println("entityList = " + entityList);
         Assert.assertNotNull(entityList);
-        Assert.assertEquals(entityList.size(), 1); // one department
+        Assert.assertTrue(entityList.contains(guid));
     }
 
     @Test
@@ -477,6 +475,36 @@ public class GraphBackedMetadataRepositoryTest {
         Assert.assertEquals(results.length(), 1);
         row = (JSONObject) results.get(0);
         Assert.assertEquals(row.get("typeName"), "Person");
+    }
+    
+    @Test(dependsOnMethods = "testSubmitEntity")
+    public void testUpdateEntity_MultiplicityOneNonCompositeReference() throws Exception {
+        ITypedReferenceableInstance john = repositoryService.getEntityDefinition("Person", "name", "John");
+        String johnGuid = john.getId()._getId();
+        ITypedReferenceableInstance max = repositoryService.getEntityDefinition("Person", "name", "Max");
+        String maxGuid = max.getId()._getId();
+        ITypedReferenceableInstance jane = repositoryService.getEntityDefinition("Person", "name", "Jane");
+        String janeGuid = jane.getId()._getId();
+        
+        // Update max's mentor reference to john.
+        repositoryService.updateEntity(maxGuid, "mentor", johnGuid);
+        
+        // Verify the update was applied correctly - john should now be max's mentor.
+        max = repositoryService.getEntityDefinition(maxGuid);
+        Object object = max.get("mentor");
+        Assert.assertTrue(object instanceof ITypedReferenceableInstance);
+        ITypedReferenceableInstance refTarget = (ITypedReferenceableInstance) object;
+        Assert.assertEquals(refTarget.getId()._getId(), johnGuid);
+
+        // Update max's mentor reference to jane.
+        repositoryService.updateEntity(maxGuid, "mentor", janeGuid);
+        
+        // Verify the update was applied correctly - jane should now be max's mentor.
+        max = repositoryService.getEntityDefinition(maxGuid);
+        object = max.get("mentor");
+        Assert.assertTrue(object instanceof ITypedReferenceableInstance);
+        refTarget = (ITypedReferenceableInstance) object;
+        Assert.assertEquals(refTarget.getId()._getId(), janeGuid);
     }
 
     private ITypedReferenceableInstance createHiveTableInstance(Referenceable databaseInstance) throws Exception {

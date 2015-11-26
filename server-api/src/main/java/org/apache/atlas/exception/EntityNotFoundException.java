@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.repository;
+package org.apache.atlas.exception;
+
+import org.apache.atlas.AtlasException;
 
 /**
  * A simple wrapper for 404.
  */
-public class EntityNotFoundException extends RepositoryException {
+public class EntityNotFoundException extends AtlasException {
     public EntityNotFoundException() {
     }
 

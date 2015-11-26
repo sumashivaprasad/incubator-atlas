@@ -26,9 +26,9 @@ import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
+import org.apache.atlas.exception.EntityExistsException;
+import org.apache.atlas.exception.EntityNotFoundException;
 import org.apache.atlas.repository.Constants;
-import org.apache.atlas.repository.EntityExistsException;
-import org.apache.atlas.repository.EntityNotFoundException;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
@@ -116,7 +116,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     @Override
     @GraphTransaction
     public String[] createEntities(ITypedReferenceableInstance... entities) throws RepositoryException,
-            EntityExistsException {
+        EntityExistsException {
         LOG.info("adding entities={}", entities);
         try {
             TypedInstanceToGraphMapper instanceToGraphMapper = new TypedInstanceToGraphMapper(graphToInstanceMapper);
@@ -235,7 +235,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
      */
     @Override
     @GraphTransaction
-    public void deleteTrait(String guid, String traitNameToBeDeleted) throws RepositoryException {
+    public void deleteTrait(String guid, String traitNameToBeDeleted) throws EntityNotFoundException, RepositoryException {
         LOG.info("Deleting trait={} from entity={}", traitNameToBeDeleted, guid);
         try {
             Vertex instanceVertex = graphHelper.getVertexForGUID(guid);
@@ -264,8 +264,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     updateTraits(instanceVertex, traitNames);
                 }
             }
-        } catch (RepositoryException e) {
-            throw e;
         } catch (Exception e) {
             throw new RepositoryException(e);
         }

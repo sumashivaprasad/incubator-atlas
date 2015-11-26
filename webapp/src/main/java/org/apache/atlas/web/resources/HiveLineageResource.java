@@ -19,7 +19,7 @@
 package org.apache.atlas.web.resources;
 
 import org.apache.atlas.AtlasClient;
-import org.apache.atlas.ParamChecker;
+import org.apache.atlas.utils.ParamChecker;
 import org.apache.atlas.discovery.DiscoveryException;
 import org.apache.atlas.discovery.LineageService;
 import org.apache.atlas.repository.EntityNotFoundException;
