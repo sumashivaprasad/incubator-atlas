@@ -25,7 +25,6 @@ import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.EntityNotFoundException;
 import org.apache.atlas.utils.ParamChecker;
-import org.apache.atlas.TypeNotFoundException;
 import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.listener.TypesChangeListener;
