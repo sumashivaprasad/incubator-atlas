@@ -22,8 +22,6 @@ import com.thinkaurelius.titan.core.attribute.Duration;
 import com.thinkaurelius.titan.diskstorage.*;
 import com.thinkaurelius.titan.diskstorage.keycolumnvalue.*;
 import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediator;
-import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediatorProvider;
-import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediators;
 import com.thinkaurelius.titan.diskstorage.locking.PermanentLockingException;
 import com.thinkaurelius.titan.diskstorage.util.KeyColumn;
 import com.thinkaurelius.titan.diskstorage.util.RecordIterator;
@@ -49,7 +47,10 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static com.thinkaurelius.titan.diskstorage.EntryMetaData.*;
 
 /**
  * Here are some areas that might need work:
@@ -393,6 +394,4 @@ public class HBaseKeyColumnValueStore implements KeyColumnValueStore {
             }
         }
     }
-
-    //TODO - Implement a lock cleaner that cleans up expired locks
 }

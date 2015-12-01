@@ -14,14 +14,6 @@
  */
 package com.thinkaurelius.titan.diskstorage.hbase;
 
-import static com.thinkaurelius.titan.diskstorage.Backend.EDGESTORE_NAME;
-import static com.thinkaurelius.titan.diskstorage.Backend.ID_STORE_NAME;
-import static com.thinkaurelius.titan.diskstorage.Backend.INDEXSTORE_NAME;
-import static com.thinkaurelius.titan.diskstorage.Backend.LOCK_STORE_SUFFIX;
-import static com.thinkaurelius.titan.diskstorage.Backend.SYSTEM_MGMT_LOG_NAME;
-import static com.thinkaurelius.titan.diskstorage.Backend.SYSTEM_TX_LOG_NAME;
-import static com.thinkaurelius.titan.graphdb.configuration.GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -34,6 +26,7 @@ import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.thinkaurelius.titan.diskstorage.Backend;
 import com.thinkaurelius.titan.diskstorage.configuration.ConfigElement;
 import com.thinkaurelius.titan.diskstorage.keycolumnvalue.CustomizeStoreKCVSManager;
 import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediator;
@@ -239,15 +232,15 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
     private static final BiMap<String, String> SHORT_CF_NAME_MAP =
             ImmutableBiMap.<String, String>builder()
-                    .put(INDEXSTORE_NAME, "g")
-                    .put(INDEXSTORE_NAME + LOCK_STORE_SUFFIX, "h")
-                    .put(ID_STORE_NAME, "i")
-                    .put(EDGESTORE_NAME, "e")
-                    .put(EDGESTORE_NAME + LOCK_STORE_SUFFIX, "f")
-                    .put(SYSTEM_PROPERTIES_STORE_NAME, "s")
-                    .put(SYSTEM_PROPERTIES_STORE_NAME + LOCK_STORE_SUFFIX, "t")
-                    .put(SYSTEM_MGMT_LOG_NAME, "m")
-                    .put(SYSTEM_TX_LOG_NAME, "l")
+                    .put(Backend.INDEXSTORE_NAME, "g")
+                    .put(Backend.INDEXSTORE_NAME + Backend.LOCK_STORE_SUFFIX, "h")
+                    .put(Backend.ID_STORE_NAME, "i")
+                    .put(Backend.EDGESTORE_NAME, "e")
+                    .put(Backend.EDGESTORE_NAME + Backend.LOCK_STORE_SUFFIX, "f")
+                    .put(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME, "s")
+                    .put(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME + Backend.LOCK_STORE_SUFFIX, "t")
+                    .put(Backend.SYSTEM_MGMT_LOG_NAME, "m")
+                    .put(Backend.SYSTEM_TX_LOG_NAME, "l")
                     .build();
 
     private static final StaticBuffer FOUR_ZERO_BYTES = BufferUtil.zeroBuffer(4);

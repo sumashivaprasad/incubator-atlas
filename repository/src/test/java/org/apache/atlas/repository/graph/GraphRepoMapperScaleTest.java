@@ -104,17 +104,17 @@ public class GraphRepoMapperScaleTest {
 
     @Test
     public void testSubmitEntity() throws Exception {
-            Referenceable databaseInstance = new Referenceable(TestUtils.DATABASE_TYPE);
-            databaseInstance.set("name", DATABASE_NAME);
-            databaseInstance.set("description", "foo database");
-            // System.out.println("databaseInstance = " + databaseInstance);
+        Referenceable databaseInstance = new Referenceable(TestUtils.DATABASE_TYPE);
+        databaseInstance.set("name", DATABASE_NAME);
+        databaseInstance.set("description", "foo database");
+        // System.out.println("databaseInstance = " + databaseInstance);
 
-            ClassType dbType = typeSystem.getDataType(ClassType.class, TestUtils.DATABASE_TYPE);
-            ITypedReferenceableInstance db = dbType.convert(databaseInstance, Multiplicity.REQUIRED);
+        ClassType dbType = typeSystem.getDataType(ClassType.class, TestUtils.DATABASE_TYPE);
+        ITypedReferenceableInstance db = dbType.convert(databaseInstance, Multiplicity.REQUIRED);
 
-            dbGUID = repositoryService.createEntities(db)[0];
+        dbGUID = repositoryService.createEntities(db)[0];
 
-            Referenceable dbInstance = new Referenceable(dbGUID, TestUtils.DATABASE_TYPE, databaseInstance.getValuesMap());
+        Referenceable dbInstance = new Referenceable(dbGUID, TestUtils.DATABASE_TYPE, databaseInstance.getValuesMap());
 
         for (int index = 0; index < 1000; index++) {
             ITypedReferenceableInstance table = createHiveTableInstance(dbInstance, index);

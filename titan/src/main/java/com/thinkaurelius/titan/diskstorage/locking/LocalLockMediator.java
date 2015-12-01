@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -60,8 +60,7 @@ public class LocalLockMediator<T> {
 
     private DelayQueue<ExpirableKeyColumn> expiryQueue = new DelayQueue<>();
 
-    private ScheduledExecutorService lockCleanerService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-
+    private ExecutorService lockCleanerService = Executors.newFixedThreadPool(1, new ThreadFactory() {
         @Override
         public Thread newThread(Runnable runnable) {
             Thread thread = Executors.defaultThreadFactory().newThread(runnable);
@@ -86,7 +85,7 @@ public class LocalLockMediator<T> {
 
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(times);
-        lockCleanerService.scheduleAtFixedRate(new LockCleaner(), 2, 15, TimeUnit.MINUTES);
+        lockCleanerService.submit(new LockCleaner());
     }
 
     /**
@@ -171,7 +170,7 @@ public class LocalLockMediator<T> {
             }
         }
 
-        if(success) {
+        if (success) {
             expiryQueue.add(new ExpirableKeyColumn(kc, expires));
         }
         return success;
@@ -204,6 +203,7 @@ public class LocalLockMediator<T> {
         boolean removed = locks.remove(kc, unlocker);
 
         if (removed) {
+            expiryQueue.remove(kc);
             if (log.isTraceEnabled()) {
                 log.trace("Local unlock succeeded: {} namespace={} txn={}",
                     new Object[]{kc, name, requestor});
@@ -295,16 +295,19 @@ public class LocalLockMediator<T> {
 
     }
 
-    private class LockCleaner implements  Runnable {
+    private class LockCleaner implements Runnable {
 
         @Override
         public void run() {
             try {
-                log.debug("Lock Cleaner service started");
-                ExpirableKeyColumn lock = expiryQueue.take();
-                log.debug("Expiring key column " + lock.getKeyColumn());
-                locks.remove(lock.getKeyColumn());
+                while (true) {
+                    log.debug("Lock Cleaner service started");
+                    ExpirableKeyColumn lock = expiryQueue.take();
+                    log.debug("Expiring key column " + lock.getKeyColumn());
+                    locks.remove(lock.getKeyColumn());
+                }
             } catch (InterruptedException e) {
+                log.debug("Received interrupt. Exiting");
             }
         }
     }
