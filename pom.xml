@@ -1478,6 +1478,7 @@
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
                 <configuration>
+		    <skip>true</skip>
                     <useDefaultExcludes>true</useDefaultExcludes>
                     <useMavenDefaultExcludes>true</useMavenDefaultExcludes>
                     <useIdeaDefaultExcludes>true</useIdeaDefaultExcludes>

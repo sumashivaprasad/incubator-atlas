@@ -27,6 +27,7 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.discovery.HiveLineageService;
 import org.apache.atlas.discovery.LineageService;
+import org.apache.atlas.discovery.SearchIndexer;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.listener.TypesChangeListener;
 import org.apache.atlas.repository.MetadataRepository;
@@ -61,9 +62,13 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         // bind the ITypeStore interface to an implementation
         bind(ITypeStore.class).to(GraphBackedTypeStore.class).asEagerSingleton();
 
+        bind(SearchIndexer.class).to(GraphBackedSearchIndexer.class);
+
         Multibinder<TypesChangeListener> typesChangeListenerBinder =
                 Multibinder.newSetBinder(binder(), TypesChangeListener.class);
         typesChangeListenerBinder.addBinding().to(GraphBackedSearchIndexer.class);
+
+
 
         // bind the MetadataService interface to an implementation
         bind(MetadataService.class).to(DefaultMetadataService.class).asEagerSingleton();

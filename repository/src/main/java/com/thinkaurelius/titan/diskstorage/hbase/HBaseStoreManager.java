@@ -36,6 +36,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.thinkaurelius.titan.diskstorage.configuration.ConfigElement;
 import com.thinkaurelius.titan.diskstorage.keycolumnvalue.CustomizeStoreKCVSManager;
+import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediator;
+import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediators;
 import com.thinkaurelius.titan.diskstorage.util.time.Timestamps;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.slf4j.Logger;
@@ -275,6 +278,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     // Mutable instance state
     private final ConcurrentMap<String, HBaseKeyColumnValueStore> openStores;
 
+    private LocalLockMediator<StoreTransaction> llm;
+
     public HBaseStoreManager(com.thinkaurelius.titan.diskstorage.configuration.Configuration config) throws BackendException {
         super(config, PORT_DEFAULT);
 
@@ -390,6 +395,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 .orderedScan(true).unorderedScan(true).batchMutation(true)
                 .multiQuery(true).distributed(true).keyOrdered(true).storeTTL(true)
                 .timestamps(true).preferredTimestamps(PREFERRED_TIMESTAMPS)
+                .locking(true)
                 .keyConsistent(c);
 
         try {
@@ -403,6 +409,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
     @Override
     public void mutateMany(Map<String, Map<StaticBuffer, KCVMutation>> mutations, StoreTransaction txh) throws BackendException {
+        logger.debug("Enter mutateMany");
         final MaskedTimestamp commitTime = new MaskedTimestamp(txh);
         // In case of an addition and deletion with identical timestamps, the
         // deletion tombstone wins.
@@ -429,7 +436,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
             try {
                 table = cnx.getTable(tableName);
+                logger.debug("mutateMany : batch mutate started size {} ", batch.size());
                 table.batch(batch, new Object[batch.size()]);
+                logger.debug("mutateMany : batch mutate finished {} ", batch.size());
             } finally {
                 IOUtils.closeQuietly(table);
             }
@@ -456,7 +465,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         if (store == null) {
             final String cfName = shortCfNames ? shortenCfName(longName) : longName;
 
-            HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, tableName, cfName, longName);
+            final String llmPrefix = getName();
+            llm = LocalLockMediators.INSTANCE.<StoreTransaction>get(llmPrefix, times);
+            HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, tableName, cfName, longName, llm);
 
             store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
 
@@ -475,7 +486,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
     @Override
     public StoreTransaction beginTransaction(final BaseTransactionConfig config) throws BackendException {
-        return new HBaseTransaction(config);
+        return new HBaseTransaction(config, llm);
     }
 
     @Override
@@ -804,12 +815,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
                     adm.addColumn(tableName, cdesc);
 
-                    try {
-                        logger.debug("Added HBase ColumnFamily {}, waiting for 1 sec. to propogate.", columnFamily);
-                        Thread.sleep(1000L);
-                    } catch (InterruptedException ie) {
-                        throw new TemporaryBackendException(ie);
-                    }
+                    logger.debug("Added HBase ColumnFamily {}, waiting for 1 sec. to propogate.", columnFamily);
 
                     adm.enableTable(tableName);
                 } catch (TableNotFoundException ee) {
@@ -832,6 +838,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
         if (ttlInSeconds > 0)
             cdesc.setTimeToLive(ttlInSeconds);
+
+        cdesc.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
     }
 
     /**

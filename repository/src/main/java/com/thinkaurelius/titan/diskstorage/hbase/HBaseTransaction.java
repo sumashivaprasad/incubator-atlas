@@ -14,8 +14,23 @@
  */
 package com.thinkaurelius.titan.diskstorage.hbase;
 
+import com.sleepycat.je.DatabaseException;
+import com.thinkaurelius.titan.diskstorage.BackendException;
 import com.thinkaurelius.titan.diskstorage.BaseTransactionConfig;
+import com.thinkaurelius.titan.diskstorage.PermanentBackendException;
+import com.thinkaurelius.titan.diskstorage.StaticBuffer;
 import com.thinkaurelius.titan.diskstorage.common.AbstractStoreTransaction;
+import com.thinkaurelius.titan.diskstorage.keycolumnvalue.StoreTransaction;
+import com.thinkaurelius.titan.diskstorage.locking.LocalLockMediator;
+import com.thinkaurelius.titan.diskstorage.util.KeyColumn;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This class overrides and adds nothing compared with
@@ -27,7 +42,41 @@ import com.thinkaurelius.titan.diskstorage.common.AbstractStoreTransaction;
  */
 public class HBaseTransaction extends AbstractStoreTransaction {
 
-    public HBaseTransaction(final BaseTransactionConfig config) {
+    private static final Logger log = LoggerFactory.getLogger(HBaseTransaction.class);
+
+    LocalLockMediator<StoreTransaction> llm;
+
+    Set<KeyColumn> keyColumnLocks = new LinkedHashSet<>();
+
+    public HBaseTransaction(final BaseTransactionConfig config, LocalLockMediator<StoreTransaction> llm) {
         super(config);
+        this.llm = llm;
+    }
+
+    @Override
+    public synchronized void rollback() throws BackendException {
+        super.rollback();
+        if (log.isTraceEnabled())
+            log.debug("{} rolled back transaction");
+        deleteAllLocks();
+    }
+
+    @Override
+    public synchronized void commit() throws BackendException {
+        super.commit();
+        log.debug("{} committed transaction");
+        deleteAllLocks();
+    }
+
+    public void updateLocks(KeyColumn lockID, StaticBuffer expectedValue) {
+
+        keyColumnLocks.add(lockID);
+    }
+
+    private void deleteAllLocks() {
+        for(KeyColumn kc : keyColumnLocks) {
+            log.debug("Removed lock {} ", kc);
+            llm.unlock(kc, this);
+        }
     }
 }
