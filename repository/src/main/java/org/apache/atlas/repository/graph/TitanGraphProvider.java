@@ -127,12 +127,13 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
         String configuredIndexBackend = config.getString(INDEX_BACKEND_CONF);
 
         TitanManagement managementSystem = graphInstance.getManagementSystem();
-
         String currentIndexBackend = managementSystem.get(INDEX_BACKEND_CONF);
+        managementSystem.commit();
+        
         if(!configuredIndexBackend.equals(currentIndexBackend)) {
             throw new RuntimeException("Configured Index Backend " + configuredIndexBackend + " differs from earlier configured Index Backend " + currentIndexBackend + ". Aborting!");
         }
-        managementSystem.commit();
+
     }
 
     @Override
