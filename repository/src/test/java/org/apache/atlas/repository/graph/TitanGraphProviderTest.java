@@ -29,10 +29,6 @@ public class TitanGraphProviderTest {
 
     @AfterClass
     public void tearDown() throws Exception {
-        //Revert the index backend to elasticsearch
-        configuration.setProperty(TitanGraphProvider.INDEX_BACKEND_CONF, TitanGraphProvider.INDEX_BACKEND_ES);
-        TitanGraphProvider.validateAndSwitchIndexBackend(configuration);
-
         try {
             graph.shutdown();
         } catch (Exception e) {
@@ -48,9 +44,8 @@ public class TitanGraphProviderTest {
 
    @Test
    public void testValidate() throws AtlasException {
-
        try {
-           TitanGraphProvider.validateAndSwitchIndexBackend(configuration);
+           TitanGraphProvider.validateIndexBackend(configuration);
        } catch(Exception e){
            Assert.fail("Unexpected exception ", e);
        }
@@ -58,25 +53,10 @@ public class TitanGraphProviderTest {
        //Change backend
        configuration.setProperty(TitanGraphProvider.INDEX_BACKEND_CONF, TitanGraphProvider.INDEX_BACKEND_LUCENE);
        try {
-           TitanGraphProvider.validateAndSwitchIndexBackend(configuration);
+           TitanGraphProvider.validateIndexBackend(configuration);
            Assert.fail("Expected exception");
        } catch(Exception e){
            Assert.assertEquals(e.getMessage(), "Configured Index Backend lucene differs from earlier configured Index Backend elasticsearch. Aborting!");
-       }
-
-       //switch backend to lucene
-       configuration.setProperty(TitanGraphProvider.INDEX_BACKEND_CONF + ".switch.force", true);
-       try {
-           TitanGraphProvider.validateAndSwitchIndexBackend(configuration);
-
-           graph = TitanGraphProvider.getGraphInstance();
-           Assert.assertEquals(graph.getManagementSystem().get(TitanGraphProvider.INDEX_BACKEND_CONF), TitanGraphProvider.INDEX_BACKEND_LUCENE);
-
-           Backend titanBackend = ((StandardTitanGraph) graph).getBackend();
-           String currentIndexBackend = titanBackend.getGlobalSystemConfig().get(TitanGraphProvider.INDEX_BACKEND_CONF, String.class);
-           Assert.assertEquals(currentIndexBackend, TitanGraphProvider.INDEX_BACKEND_LUCENE);
-       } catch(Exception e){
-           Assert.fail("Unexpected exception ", e);
        }
    }
 }

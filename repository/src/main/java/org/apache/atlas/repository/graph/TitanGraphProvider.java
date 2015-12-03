@@ -57,8 +57,6 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
 
     public static final String INDEX_BACKEND_CONF = "index.search.backend";
 
-    public static final String INDEX_BACKEND_SOLR = "solr5";
-
     public static final String INDEX_BACKEND_LUCENE = "lucene";
 
     public static final String INDEX_BACKEND_ES = "elasticsearch";
@@ -100,9 +98,9 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
     }
 
     public static TitanGraph getGraphInstance() {
-        if(graphInstance == null) {
+        if (graphInstance == null) {
             synchronized (TitanGraphProvider.class) {
-                if(graphInstance == null) {
+                if (graphInstance == null) {
                     Configuration config;
                     try {
                         config = getConfiguration();
@@ -111,7 +109,7 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
                     }
 
                     graphInstance = TitanFactory.open(config);
-                    validateAndSwitchIndexBackend(config);
+                    validateIndexBackend(config);
                 }
             }
         }
@@ -125,35 +123,14 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
         }
     }
 
-    public static void rollBackAll() {
-        final Set<? extends TitanTransaction> openTransactions = ((StandardTitanGraph) graphInstance).getOpenTransactions();
-        for(TitanTransaction tx : openTransactions) {
-            LOG.info("Rolling back transaction {} ", tx);
-            //RollBack all open transactions
-            tx.rollback();
-        }
-    }
-
-    static void validateAndSwitchIndexBackend(Configuration config) {
+    static void validateIndexBackend(Configuration config) {
         String configuredIndexBackend = config.getString(INDEX_BACKEND_CONF);
 
-        Boolean forceIndexBackendSwitch = config.getBoolean(INDEX_BACKEND_CONF + ".switch.force", false);
         TitanManagement managementSystem = graphInstance.getManagementSystem();
 
         String currentIndexBackend = managementSystem.get(INDEX_BACKEND_CONF);
         if(!configuredIndexBackend.equals(currentIndexBackend)) {
-            if(!forceIndexBackendSwitch) {
-                throw new RuntimeException("Configured Index Backend " + configuredIndexBackend + " differs from earlier configured Index Backend " + currentIndexBackend + ". Aborting!");
-            } else {
-                rollBackAll();
-                managementSystem = graphInstance.getManagementSystem();
-                managementSystem.set(INDEX_BACKEND_CONF, configuredIndexBackend);
-                managementSystem.commit();
-                LOG.warn("Switching forcefully from Index backend (" + currentIndexBackend + ") to (" + configuredIndexBackend + "). Index data will be lost!");
-                clear();
-
-                getGraphInstance();
-            }
+            throw new RuntimeException("Configured Index Backend " + configuredIndexBackend + " differs from earlier configured Index Backend " + currentIndexBackend + ". Aborting!");
         }
     }
 
