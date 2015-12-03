@@ -22,8 +22,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provides;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.TitanTransaction;
+import com.thinkaurelius.titan.core.schema.TitanManagement;
+import com.thinkaurelius.titan.diskstorage.Backend;
 import com.thinkaurelius.titan.diskstorage.StandardIndexProvider;
+import com.thinkaurelius.titan.diskstorage.indexing.IndexInformation;
 import com.thinkaurelius.titan.diskstorage.solr.Solr5Index;
+import com.thinkaurelius.titan.graphdb.configuration.GraphDatabaseConfiguration;
+import com.thinkaurelius.titan.graphdb.database.StandardTitanGraph;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
 import org.apache.commons.configuration.Configuration;
@@ -35,6 +41,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Default implementation for Graph Provider that doles out Titan Graph.
@@ -46,7 +53,15 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
     /**
      * Constant for the configuration property that indicates the prefix.
      */
-    private static final String GRAPH_PREFIX = "atlas.graph";
+    public static final String GRAPH_PREFIX = "atlas.graph";
+
+    public static final String INDEX_BACKEND_CONF = "index.search.backend";
+
+    public static final String INDEX_BACKEND_SOLR = "solr5";
+
+    public static final String INDEX_BACKEND_LUCENE = "lucene";
+
+    public static final String INDEX_BACKEND_ES = "elasticsearch";
 
     private static volatile TitanGraph graphInstance;
 
@@ -96,10 +111,50 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
                     }
 
                     graphInstance = TitanFactory.open(config);
+                    validateAndSwitchIndexBackend(config);
                 }
             }
         }
         return graphInstance;
+    }
+
+    public static void clear() {
+        synchronized (TitanGraphProvider.class) {
+            graphInstance.shutdown();
+            graphInstance = null;
+        }
+    }
+
+    public static void rollBackAll() {
+        final Set<? extends TitanTransaction> openTransactions = ((StandardTitanGraph) graphInstance).getOpenTransactions();
+        for(TitanTransaction tx : openTransactions) {
+            LOG.info("Rolling back transaction {} ", tx);
+            //RollBack all open transactions
+            tx.rollback();
+        }
+    }
+
+    static void validateAndSwitchIndexBackend(Configuration config) {
+        String configuredIndexBackend = config.getString(INDEX_BACKEND_CONF);
+
+        Boolean forceIndexBackendSwitch = config.getBoolean(INDEX_BACKEND_CONF + ".switch.force", false);
+        TitanManagement managementSystem = graphInstance.getManagementSystem();
+
+        String currentIndexBackend = managementSystem.get(INDEX_BACKEND_CONF);
+        if(!configuredIndexBackend.equals(currentIndexBackend)) {
+            if(!forceIndexBackendSwitch) {
+                throw new RuntimeException("Configured Index Backend " + configuredIndexBackend + " differs from earlier configured Index Backend " + currentIndexBackend + ". Aborting!");
+            } else {
+                rollBackAll();
+                managementSystem = graphInstance.getManagementSystem();
+                managementSystem.set(INDEX_BACKEND_CONF, configuredIndexBackend);
+                managementSystem.commit();
+                LOG.warn("Switching forcefully from Index backend (" + currentIndexBackend + ") to (" + configuredIndexBackend + "). Index data will be lost!");
+                clear();
+
+                getGraphInstance();
+            }
+        }
     }
 
     @Override
