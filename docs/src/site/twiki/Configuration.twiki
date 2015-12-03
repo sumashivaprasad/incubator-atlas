@@ -85,10 +85,16 @@ Refer http://s3.thinkaurelius.com/docs/titan/0.5.4/bdb.html and http://s3.thinka
 BerkeleyDB is suitable for smaller data sets in the range of upto 10 million vertices with ACID gurantees.
 HBase on the other hand doesnt provide ACID guarantees but is able to scale for larger graphs. HBase also provides HA inherently.
 
----+++ Switching Persistence and Indexing Backends
+---+++ Choosing between Persistence Backends
 
- ATLAS supports BerkeleyDB and HBase with Titan as the graph persistence backends and Solr/ElasticSearch as the indexing backends. Switching storage backend from BerkeleyDB to HBase and vice versa means that the data persisted through ATLAS for types, entities and tags/traits will be lost.
- Currently ATLAS does not support a migration path while switching between the backends. (This is in our near term roadmap and will be addressed soon).
+Refer http://s3.thinkaurelius.com/docs/titan/0.5.4/bdb.html and http://s3.thinkaurelius.com/docs/titan/0.5.4/hbase.html for choosing between the persistence backends.
+BerkeleyDB is suitable for smaller data sets in the range of upto 10 million vertices with ACID gurantees.
+HBase on the other hand doesnt provide ACID guarantees but is able to scale for larger graphs. HBase also provides HA inherently.
+
+---+++ Choosing between Indexing Backends
+
+Refer http://s3.thinkaurelius.com/docs/titan/0.5.4/elasticsearch.html and http://s3.thinkaurelius.com/docs/titan/0.5.4/solr.html for chossing between ElasticSarch and Solr.
+Solr in cloud mode is the recommended setup.
 
 ---+++ Switching Persistence Backend
 
@@ -102,7 +108,7 @@ HBase on the other hand doesnt provide ACID guarantees but is able to scale for 
   Switching the Index backend requires clearing the persistence backend data. Otherwise there will be discrepancies between the persistence and index backends since switching the indexing backend means index data will be lost.
   This leads to "Fulltext" queries not working on the existing data
   For clearing the data for BerkeleyDB, delete the ATLAS_HOME/data/berkeley directory
-  For clearing the data for HBase,  in Hbase shell, run 'disable titan' and 'drop titan'
+  For clearing the data for HBase, in Hbase shell, run 'disable titan' and 'drop titan'
 
 ---+++ Hive Lineage Configs
 
