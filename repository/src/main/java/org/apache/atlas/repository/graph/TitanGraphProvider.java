@@ -132,6 +132,7 @@ public class TitanGraphProvider implements GraphProvider<TitanGraph> {
         if(!configuredIndexBackend.equals(currentIndexBackend)) {
             throw new RuntimeException("Configured Index Backend " + configuredIndexBackend + " differs from earlier configured Index Backend " + currentIndexBackend + ". Aborting!");
         }
+        managementSystem.commit();
     }
 
     @Override
