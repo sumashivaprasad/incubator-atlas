@@ -31,7 +31,7 @@ Tar is structured as follows
    |- quick_start.py
    |- cputil.py
 |- conf
-   |- application.properties
+   |- atlas-application.properties
    |- client.properties
    |- atlas-env.sh
    |- log4j.xml
