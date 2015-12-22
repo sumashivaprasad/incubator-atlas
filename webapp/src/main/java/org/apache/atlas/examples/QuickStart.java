@@ -107,7 +107,7 @@ public class QuickStart {
 
     private static final String[] TYPES =
             {DATABASE_TYPE, TABLE_TYPE, STORAGE_DESC_TYPE, COLUMN_TYPE, LOAD_PROCESS_TYPE, VIEW_TYPE, "JdbcAccess",
-                    "ETL", "Metric", "PII", "Fact", "Dimension"};
+                    "ETL", "Metric", "PII", "Fact", "Dimension", "Log Data"};
 
     private final AtlasClient metadataServiceClient;
 
@@ -182,8 +182,10 @@ public class QuickStart {
 
         HierarchicalTypeDefinition<TraitType> jdbcTraitDef = TypesUtil.createTraitTypeDef("JdbcAccess", null);
 
+        HierarchicalTypeDefinition<TraitType> logTraitDef = TypesUtil.createTraitTypeDef("Log Data", null);
+
         return TypesUtil.getTypesDef(ImmutableList.<EnumTypeDefinition>of(), ImmutableList.<StructTypeDefinition>of(),
-                ImmutableList.of(dimTraitDef, factTraitDef, piiTraitDef, metricTraitDef, etlTraitDef, jdbcTraitDef),
+                ImmutableList.of(dimTraitDef, factTraitDef, piiTraitDef, metricTraitDef, etlTraitDef, jdbcTraitDef, logTraitDef),
                 ImmutableList.of(dbClsDef, storageDescClsDef, columnClsDef, tblClsDef, loadProcessClsDef, viewClsDef));
     }
 
@@ -274,6 +276,13 @@ public class QuickStart {
 
         loadProcess("loadSalesMonthly", "hive query for monthly summary", "John ETL", ImmutableList.of(salesFactDaily),
                 ImmutableList.of(salesFactMonthly), "create table as select ", "plan", "id", "graph", "ETL");
+
+        Id loggingFactMonthly =
+                table("logging_fact_monthly_mv", "logging fact monthly materialized view", logDB, sd, "Tim ETL",
+                        "Managed", logFactColumns, "Log Data");
+
+        loadProcess("loadLogsMonthly", "hive query for monthly summary", "Tim ETL", ImmutableList.of(loggingFactDaily),
+                ImmutableList.of(loggingFactMonthly), "create table as select ", "plan", "id", "graph", "ETL");
     }
 
     private Id createInstance(Referenceable referenceable) throws Exception {
@@ -410,7 +419,7 @@ public class QuickStart {
                 // trait searches
                 "Dimension",
             /*"Fact", - todo: does not work*/
-                "JdbcAccess", "ETL", "Metric", "PII",
+                "JdbcAccess", "ETL", "Metric", "PII", "`Log Data`",
             /*
             // Lineage - todo - fix this, its not working
             "Table hive_process outputTables",
