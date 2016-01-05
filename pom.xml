@@ -354,12 +354,6 @@
 
         <PermGen>64m</PermGen>
         <MaxPermGen>512m</MaxPermGen>
-        <SnapshotsId>apache.snapshots.repo</SnapshotsId>
-        <SnapshotsName>Apache Snapshot Repository</SnapshotsName>
-        <SnapshotsUrl>https://repository.apache.org/content/groups/snapshots</SnapshotsUrl>
-        <StagingId>apache-staging</StagingId>
-        <StagingName>Apache Release Distribution Repository</StagingName>
-        <StagingUrl>https://repository.apache.org/content/groups/staging</StagingUrl>
 
         <!-- skips checkstyle and find bugs -->
         <skipCheck>false</skipCheck>
@@ -426,9 +420,9 @@
         <module>webapp</module>
         <module>docs</module>
         <module>addons/hive-bridge</module>
-        <module>addons/storm-bridge</module>
         <module>addons/falcon-bridge</module>
         <module>addons/sqoop-bridge</module>
+        <module>addons/storm-bridge</module>
         <module>distro</module>
     </modules>
 
@@ -1424,6 +1418,20 @@
               </execution>
             </executions>
           </plugin>		
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                            <goal>test-jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
