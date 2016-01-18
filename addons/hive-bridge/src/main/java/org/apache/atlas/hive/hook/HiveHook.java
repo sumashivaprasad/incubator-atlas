@@ -20,15 +20,11 @@ package org.apache.atlas.hive.hook;
 
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
 import org.apache.atlas.hook.AtlasHook;
-import org.apache.atlas.notification.NotificationInterface;
-import org.apache.atlas.notification.NotificationModule;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.commons.configuration.Configuration;
@@ -232,7 +228,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         default:
         }
 
-        notifyEntity(messages);
+        notifyEntities(messages);
     }
 
     private void renameTable(HiveMetaStoreBridge dgiBridge, HiveEvent event) throws Exception {

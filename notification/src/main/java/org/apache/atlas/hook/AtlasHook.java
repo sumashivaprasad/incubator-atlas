@@ -45,9 +45,6 @@ public abstract class AtlasHook {
 
     private static final Logger LOG = LoggerFactory.getLogger(AtlasHook.class);
     private static final String DEFAULT_ATLAS_URL = "http://localhost:21000/";
-    protected static final String CLUSTER_NAME = "clusterName";
-    protected static final String CURRENT_CLUSTER_NAME_KEY = "atlas.cluster.name";
-    protected static final String DEFAULT_CLUSTER_NAME = "primary";
 
     public static final String ATLAS_ENDPOINT = "atlas.rest.address";
 
@@ -56,8 +53,6 @@ public abstract class AtlasHook {
     /**
      * Hadoop Cluster name for this instance, typically used for namespace.
      */
-    protected final String clusterName;
-
     protected static Configuration atlasProperties;
 
     @Inject
@@ -77,18 +72,17 @@ public abstract class AtlasHook {
     }
 
     public AtlasHook() {
-        clusterName = atlasProperties.getString(CURRENT_CLUSTER_NAME_KEY, DEFAULT_CLUSTER_NAME);
-        atlasClient = new AtlasClient(atlasProperties.getString(ATLAS_ENDPOINT, DEFAULT_ATLAS_URL));
-        //TODO - take care of passing in - ugi, doAsUser for secure cluster
+        this(new AtlasClient(atlasProperties.getString(ATLAS_ENDPOINT, DEFAULT_ATLAS_URL)));
     }
 
-    protected String getClusterName() {
-        return clusterName;
+    public AtlasHook(AtlasClient atlasClient) {
+        this.atlasClient = atlasClient;
+        //TODO - take care of passing in - ugi, doAsUser for secure cluster
     }
 
     protected abstract String getNumberOfRetriesPropertyKey();
 
-    protected void notifyEntity(Collection<Referenceable> entities) {
+    protected void notifyEntities(Collection<Referenceable> entities) {
         JSONArray entitiesArray = new JSONArray();
 
         for (Referenceable entity : entities) {
@@ -99,7 +93,7 @@ public abstract class AtlasHook {
 
         List<HookNotification.HookNotificationMessage> hookNotificationMessages = new ArrayList<>();
         hookNotificationMessages.add(new HookNotification.EntityCreateRequest(entitiesArray));
-        notifyEntity(hookNotificationMessages);
+        notifyEntities(hookNotificationMessages);
     }
 
     /**
@@ -111,7 +105,7 @@ public abstract class AtlasHook {
      *
      * @param entities entities
      */
-    protected void notifyEntity(List<HookNotification.HookNotificationMessage> entities) {
+    protected void notifyEntities(List<HookNotification.HookNotificationMessage> entities) {
         final int maxRetries = atlasProperties.getInt(getNumberOfRetriesPropertyKey(), 3);
         final String message = entities.toString();
 

@@ -22,6 +22,7 @@ import backtype.storm.ILocalCluster;
 import backtype.storm.generated.StormTopology;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.storm.model.StormDataModel;
 import org.apache.atlas.storm.model.StormDataTypes;
 import org.apache.atlas.typesystem.Referenceable;
@@ -37,10 +38,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-/**
- * Unit tests for storm atlas hook. Constructs a sample topology and
- * maps it to atlas types.
- */
 @Test
 public class StormAtlasHookIT {
 
@@ -78,7 +75,7 @@ public class StormAtlasHookIT {
         String stormTypesAsJSON = TypesSerialization.toJson(stormTypesDef);
         LOG.info("stormTypesAsJSON = {}", stormTypesAsJSON);
 
-        new StormAtlasHook().registerDataModel();
+        new StormAtlasHook().registerDataModel(new HiveDataModelGenerator());
 
         // verify types are registered
         for (StormDataTypes stormDataType : StormDataTypes.values()) {
