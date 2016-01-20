@@ -2,6 +2,26 @@ Apache Atlas Release Notes
 ==========================
 
 ALL CHANGES:
+ATLAS-181 Integrate storm topology metadata into Atlas (svenkat,yhemanth via shwethags)
+ATLAS-311 UI: Local storage for traits - caching [not cleared on refresh] To be cleared on time lapse for 1hr (Anilg via shwethags)
+ATLAS-106 Store createTimestamp and modified timestamp separately for an entity (dkantor via shwethags)
+ATLAS-433 Fix checkstyle issues for common and notification module (shwethags)
+ATLAS-183 Add a Hook in Storm to post the topology metadata (svenkat,yhemanth via shwethags)
+ATLAS-370 Implement deleteEntities at repository level (dkantor via shwethags)
+ATLAS-406 Resizing lineage window – should be an anchor on a corner – like ppt for graphic (sanjayp via shwethags)
+ATLAS-432 QuickStart lineage is broken (yhemanth via shwethags)
+ATLAS-421 typo in Architecture.twiki (dbist13 via shwethags)
+ATLAS-387 Running quick_start without a valid atlas endpoint in configuration or argument prints a spurious success message (yhemanth via shwethags)
+ATLAS-182 Add data model for Storm topology elements (svenkat,yhemanth via shwethags)
+ATLAS-414 Doc: Increase MAVEN_OPTS limit to 512m in InstallationSteps.twiki (yhemanth via shwethags)
+ATLAS-418 Update atlas website (shwethags)
+ATLAS-392 Rename application.properties to atlas-application.properties (rishabhbhardwaj via shwethags)
+ATLAS-381 HiveMetaStoreBridge will not connect to a kerberized hive metastore (dossett@gmail.com via shwethags)
+ATLAS-20 Rename env variables from METADATA to ATLAS (rishabhbhardwaj via shwethags)
+ATLAS-360 Secure cluster Atlas-solr integration instructions (tbeerbower via shwethags)
+ATLAS-368 Change trunk version to 0.7-incubating-SNAPSHOT (sumasai via shwethags)
+ATLAS-383 tests for classtype.convert() with id (sumasai via shwethags)
+ATLAS-263 Searching for a multi word trait always returns empty result (girishrp via shwethags)
 
 --Release 0.6-incubating
 INCOMPATIBLE CHANGES:
