@@ -2,6 +2,11 @@ Apache Atlas Release Notes
 ==========================
 
 ALL CHANGES:
+ATLAS-415 Hive import fails when importing a table that is already imported without StorageDescriptor information (yhemanth via shwethags)
+ATLAS-450 quick_start fails on cygwin (dkantor via shwethags)
+ATLAS-451 Doc: Fix few broken links due to Wiki words in Atlas documentation (ssainath via shwethags)
+ATLAS-439 Investigate apache build failure - EntityJerseyResourceIT.testEntityDeduping (shwethags)
+ATLAS-426 atlas_start fails on cygwin (dkantor via shwethags)
 ATLAS-448 Hive IllegalArgumentException with Atlas hook enabled on SHOW TRANSACTIONS AND SHOW COMPACTIONS (shwethags)
 ATLAS-181 Integrate storm topology metadata into Atlas (svenkat,yhemanth via shwethags)
 ATLAS-311 UI: Local storage for traits - caching [not cleared on refresh] To be cleared on time lapse for 1hr (Anilg via shwethags)
