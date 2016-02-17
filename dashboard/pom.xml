@@ -68,7 +68,7 @@
             <id>install-node</id>
             <activation>
                 <file>
-                    <missing>${project.build.directory}/node</missing>
+                    <missing>./target/node</missing>
                 </file>
             </activation>
             <build>
@@ -123,7 +123,7 @@
             <id>install-node_modules</id>
             <activation>
                 <file>
-                    <missing>${project.build.directory}/node_modules</missing>
+                    <missing>./target/node_modules</missing>
                 </file>
             </activation>
             <build>
@@ -150,7 +150,7 @@
             <id>bower-install</id>
             <activation>
                 <file>
-                    <missing>${project.build.directory}/dist/lib</missing>
+                    <missing>./target/dist/lib</missing>
                 </file>
             </activation>
             <build>
