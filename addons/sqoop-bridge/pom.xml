@@ -33,7 +33,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <sqoop.version>1.4.7-SNAPSHOT</sqoop.version>
+        <sqoop.version>1.4.6.2.3.99.0-195</sqoop.version>
         <hive.version>1.2.1</hive.version>
     </properties>
 

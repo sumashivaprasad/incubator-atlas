@@ -33,7 +33,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <storm.version>0.10.0-SNAPSHOT</storm.version>
+        <storm.version>0.11.0-SNAPSHOT</storm.version>
     </properties>
 
     <dependencies>
