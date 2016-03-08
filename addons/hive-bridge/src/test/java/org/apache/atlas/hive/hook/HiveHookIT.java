@@ -34,6 +34,13 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
@@ -41,7 +48,14 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
@@ -60,6 +74,14 @@ public class HiveHookIT {
     public void setUp() throws Exception {
         //Set-up hive session
         HiveConf conf = new HiveConf();
+        //Run in local mode
+        conf.set("mapreduce.framework.name", "local");
+        conf.set("fs.default.name", "file:///'");
+        conf.setClassLoader(Thread.currentThread().getContextClassLoader());
+        conf.setClass("org.apache.atlas.hive.hook.TestInputFormat", TestInputFormat.class, InputFormat.class);
+        Path path = Paths.get(TestInputFormat.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        System.out.println("Setting HIVE_AUX_JARS to " + path.toString());
+        conf.setAuxJars(path.toString());
         driver = new Driver(conf);
         ss = new SessionState(conf, System.getProperty("user.name"));
         ss = SessionState.start(ss);
@@ -83,7 +105,7 @@ public class HiveHookIT {
         String dbId = assertDatabaseIsRegistered(dbName);
 
         Referenceable definition = dgiCLient.getEntity(dbId);
-        Map params = (Map) definition.get("parameters");
+        Map params = (Map) definition.get(HiveDataModelGenerator.PARAMETERS);
         Assert.assertNotNull(params);
         Assert.assertEquals(params.size(), 2);
         Assert.assertEquals(params.get("p1"), "v1");
@@ -120,7 +142,7 @@ public class HiveHookIT {
     private String createTable(boolean partition) throws Exception {
         String tableName = tableName();
         runCommand("create table " + tableName + "(id int, name string) comment 'table comment' " + (partition ?
-                " partitioned by(dt string)" : ""));
+            " partitioned by(dt string)" : ""));
         return tableName;
     }
 
@@ -207,7 +229,7 @@ public class HiveHookIT {
         String partId = assertPartitionIsRegistered(DEFAULT_DB, insertTableName, "2015-01-01");
         Referenceable partitionEntity = dgiCLient.getEntity(partId);
         Assert.assertEquals(partitionEntity.get("qualifiedName"),
-                String.format("%s.%s.%s@%s", "default", insertTableName.toLowerCase(), "2015-01-01", CLUSTER_NAME));
+            String.format("%s.%s.%s@%s", "default", insertTableName.toLowerCase(), "2015-01-01", CLUSTER_NAME));
     }
 
     private String random() {
@@ -283,6 +305,96 @@ public class HiveHookIT {
 
         assertTableIsRegistered(DEFAULT_DB, newName);
         assertTableIsNotRegistered(DEFAULT_DB, viewName);
+    }
+
+    @Test
+    public void testAlterTableLocation() throws Exception {
+        String tableName = createTable();
+        final String testPath = "file://" + System.getProperty("java.io.tmpdir", "/tmp") + File.pathSeparator + "testPath";
+        String query = "alter table " + tableName + " set location '" + testPath + "'";
+        runCommand(query);
+
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        //Verify the number of columns present in the table
+        Referenceable tableRef = dgiCLient.getEntity(tableId);
+        Referenceable sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
+        Assert.assertEquals(sdRef.get("location"), testPath);
+    }
+
+    @Test
+    public void testAlterTableFileFormat() throws Exception {
+        String tableName = createTable();
+        final String testFormat = "orc";
+        String query = "alter table " + tableName + " set FILEFORMAT " + testFormat;
+        runCommand(query);
+
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+
+        Referenceable tableRef = dgiCLient.getEntity(tableId);
+        Referenceable sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
+        Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_INPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat");
+        Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_OUTPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat");
+
+        final String testInputFormat = "org.apache.atlas.hive.hook.TestInputFormat";
+        final String testOutputFormat = "org.apache.hadoop.mapreduce.lib.input.TextOutputFormat";
+        query = "alter table " + tableName + " set FILEFORMAT INPUTFORMAT '" + testInputFormat + "' OUTPUTFORMAT '" + testOutputFormat + "' SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'";
+        runCommand(query);
+
+        tableRef = dgiCLient.getEntity(tableId);
+        sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
+        Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_INPUT_FMT), testInputFormat);
+        Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_OUTPUT_FMT), testOutputFormat);
+
+        /**
+         * Hive Talter Table stored as is not supported - See https://issues.apache.org/jira/browse/HIVE-9576
+         * query = "alter table " + tableName + " STORED AS " + testFormat.toUpperCase();
+         * runCommand(query);
+
+         * tableRef = dgiCLient.getEntity(tableId);
+         * sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
+         * Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_INPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat");
+         * Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_OUTPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat");
+         * Assert.assertEquals(((Map) sdRef.get(HiveDataModelGenerator.PARAMETERS)).get("orc.compress"), "ZLIB");
+         */
+    }
+
+    public void TestAlterTableBucketingClusterSort() {
+//        case ALTERTABLE_CLUSTER_SORT:
+//        case ALTERTABLE_BUCKETNUM:
+    }
+
+    public void testAlterTableSerde() {
+//        case ALTERTABLE_SERDEPROPERTIES:
+//        case ALTERTABLE_SERIALIZER:
+    }
+
+    @Test
+    public void testAlterTableProperties() throws Exception {
+        String tableName = createTable();
+        final String testComment = "test comment";
+        String testPropKey = "testPropKey";
+        String testPropValue = "testPropValue";
+        String query = "alter table " + tableName + " set TBLPROPERTIES " + "('comment' = 'test comment', 'testPropKey'='testPropValue')";
+        runCommand(query);
+
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+
+        Referenceable tableRef = dgiCLient.getEntity(tableId);
+        Map<String, String> parameters = (Map<String, String>) tableRef.get(HiveDataModelGenerator.PARAMETERS);
+        Assert.assertNotNull(parameters);
+        Assert.assertEquals(parameters.get(HiveDataModelGenerator.COMMENT), testComment);
+        Assert.assertEquals(parameters.get(testPropKey), testPropValue);
+
+        testPropKey = "testPropKey1";
+        testPropValue = "testPropValue1";
+        //Remove comment and one of the properties and add another
+        query = "alter table " + tableName + " set TBLPROPERTIES " + "('" + testPropKey + "'='" + testPropValue + "')";
+        runCommand(query);
+
+        tableRef = dgiCLient.getEntity(tableId);
+        parameters = (Map<String, String>) tableRef.get(HiveDataModelGenerator.PARAMETERS);
+        Assert.assertNotNull(parameters);
+        Assert.assertEquals(parameters.get(testPropKey), testPropValue);
     }
 
     private String assertProcessIsRegistered(String queryStr) throws Exception {
@@ -425,6 +537,78 @@ public class HiveHookIT {
         }
         if (!eval) {
             throw new Exception("Waiting timed out after " + timeout + " msec");
+        }
+    }
+
+    /**
+     * An empty InputFormat.
+     */
+    public static class TestInputFormat extends InputFormat<NullWritable, NullWritable> {
+
+        public List<InputSplit> getSplits(JobContext job)
+            throws IOException {
+            List<InputSplit> res = new ArrayList<InputSplit>();
+            res.add(new NullSplit());
+            return res;
+        }
+
+        public RecordReader<NullWritable, NullWritable>
+        createRecordReader(InputSplit split,
+            TaskAttemptContext context)
+            throws IOException {
+            return new NullRecordReader();
+        }
+    }
+
+    /**
+     * An empty splitter.
+     */
+    public static class NullSplit extends InputSplit implements Writable {
+        public long getLength() { return 0; }
+
+        public String[] getLocations() throws IOException {
+            return new String[]{};
+        }
+
+        @Override
+        public void write(DataOutput out) throws IOException {}
+
+        @Override
+        public void readFields(DataInput in) throws IOException {}
+    }
+
+    /**
+     * An empty record reader.
+     */
+    public static class NullRecordReader
+        extends RecordReader<NullWritable, NullWritable> {
+        @Override
+        public void initialize(InputSplit genericSplit, TaskAttemptContext context)
+            throws IOException {
+        }
+
+        @Override
+        public void close() throws IOException {
+        }
+
+        @Override
+        public NullWritable getCurrentKey() {
+            return NullWritable.get();
+        }
+
+        @Override
+        public NullWritable getCurrentValue() {
+            return NullWritable.get();
+        }
+
+        @Override
+        public float getProgress() {
+            return 1.0f;
+        }
+
+        @Override
+        public boolean nextKeyValue() throws IOException {
+            return false;
         }
     }
 }

@@ -164,7 +164,7 @@ public class HiveMetaStoreBridge {
         dbRef.set(HiveDataModelGenerator.CLUSTER_NAME, clusterName);
         dbRef.set(DESCRIPTION_ATTR, hiveDB.getDescription());
         dbRef.set("locationUri", hiveDB.getLocationUri());
-        dbRef.set("parameters", hiveDB.getParameters());
+        dbRef.set(HiveDataModelGenerator.PARAMETERS, hiveDB.getParameters());
         dbRef.set("ownerName", hiveDB.getOwnerName());
         if (hiveDB.getOwnerType() != null) {
             dbRef.set("ownerType", hiveDB.getOwnerType().getValue());
@@ -331,7 +331,7 @@ public class HiveMetaStoreBridge {
         List<Referenceable> partKeys = getColumns(hiveTable.getPartitionKeys(), tableQualifiedName);
         tableReference.set("partitionKeys", partKeys);
 
-        tableReference.set("parameters", hiveTable.getParameters());
+        tableReference.set(HiveDataModelGenerator.PARAMETERS, hiveTable.getParameters());
 
         if (hiveTable.getViewOriginalText() != null) {
             tableReference.set("viewOriginalText", hiveTable.getViewOriginalText());
@@ -480,7 +480,7 @@ public class HiveMetaStoreBridge {
         // ones will fix to identify partitions with differing schema.
         partRef.set("sd", sdReferenceable);
 
-        partRef.set("parameters", hivePart.getParameters());
+        partRef.set(HiveDataModelGenerator.PARAMETERS, hivePart.getParameters());
         return partRef;
     }
 
@@ -517,7 +517,7 @@ public class HiveMetaStoreBridge {
 
         serdeInfoStruct.set(HiveDataModelGenerator.NAME, serdeInfo.getName());
         serdeInfoStruct.set("serializationLib", serdeInfo.getSerializationLib());
-        serdeInfoStruct.set("parameters", serdeInfo.getParameters());
+        serdeInfoStruct.set(HiveDataModelGenerator.PARAMETERS, serdeInfo.getParameters());
 
         sdReferenceable.set("serdeInfo", serdeInfoStruct);
         sdReferenceable.set(HiveDataModelGenerator.STORAGE_NUM_BUCKETS, storageDesc.getNumBuckets());
@@ -552,7 +552,7 @@ public class HiveMetaStoreBridge {
             sdReferenceable.set("bucketCols", storageDesc.getBucketCols());
         }
 
-        sdReferenceable.set("parameters", storageDesc.getParameters());
+        sdReferenceable.set(HiveDataModelGenerator.PARAMETERS, storageDesc.getParameters());
         sdReferenceable.set("storedAsSubDirectories", storageDesc.isStoredAsSubDirectories());
 
         return sdReferenceable;
