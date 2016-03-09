@@ -18,12 +18,16 @@
 
 package org.apache.atlas.hive.hook;
 
+import com.google.common.collect.ImmutableList;
+import groovy.transform.Immutable;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
 import org.apache.atlas.typesystem.Referenceable;
+import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
@@ -55,6 +59,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -77,11 +82,6 @@ public class HiveHookIT {
         //Run in local mode
         conf.set("mapreduce.framework.name", "local");
         conf.set("fs.default.name", "file:///'");
-        conf.setClassLoader(Thread.currentThread().getContextClassLoader());
-        conf.setClass("org.apache.atlas.hive.hook.TestInputFormat", TestInputFormat.class, InputFormat.class);
-        Path path = Paths.get(TestInputFormat.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-        System.out.println("Setting HIVE_AUX_JARS to " + path.toString());
-        conf.setAuxJars(path.toString());
         driver = new Driver(conf);
         ss = new SessionState(conf, System.getProperty("user.name"));
         ss = SessionState.start(ss);
@@ -335,16 +335,6 @@ public class HiveHookIT {
         Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_INPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat");
         Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_OUTPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat");
 
-        final String testInputFormat = "org.apache.atlas.hive.hook.TestInputFormat";
-        final String testOutputFormat = "org.apache.hadoop.mapreduce.lib.input.TextOutputFormat";
-        query = "alter table " + tableName + " set FILEFORMAT INPUTFORMAT '" + testInputFormat + "' OUTPUTFORMAT '" + testOutputFormat + "' SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'";
-        runCommand(query);
-
-        tableRef = dgiCLient.getEntity(tableId);
-        sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
-        Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_INPUT_FMT), testInputFormat);
-        Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_OUTPUT_FMT), testOutputFormat);
-
         /**
          * Hive Talter Table stored as is not supported - See https://issues.apache.org/jira/browse/HIVE-9576
          * query = "alter table " + tableName + " STORED AS " + testFormat.toUpperCase();
@@ -358,43 +348,117 @@ public class HiveHookIT {
          */
     }
 
-    public void TestAlterTableBucketingClusterSort() {
-//        case ALTERTABLE_CLUSTER_SORT:
-//        case ALTERTABLE_BUCKETNUM:
+    @Test
+    public void testAlterTableBucketingClusterSort() throws Exception {
+
+        String tableName = createTable();
+
+        ImmutableList<String> cols = ImmutableList.<String>of("id");
+        runBucketSortQuery(tableName, 5, cols, cols);
+
+        cols = ImmutableList.<String>of("id", "name");
+        runBucketSortQuery(tableName, 2, cols, cols);
     }
 
-    public void testAlterTableSerde() {
-//        case ALTERTABLE_SERDEPROPERTIES:
-//        case ALTERTABLE_SERIALIZER:
+    private void runBucketSortQuery(String tableName, int numBuckets,  ImmutableList<String> bucketCols,ImmutableList<String> sortCols) throws Exception {
+        final String fmtQuery = "alter table %s CLUSTERED BY (%s) SORTED BY (%s) INTO %s BUCKETS";
+        String query = String.format(fmtQuery, tableName, bucketCols.toString().substring(1, bucketCols.toString().lastIndexOf("]")), sortCols.toString().substring(1, sortCols.toString().lastIndexOf("]")), numBuckets);
+        runCommand(query);
+
+        verifyBucketSortingProperties(tableName, numBuckets, bucketCols, sortCols);
+    }
+
+    private void verifyBucketSortingProperties(String tableName, int numBuckets, ImmutableList<String> bucketColNames, ImmutableList<String>  sortcolNames) throws Exception {
+
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+
+        Referenceable tableRef = dgiCLient.getEntity(tableId);
+        Referenceable sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
+        Assert.assertEquals(((scala.math.BigInt) sdRef.get(HiveDataModelGenerator.STORAGE_NUM_BUCKETS)).intValue(), numBuckets);
+        Assert.assertEquals(sdRef.get("bucketCols"), bucketColNames);
+
+        List<Struct> hiveOrderStructList = (List<Struct>) sdRef.get("sortCols");
+        Assert.assertNotNull(hiveOrderStructList);
+        Assert.assertEquals(hiveOrderStructList.size(), sortcolNames.size());
+
+        for (int i = 0; i < sortcolNames.size(); i++) {
+            Assert.assertEquals(hiveOrderStructList.get(i).get("col"), sortcolNames.get(i));
+            Assert.assertEquals(((scala.math.BigInt)hiveOrderStructList.get(i).get("order")).intValue(), 1);
+        }
+    }
+
+    @Test
+    public void testAlterTableSerde() throws Exception {
+        //SERDE PROPERTIES
+        String tableName = createTable();
+        Map<String, String> expectedProps = new HashMap<String, String>() {{
+            put("testPropKey", "testPropValue");
+        }};
+
+        runSerdePropsQuery(tableName, "testPropKey", "testPropValue", expectedProps);
+
+        expectedProps.put("testPropKey1", "testPropValue1");
+
+        //Add another property
+        runSerdePropsQuery(tableName, "testPropKey1", "testPropValue1", expectedProps);
+
+    }
+
+    private void runSerdePropsQuery(String tableName, final String testPropKey, final String testPropValue, Map<String, String> expectedProps) throws Exception {
+
+        String query = String.format("alter table %s set SERDEPROPERTIES ('%s' = '%s')", tableName, testPropKey, testPropValue);
+        runCommand(query);
+
+        verifyTableSdProperties(tableName, expectedProps);
     }
 
     @Test
     public void testAlterTableProperties() throws Exception {
         String tableName = createTable();
         final String testComment = "test comment";
-        String testPropKey = "testPropKey";
-        String testPropValue = "testPropValue";
-        String query = "alter table " + tableName + " set TBLPROPERTIES " + "('comment' = 'test comment', 'testPropKey'='testPropValue')";
+        final String testPropKey = "testPropKey";
+        final String testPropValue = "testPropValue";
+        String query = String.format("alter table %s set TBLPROPERTIES ('comment' = 'test comment', '%s' = '%s')", tableName, testPropKey, testPropValue);
         runCommand(query);
 
-        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        verifyTableProperties(tableName, new HashMap<String, String>() {{
+            put(HiveDataModelGenerator.COMMENT, testComment);
+            put(testPropKey, testPropValue);
+        }});
 
+        final String newtestPropKey = "testPropKey1";
+        final String newtestPropValue = "testPropValue1";
+        //Add another property
+        query = String.format("alter table %s set TBLPROPERTIES ('%s'='%s')", tableName, newtestPropKey, newtestPropValue);
+        runCommand(query);
+
+        verifyTableProperties(tableName, new HashMap<String, String>() {{
+            put(HiveDataModelGenerator.COMMENT, testComment);
+            put(newtestPropKey, newtestPropValue);
+        }});
+    }
+
+    private void verifyTableProperties(String tableName, Map<String, String> expectedProps) throws Exception {
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
         Referenceable tableRef = dgiCLient.getEntity(tableId);
         Map<String, String> parameters = (Map<String, String>) tableRef.get(HiveDataModelGenerator.PARAMETERS);
         Assert.assertNotNull(parameters);
-        Assert.assertEquals(parameters.get(HiveDataModelGenerator.COMMENT), testComment);
-        Assert.assertEquals(parameters.get(testPropKey), testPropValue);
+        //Comment should exist since SET TBLPOPERTIES only adds properties. Doe not remove existing ones
+        for (String propKey : expectedProps.keySet()) {
+            Assert.assertEquals(parameters.get(propKey), expectedProps.get(propKey));
+        }
+    }
 
-        testPropKey = "testPropKey1";
-        testPropValue = "testPropValue1";
-        //Remove comment and one of the properties and add another
-        query = "alter table " + tableName + " set TBLPROPERTIES " + "('" + testPropKey + "'='" + testPropValue + "')";
-        runCommand(query);
-
-        tableRef = dgiCLient.getEntity(tableId);
-        parameters = (Map<String, String>) tableRef.get(HiveDataModelGenerator.PARAMETERS);
+    private void verifyTableSdProperties(String tableName, Map<String, String> expectedProps) throws Exception {
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        Referenceable tableRef = dgiCLient.getEntity(tableId);
+        Referenceable sdRef = (Referenceable) tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
+        Map<String, String> parameters = (Map<String, String>) sdRef.get(HiveDataModelGenerator.PARAMETERS);
         Assert.assertNotNull(parameters);
-        Assert.assertEquals(parameters.get(testPropKey), testPropValue);
+        //Comment should exist since SET TBLPOPERTIES only adds properties. Doe not remove existing ones
+        for (String propKey : expectedProps.keySet()) {
+            Assert.assertEquals(parameters.get(propKey), expectedProps.get(propKey));
+        }
     }
 
     private String assertProcessIsRegistered(String queryStr) throws Exception {
@@ -537,78 +601,6 @@ public class HiveHookIT {
         }
         if (!eval) {
             throw new Exception("Waiting timed out after " + timeout + " msec");
-        }
-    }
-
-    /**
-     * An empty InputFormat.
-     */
-    public static class TestInputFormat extends InputFormat<NullWritable, NullWritable> {
-
-        public List<InputSplit> getSplits(JobContext job)
-            throws IOException {
-            List<InputSplit> res = new ArrayList<InputSplit>();
-            res.add(new NullSplit());
-            return res;
-        }
-
-        public RecordReader<NullWritable, NullWritable>
-        createRecordReader(InputSplit split,
-            TaskAttemptContext context)
-            throws IOException {
-            return new NullRecordReader();
-        }
-    }
-
-    /**
-     * An empty splitter.
-     */
-    public static class NullSplit extends InputSplit implements Writable {
-        public long getLength() { return 0; }
-
-        public String[] getLocations() throws IOException {
-            return new String[]{};
-        }
-
-        @Override
-        public void write(DataOutput out) throws IOException {}
-
-        @Override
-        public void readFields(DataInput in) throws IOException {}
-    }
-
-    /**
-     * An empty record reader.
-     */
-    public static class NullRecordReader
-        extends RecordReader<NullWritable, NullWritable> {
-        @Override
-        public void initialize(InputSplit genericSplit, TaskAttemptContext context)
-            throws IOException {
-        }
-
-        @Override
-        public void close() throws IOException {
-        }
-
-        @Override
-        public NullWritable getCurrentKey() {
-            return NullWritable.get();
-        }
-
-        @Override
-        public NullWritable getCurrentValue() {
-            return NullWritable.get();
-        }
-
-        @Override
-        public float getProgress() {
-            return 1.0f;
-        }
-
-        @Override
-        public boolean nextKeyValue() throws IOException {
-            return false;
         }
     }
 }
