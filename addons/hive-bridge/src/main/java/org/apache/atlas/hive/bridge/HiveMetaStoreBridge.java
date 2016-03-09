@@ -546,6 +546,8 @@ public class HiveMetaStoreBridge {
         sdReferenceable.set("location", storageDesc.getLocation());
         sdReferenceable.set("inputFormat", storageDesc.getInputFormat());
         sdReferenceable.set("outputFormat", storageDesc.getOutputFormat());
+
+        System.out.println("Setting compressed to : " + storageDesc.isCompressed());
         sdReferenceable.set("compressed", storageDesc.isCompressed());
 
         if (storageDesc.getBucketCols().size() > 0) {

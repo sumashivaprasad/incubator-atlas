@@ -56,6 +56,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -82,6 +83,14 @@ public class HiveHookIT {
         //Run in local mode
         conf.set("mapreduce.framework.name", "local");
         conf.set("fs.default.name", "file:///'");
+        conf.setClassLoader(Thread.currentThread().getContextClassLoader());
+
+        System.out.println("Classloader = " + conf.getClassLoader());
+        System.out.println("aux jars = " + conf.getAuxJars());
+
+        System.out.println("sys classpath = " + System.getProperty("java.class.path"));
+        System.out.println("classpath = " + ((URLClassLoader)conf.getClassLoader()).getURLs());
+
         driver = new Driver(conf);
         ss = new SessionState(conf, System.getProperty("user.name"));
         ss = SessionState.start(ss);
@@ -334,9 +343,17 @@ public class HiveHookIT {
         Referenceable sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
         Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_INPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat");
         Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_DESC_OUTPUT_FMT), "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat");
+        Assert.assertNotNull(sdRef.get("serdeInfo"));
+
+        Struct serdeInfo = (Struct) sdRef.get("serdeInfo");
+        Assert.assertEquals(serdeInfo.get("serializationLib"), "org.apache.hadoop.hive.ql.io.orc.OrcSerde");
+        Assert.assertEquals(serdeInfo.get("compressed"), false);
+        Assert.assertNotNull(serdeInfo.get(HiveDataModelGenerator.PARAMETERS));
+        Assert.assertEquals(((Map<String, String>)serdeInfo.get(HiveDataModelGenerator.PARAMETERS)).get("serialization.format"), "1");
+
 
         /**
-         * Hive Talter Table stored as is not supported - See https://issues.apache.org/jira/browse/HIVE-9576
+         * Hive 'alter table stored as' is not supported - See https://issues.apache.org/jira/browse/HIVE-9576
          * query = "alter table " + tableName + " STORED AS " + testFormat.toUpperCase();
          * runCommand(query);
 
@@ -406,7 +423,7 @@ public class HiveHookIT {
 
     private void runSerdePropsQuery(String tableName, final String testPropKey, final String testPropValue, Map<String, String> expectedProps) throws Exception {
 
-        String query = String.format("alter table %s set SERDEPROPERTIES ('%s' = '%s')", tableName, testPropKey, testPropValue);
+        String query = String.format("alter table %s set SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' WITH SERDEPROPERTIES ('%s' = '%s')", tableName, testPropKey, testPropValue);
         runCommand(query);
 
         verifyTableSdProperties(tableName, expectedProps);
