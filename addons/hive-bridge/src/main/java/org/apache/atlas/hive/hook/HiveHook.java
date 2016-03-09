@@ -81,7 +81,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private static final int WAIT_TIME = 3;
     private static ExecutorService executor;
 
-    private static final int minThreadsDefault = 5;
+    private static final int minThreadsDefault = 1;
     private static final int maxThreadsDefault = 5;
     private static final long keepAliveTimeDefault = 10;
     private static final int queueSizeDefault = 10000;
@@ -245,6 +245,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_ADDCOLS:
         case ALTERTABLE_REPLACECOLS:
         case ALTERTABLE_RENAMECOL:
+            alterTable(dgiBridge, event);
             break;
 
         default:
