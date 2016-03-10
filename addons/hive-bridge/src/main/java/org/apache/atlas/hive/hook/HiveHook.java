@@ -237,6 +237,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_SERDEPROPERTIES:
         case ALTERTABLE_SERIALIZER:
             alterTable(dgiBridge, event);
+            break;
 
         case ALTERVIEW_AS:
             //update inputs/outputs?
@@ -261,11 +262,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         for (WriteEntity writeEntity : event.outputs) {
            //Below check should  filter out partition related
            if (writeEntity.getType() == Entity.Type.TABLE) {
-               Table newTable = writeEntity.getTable();
-                //Reload table since hive is not providing the updated column set here
-               Table updatedTable = dgiBridge.hiveClient.getTable(newTable.getDbName(), newTable.getTableName());
-               writeEntity.setT(updatedTable);
-
                //Create/update table entity
                createOrUpdateEntities(dgiBridge, writeEntity);
            }
