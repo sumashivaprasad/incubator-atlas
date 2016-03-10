@@ -217,6 +217,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         case CREATETABLE_AS_SELECT:
         case CREATEVIEW:
+        case ALTERVIEW_AS:
         case LOAD:
         case EXPORT:
         case IMPORT:
@@ -234,12 +235,10 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_CLUSTER_SORT:
         case ALTERTABLE_BUCKETNUM:
         case ALTERTABLE_PROPERTIES:
+        case ALTERVIEW_PROPERTIES:
         case ALTERTABLE_SERDEPROPERTIES:
         case ALTERTABLE_SERIALIZER:
             alterTable(dgiBridge, event);
-
-        case ALTERVIEW_AS:
-            //update inputs/outputs?
             break;
 
         case ALTERTABLE_ADDCOLS:

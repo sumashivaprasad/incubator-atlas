@@ -19,10 +19,8 @@
 package org.apache.atlas.hive.hook;
 
 import com.google.common.collect.ImmutableList;
-import groovy.transform.Immutable;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
-import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
@@ -38,13 +36,6 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
@@ -52,14 +43,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.File;
-import java.io.IOException;
-import java.net.URLClassLoader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -217,6 +201,55 @@ public class HiveHookIT {
         assertProcessIsRegistered(query);
         assertTableIsRegistered(DEFAULT_DB, viewName);
     }
+
+    @Test
+    public void testAlterViewAsSelect() throws Exception {
+
+        //Create the view from table1
+        String table1Name = createTable();
+        String viewName = tableName();
+        String query = "create view " + viewName + " as select * from " + table1Name;
+        runCommand(query);
+
+        String table1Id = assertTableIsRegistered(DEFAULT_DB, table1Name);
+        assertProcessIsRegistered(query);
+        String viewId = assertTableIsRegistered(DEFAULT_DB, viewName);
+
+        //Check lineage which includes table1
+        String datasetName = HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, viewName);
+        JSONObject response = dgiCLient.getInputGraph(datasetName);
+        JSONObject vertices = response.getJSONObject("values").getJSONObject("vertices");
+        Assert.assertTrue(vertices.has(viewId));
+        Assert.assertTrue(vertices.has(table1Id));
+
+        //Alter the view from table2
+        String table2Name = createTable();
+        query = "alter view " + viewName + " as select * from " + table2Name;
+        runCommand(query);
+
+        assertProcessIsRegistered(query);
+        String table2Id = assertTableIsRegistered(DEFAULT_DB, table2Name);
+
+        Assert.assertEquals(assertTableIsRegistered(DEFAULT_DB, viewName), viewId);
+
+        //Check lineage which includes table1 and table2
+        datasetName = HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, viewName);
+        response = dgiCLient.getInputGraph(datasetName);
+        vertices = response.getJSONObject("values").getJSONObject("vertices");
+        Assert.assertTrue(vertices.has(viewId));
+
+        //THis is through the alter view process
+        Assert.assertTrue(vertices.has(table2Id));
+
+        //THis is through the Create view process
+        Assert.assertTrue(vertices.has(table1Id));
+
+        //Outputs dont exist
+        response = dgiCLient.getOutputGraph(datasetName);
+        vertices = response.getJSONObject("values").getJSONObject("vertices");
+        Assert.assertEquals(vertices.length(), 0);
+    }
+
 
     @Test
     public void testLoadData() throws Exception {
@@ -531,12 +564,16 @@ public class HiveHookIT {
     @Test
     public void testAlterTableProperties() throws Exception {
         String tableName = createTable();
+        final String fmtQuery = "alter table %s set TBLPROPERTIES (%s)";
+        testAlterProperties(tableName, fmtQuery);
+    }
+
+    private void testAlterProperties(String tableName, String fmtQuery) throws Exception {
         final Map<String, String> expectedProps = new HashMap<String, String>() {{
             put("testPropKey1", "testPropValue1");
             put("comment", "test comment");
         }};
 
-        final String fmtQuery = "alter table %s set TBLPROPERTIES (%s)";
         String query = String.format(fmtQuery, tableName, getSerializedProps(expectedProps));
         runCommand(query);
 
@@ -549,6 +586,16 @@ public class HiveHookIT {
         runCommand(query);
 
         verifyTableProperties(tableName, expectedProps);
+    }
+
+    @Test
+    public void testAlterViewProperties() throws Exception {
+        String tableName = createTable();
+        final String fmtQuery = "alter view %s set TBLPROPERTIES (%s)";
+        String viewName = tableName();
+        String query = "create view " + viewName + " as select * from " + tableName;
+        runCommand(query);
+        testAlterProperties(viewName, fmtQuery);
     }
 
     private void verifyTableProperties(String tableName, Map<String, String> expectedProps) throws Exception {
