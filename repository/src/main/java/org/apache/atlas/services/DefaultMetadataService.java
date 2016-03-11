@@ -20,6 +20,7 @@ package org.apache.atlas.services;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provider;
 
 import org.apache.atlas.AtlasClient;
@@ -68,6 +69,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -89,18 +91,28 @@ public class DefaultMetadataService implements MetadataService {
     private final TypeSystem typeSystem;
     private final MetadataRepository repository;
     private final ITypeStore typeStore;
+    private IBootstrapTypesRegistrar typesRegistrar;
     private final Collection<Provider<TypesChangeListener>> typeChangeListeners;
 
     @Inject
     DefaultMetadataService(final MetadataRepository repository, final ITypeStore typeStore,
+                           final IBootstrapTypesRegistrar typesRegistrar,
         final Collection<Provider<TypesChangeListener>> typeChangeListeners) throws AtlasException {
+        this(repository, typeStore, typesRegistrar, typeChangeListeners, TypeSystem.getInstance());
+    }
 
+    DefaultMetadataService(final MetadataRepository repository, final ITypeStore typeStore,
+                           final IBootstrapTypesRegistrar typesRegistrar,
+                           final Collection<Provider<TypesChangeListener>> typeChangeListeners,
+                           final TypeSystem typeSystem) throws AtlasException {
         this.typeStore = typeStore;
-        this.typeSystem = TypeSystem.getInstance();
+        this.typesRegistrar = typesRegistrar;
+        this.typeSystem = typeSystem;
         this.repository = repository;
 
         this.typeChangeListeners = typeChangeListeners;
         restoreTypeSystem();
+        typesRegistrar.registerTypes(ReservedTypesRegistrar.getTypesDir(), typeSystem, this);
     }
 
     private void restoreTypeSystem() {
@@ -111,7 +123,6 @@ public class DefaultMetadataService implements MetadataService {
 
             // restore types before creating super types
             createSuperTypes();
-
         } catch (AtlasException e) {
             throw new RuntimeException(e);
         }
@@ -126,17 +137,17 @@ public class DefaultMetadataService implements MetadataService {
     @InterfaceAudience.Private
     private void createSuperTypes() throws AtlasException {
         HierarchicalTypeDefinition<ClassType> infraType = TypesUtil
-                .createClassTypeDef(AtlasClient.INFRASTRUCTURE_SUPER_TYPE, ImmutableList.<String>of(), NAME_ATTRIBUTE,
+                .createClassTypeDef(AtlasClient.INFRASTRUCTURE_SUPER_TYPE, ImmutableSet.<String>of(), NAME_ATTRIBUTE,
                         DESCRIPTION_ATTRIBUTE);
         createType(infraType);
 
         HierarchicalTypeDefinition<ClassType> datasetType = TypesUtil
-                .createClassTypeDef(AtlasClient.DATA_SET_SUPER_TYPE, ImmutableList.<String>of(), NAME_ATTRIBUTE,
+                .createClassTypeDef(AtlasClient.DATA_SET_SUPER_TYPE, ImmutableSet.<String>of(), NAME_ATTRIBUTE,
                         DESCRIPTION_ATTRIBUTE);
         createType(datasetType);
 
         HierarchicalTypeDefinition<ClassType> processType = TypesUtil
-                .createClassTypeDef(AtlasClient.PROCESS_SUPER_TYPE, ImmutableList.<String>of(), NAME_ATTRIBUTE,
+                .createClassTypeDef(AtlasClient.PROCESS_SUPER_TYPE, ImmutableSet.<String>of(), NAME_ATTRIBUTE,
                         DESCRIPTION_ATTRIBUTE,
                         new AttributeDefinition("inputs", DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
                                 Multiplicity.OPTIONAL, false, null),
@@ -145,7 +156,7 @@ public class DefaultMetadataService implements MetadataService {
         createType(processType);
 
         HierarchicalTypeDefinition<ClassType> referenceableType = TypesUtil
-                .createClassTypeDef(AtlasClient.REFERENCEABLE_SUPER_TYPE, ImmutableList.<String>of(),
+                .createClassTypeDef(AtlasClient.REFERENCEABLE_SUPER_TYPE, ImmutableSet.<String>of(),
                         TypesUtil.createUniqueRequiredAttrDef(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                                 DataTypes.STRING_TYPE));
         createType(referenceableType);

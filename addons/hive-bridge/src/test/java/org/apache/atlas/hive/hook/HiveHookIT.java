@@ -21,6 +21,7 @@ package org.apache.atlas.hive.hook;
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
@@ -74,6 +75,8 @@ public class HiveHookIT {
         SessionState.setCurrentSessionState(ss);
 
         Configuration configuration = ApplicationProperties.get();
+        HiveMetaStoreBridge hiveMetaStoreBridge = new HiveMetaStoreBridge(conf, configuration);
+        hiveMetaStoreBridge.registerHiveDataModel();
         dgiCLient = new AtlasClient(configuration.getString(HiveMetaStoreBridge.ATLAS_ENDPOINT, DGI_URL));
     }
 
@@ -465,7 +468,7 @@ public class HiveHookIT {
         Struct serdeInfo = (Struct) sdRef.get("serdeInfo");
         Assert.assertEquals(serdeInfo.get("serializationLib"), "org.apache.hadoop.hive.ql.io.orc.OrcSerde");
         Assert.assertNotNull(serdeInfo.get(HiveDataModelGenerator.PARAMETERS));
-        Assert.assertEquals(((Map<String, String>)serdeInfo.get(HiveDataModelGenerator.PARAMETERS)).get("serialization.format"), "1");
+        Assert.assertEquals(((Map<String, String>) serdeInfo.get(HiveDataModelGenerator.PARAMETERS)).get("serialization.format"), "1");
 
 
         /**
@@ -483,9 +486,7 @@ public class HiveHookIT {
 
     @Test
     public void testAlterTableBucketingClusterSort() throws Exception {
-
         String tableName = createTable();
-
         ImmutableList<String> cols = ImmutableList.<String>of("id");
         runBucketSortQuery(tableName, 5, cols, cols);
 
@@ -495,10 +496,14 @@ public class HiveHookIT {
 
     private void runBucketSortQuery(String tableName, int numBuckets,  ImmutableList<String> bucketCols,ImmutableList<String> sortCols) throws Exception {
         final String fmtQuery = "alter table %s CLUSTERED BY (%s) SORTED BY (%s) INTO %s BUCKETS";
-        String query = String.format(fmtQuery, tableName, bucketCols.toString().substring(1, bucketCols.toString().lastIndexOf("]")), sortCols.toString().substring(1, sortCols.toString().lastIndexOf("]")), numBuckets);
+        String query = String.format(fmtQuery, tableName, stripListBrackets(bucketCols.toString()), stripListBrackets(sortCols.toString()), numBuckets);
         runCommand(query);
 
         verifyBucketSortingProperties(tableName, numBuckets, bucketCols, sortCols);
+    }
+
+    private String stripListBrackets(String listElements) {
+        return StringUtils.strip(StringUtils.strip(listElements, "["), "]");
     }
 
     private void verifyBucketSortingProperties(String tableName, int numBuckets, ImmutableList<String> bucketColNames, ImmutableList<String>  sortcolNames) throws Exception {
@@ -685,7 +690,7 @@ public class HiveHookIT {
     }
 
     private String assertEntityIsRegistered(final String query, String... arg) throws Exception {
-        waitFor(20000, new Predicate() {
+        waitFor(60000, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
                 JSONArray results = dgiCLient.search(query);

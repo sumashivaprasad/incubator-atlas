@@ -19,8 +19,11 @@
 package org.apache.atlas.sqoop.model;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.addons.ModelDefinitionDump;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
@@ -130,7 +133,7 @@ public class SqoopDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, SqoopDataTypes.SQOOP_DBDATASTORE.getName(), null,
-                        ImmutableList.of(AtlasClient.DATA_SET_SUPER_TYPE), attributeDefinitions);
+                    ImmutableSet.of(AtlasClient.DATA_SET_SUPER_TYPE), attributeDefinitions);
         classTypeDefinitions.put(SqoopDataTypes.SQOOP_DBDATASTORE.getName(), definition);
         LOG.debug("Created definition for " + SqoopDataTypes.SQOOP_DBDATASTORE.getName());
     }
@@ -149,7 +152,7 @@ public class SqoopDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, SqoopDataTypes.SQOOP_PROCESS.getName(), null,
-                        ImmutableList.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions);
+                    ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions);
         classTypeDefinitions.put(SqoopDataTypes.SQOOP_PROCESS.getName(), definition);
         LOG.debug("Created definition for " + SqoopDataTypes.SQOOP_PROCESS.getName());
     }
@@ -161,7 +164,14 @@ public class SqoopDataModelGenerator {
 
     public static void main(String[] args) throws Exception {
         SqoopDataModelGenerator dataModelGenerator = new SqoopDataModelGenerator();
-        System.out.println("sqoopDataModelAsJSON = " + dataModelGenerator.getModelAsJson());
+        String modelAsJson = dataModelGenerator.getModelAsJson();
+
+        if (args.length == 1) {
+            ModelDefinitionDump.dumpModelToFile(args[0], modelAsJson);
+            return;
+        }
+
+        System.out.println("sqoopDataModelAsJSON = " + modelAsJson);
 
         TypesDef typesDef = dataModelGenerator.getTypesDef();
         for (EnumTypeDefinition enumType : typesDef.enumTypesAsJavaList()) {

@@ -86,7 +86,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private static final long keepAliveTimeDefault = 10;
     private static final int queueSizeDefault = 10000;
 
-    private static boolean typesRegistered = false;
     private static Configuration atlasProperties;
 
     class HiveEvent {
@@ -201,11 +200,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         HiveMetaStoreBridge dgiBridge = new HiveMetaStoreBridge(hiveConf, atlasProperties, event.user, event.ugi);
 
-        if (!typesRegistered) {
-            dgiBridge.registerHiveDataModel();
-            typesRegistered = true;
-        }
-
         switch (event.operation) {
         case CREATEDATABASE:
             handleEventOutputs(dgiBridge, event, Type.DATABASE);
@@ -260,11 +254,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         for (WriteEntity writeEntity : event.outputs) {
            //Below check should  filter out partition related
            if (writeEntity.getType() == Entity.Type.TABLE) {
-               Table newTable = writeEntity.getTable();
-                //Reload table since hive is not providing the updated column set here
-               Table updatedTable = dgiBridge.hiveClient.getTable(newTable.getDbName(), newTable.getTableName());
-               writeEntity.setT(updatedTable);
-
                //Create/update table entity
                createOrUpdateEntities(dgiBridge, writeEntity);
            }
