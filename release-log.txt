@@ -2,6 +2,9 @@ Apache Atlas Release Notes
 ==========================
 
 ALL CHANGES:
+ATLAS-522 Support Alter table commands (sumasai via shwethags)
+ATLAS-471 Atlas Server could run out of memory due to Scala memory leak (yhemanth via sumasai)
+ATLAS-486 Updated pom.xml to fix scm url and upgrade plugin (sneethiraj via sumasai)
 ATLAS-457 Upgrade to 0.9 version of Kafka dependency (yhemanth via shwethags)
 ATLAS-398 Delete trait that exists but not linked to entity results in "400 Bad request". It should result "404 not found" (ndjouhr via shwethags)
 ATLAS-372 Expose entity deletion through REST API (dkantor via shwethags)
