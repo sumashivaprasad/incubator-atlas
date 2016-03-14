@@ -18,6 +18,7 @@
 
 package org.apache.atlas.hive.hook;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
@@ -230,21 +231,21 @@ public class HiveHookIT {
         query = "alter view " + viewName + " as select * from " + table2Name;
         runCommand(query);
 
+        //Check if alter view process is reqistered
         assertProcessIsRegistered(query);
         String table2Id = assertTableIsRegistered(DEFAULT_DB, table2Name);
-
         Assert.assertEquals(assertTableIsRegistered(DEFAULT_DB, viewName), viewId);
 
-        //Check lineage which includes table1 and table2
+        //Check lineage which includes both table1 and table2
         datasetName = HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, viewName);
         response = dgiCLient.getInputGraph(datasetName);
         vertices = response.getJSONObject("values").getJSONObject("vertices");
         Assert.assertTrue(vertices.has(viewId));
 
-        //THis is through the alter view process
+        //This is through the alter view process
         Assert.assertTrue(vertices.has(table2Id));
 
-        //THis is through the Create view process
+        //This is through the Create view process
         Assert.assertTrue(vertices.has(table1Id));
 
         //Outputs dont exist
@@ -554,7 +555,7 @@ public class HiveHookIT {
     }
 
     private String getSerializedProps(Map<String, String> expectedProps) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for(String expectedPropKey : expectedProps.keySet()) {
             if(sb.length() > 0) {
                 sb.append(",");
@@ -569,48 +570,68 @@ public class HiveHookIT {
     @Test
     public void testAlterTableProperties() throws Exception {
         String tableName = createTable();
-        final String fmtQuery = "alter table %s set TBLPROPERTIES (%s)";
+        final String fmtQuery = "alter table %s %s TBLPROPERTIES (%s)";
         testAlterProperties(tableName, fmtQuery);
     }
 
     private void testAlterProperties(String tableName, String fmtQuery) throws Exception {
+
+        final String SET_OP = "set";
+        final String UNSET_OP = "unset";
+
         final Map<String, String> expectedProps = new HashMap<String, String>() {{
             put("testPropKey1", "testPropValue1");
             put("comment", "test comment");
         }};
 
-        String query = String.format(fmtQuery, tableName, getSerializedProps(expectedProps));
+        String query = String.format(fmtQuery, tableName, SET_OP, getSerializedProps(expectedProps));
         runCommand(query);
 
-        verifyTableProperties(tableName, expectedProps);
-
+        verifyTableProperties(tableName, expectedProps, false);
 
         expectedProps.put("testPropKey2", "testPropValue2");
         //Add another property
-        query = String.format(fmtQuery, tableName, getSerializedProps(expectedProps));
+        query = String.format(fmtQuery, tableName, SET_OP, getSerializedProps(expectedProps));
         runCommand(query);
 
-        verifyTableProperties(tableName, expectedProps);
+        verifyTableProperties(tableName, expectedProps, false);
+
+        //Unset all the props
+        StringBuilder sb = new StringBuilder("'");
+        query = String.format(fmtQuery, tableName, UNSET_OP, Joiner.on("','").skipNulls().appendTo(sb, expectedProps.keySet()).append('\''));
+        runCommand(query);
+
+        verifyTableProperties(tableName, expectedProps, true);
     }
 
     @Test
     public void testAlterViewProperties() throws Exception {
         String tableName = createTable();
-        final String fmtQuery = "alter view %s set TBLPROPERTIES (%s)";
         String viewName = tableName();
         String query = "create view " + viewName + " as select * from " + tableName;
         runCommand(query);
+
+        final String fmtQuery = "alter view %s %s TBLPROPERTIES (%s)";
         testAlterProperties(viewName, fmtQuery);
     }
 
-    private void verifyTableProperties(String tableName, Map<String, String> expectedProps) throws Exception {
+    private void verifyTableProperties(String tableName, Map<String, String> expectedProps, boolean checkIfNotExists) throws Exception {
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
         Referenceable tableRef = dgiCLient.getEntity(tableId);
         Map<String, String> parameters = (Map<String, String>) tableRef.get(HiveDataModelGenerator.PARAMETERS);
-        Assert.assertNotNull(parameters);
-        //Comment should exist since SET TBLPOPERTIES only adds properties. Doe not remove existing ones
-        for (String propKey : expectedProps.keySet()) {
-            Assert.assertEquals(parameters.get(propKey), expectedProps.get(propKey));
+        if (checkIfNotExists == false) {
+            //Check if properties exist
+            Assert.assertNotNull(parameters);
+            for (String propKey : expectedProps.keySet()) {
+                Assert.assertEquals(parameters.get(propKey), expectedProps.get(propKey));
+            }
+        } else {
+            //Check if properties dont exist
+            if (expectedProps != null && parameters != null) {
+                for (String propKey : expectedProps.keySet()) {
+                    Assert.assertFalse(parameters.containsKey(propKey));
+                }
+            }
         }
     }
 
