@@ -22,7 +22,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
-import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
@@ -208,7 +207,6 @@ public class HiveHookIT {
 
     @Test
     public void testAlterViewAsSelect() throws Exception {
-
         //Create the view from table1
         String table1Name = createTable();
         String viewName = tableName();
@@ -338,8 +336,17 @@ public class HiveHookIT {
         String query = "alter table " + tableName + " rename to " + newName;
         runCommand(query);
 
-        assertTableIsRegistered(DEFAULT_DB, newName);
+        String tableId = assertTableIsRegistered(DEFAULT_DB, newName);
         assertTableIsNotRegistered(DEFAULT_DB, tableName);
+
+        final String tableQFName = HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, newName);
+        Referenceable tableEntity = dgiCLient.getEntity(tableId);
+        List<Referenceable> columns = (List<Referenceable>) tableEntity.get(HiveDataModelGenerator.COLUMNS);
+        Assert.assertEquals(columns.get(0).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME),
+            HiveMetaStoreBridge.getColumnQualifiedName(tableQFName, "id"));
+
+        Referenceable sd = (Referenceable) tableEntity.get(HiveDataModelGenerator.STORAGE_DESC);
+        Assert.assertEquals(sd.get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME), tableQFName);
     }
 
     private List<Referenceable> getColumns(String dbName, String tableName) throws Exception {

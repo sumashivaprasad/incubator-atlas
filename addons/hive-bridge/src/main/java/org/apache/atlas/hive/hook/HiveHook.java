@@ -288,6 +288,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                     Referenceable newEntity = new Referenceable(HiveDataTypes.HIVE_TABLE.getName());
                     newEntity.set(HiveDataModelGenerator.NAME, newQualifiedName);
                     newEntity.set(HiveDataModelGenerator.TABLE_NAME, newTable.getTableName().toLowerCase());
+                    newEntity.set(HiveDataModelGenerator.COLUMNS, dgiBridge.getColumns(newTable.getCols(), newQualifiedName));
+                    newEntity.set(HiveDataModelGenerator.STORAGE_DESC, dgiBridge.fillStorageDescStruct(newTable.getSd(), newQualifiedName, newQualifiedName));
                     messages.add(new HookNotification.EntityPartialUpdateRequest(HiveDataTypes.HIVE_TABLE.getName(),
                             HiveDataModelGenerator.NAME, oldQualifiedName, newEntity));
                 }
