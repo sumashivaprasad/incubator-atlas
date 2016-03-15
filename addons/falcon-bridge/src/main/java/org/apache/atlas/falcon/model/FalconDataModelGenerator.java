@@ -19,8 +19,11 @@
 package org.apache.atlas.falcon.model;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.addons.ModelDefinitionDump;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
@@ -116,7 +119,7 @@ public class FalconDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, FalconDataTypes.FALCON_PROCESS_ENTITY.getName(), null,
-                        ImmutableList.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions);
+                    ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions);
         classTypeDefinitions.put(FalconDataTypes.FALCON_PROCESS_ENTITY.getName(), definition);
         LOG.debug("Created definition for {}", FalconDataTypes.FALCON_PROCESS_ENTITY.getName());
     }
@@ -130,7 +133,14 @@ public class FalconDataModelGenerator {
 
     public static void main(String[] args) throws Exception {
         FalconDataModelGenerator falconDataModelGenerator = new FalconDataModelGenerator();
-        System.out.println("falconDataModelAsJSON = " + falconDataModelGenerator.getModelAsJson());
+        String modelAsJson = falconDataModelGenerator.getModelAsJson();
+
+        if (args.length == 1) {
+            ModelDefinitionDump.dumpModelToFile(args[0], modelAsJson);
+            return;
+        }
+
+        System.out.println("falconDataModelAsJSON = " + modelAsJson);
 
         TypesDef typesDef = falconDataModelGenerator.getTypesDef();
         for (EnumTypeDefinition enumType : typesDef.enumTypesAsJavaList()) {
