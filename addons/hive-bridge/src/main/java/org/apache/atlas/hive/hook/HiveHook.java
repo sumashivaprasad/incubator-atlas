@@ -257,12 +257,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         for (WriteEntity writeEntity : event.outputs) {
             if (writeEntity.getType() == Type.DATABASE) {
-                Database newDB = writeEntity.getDatabase();
-
-//                //Reload DB since hive is not providing the updated info here
-//                Database updatedDB = dgiBridge.hiveClient.getDatabase(newDB.getName());
-//                writeEntity.setDatabase(updatedDB);
-
                 //Create/update table entity
                 createOrUpdateEntities(dgiBridge, writeEntity);
             }

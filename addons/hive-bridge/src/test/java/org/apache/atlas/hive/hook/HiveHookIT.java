@@ -584,14 +584,14 @@ public class HiveHookIT {
     @Test
     public void testAlterDBProperties() throws Exception {
         String dbName = createDatabase();
-        final String fmtQuery = "alter database %s set DBPROPERTIES (%s)";
+        final String fmtQuery = "alter database %s %s DBPROPERTIES (%s)";
         testAlterProperties(Entity.Type.DATABASE, dbName, fmtQuery);
     }
 
     @Test
     public void testAlterTableProperties() throws Exception {
         String tableName = createTable();
-        final String fmtQuery = "alter table %s set TBLPROPERTIES (%s)";
+        final String fmtQuery = "alter table %s %s TBLPROPERTIES (%s)";
         testAlterProperties(Entity.Type.TABLE, tableName, fmtQuery);
     }
 
@@ -606,20 +606,23 @@ public class HiveHookIT {
 
         String query = String.format(fmtQuery, entityName, SET_OP, getSerializedProps(expectedProps));
         runCommand(query);
-        verifyEntityProperties(entityType, entityName, expectedProps, true);
+        verifyEntityProperties(entityType, entityName, expectedProps, false);
 
         expectedProps.put("testPropKey2", "testPropValue2");
         //Add another property
         query = String.format(fmtQuery, entityName, SET_OP, getSerializedProps(expectedProps));
         runCommand(query);
-        verifyEntityProperties(entityType, entityName, expectedProps, true);
+        verifyEntityProperties(entityType, entityName, expectedProps, false);
 
-        //Unset all the props
-        StringBuilder sb = new StringBuilder("'");
-        query = String.format(fmtQuery, entityName, UNSET_OP, Joiner.on("','").skipNulls().appendTo(sb, expectedProps.keySet()).append('\''));
-        runCommand(query);
+        if (entityType != Entity.Type.DATABASE) {
+            //Database unset properties doesnt work strangely - alter database %s unset DBPROPERTIES doesnt work
+            //Unset all the props
+            StringBuilder sb = new StringBuilder("'");
+            query = String.format(fmtQuery, entityName, UNSET_OP, Joiner.on("','").skipNulls().appendTo(sb, expectedProps.keySet()).append('\''));
+            runCommand(query);
 
-        verifyEntityProperties(entityType, entityName, expectedProps, true);
+            verifyEntityProperties(entityType, entityName, expectedProps, true);
+        }
     }
 
     @Test
@@ -647,22 +650,7 @@ public class HiveHookIT {
         }
 
         Referenceable ref = dgiCLient.getEntity(entityId);
-        Map<String, String> parameters = (Map<String, String>) ref.get(HiveDataModelGenerator.PARAMETERS);
-
-        if (checkIfNotExists == false) {
-            //Check if properties exist
-            Assert.assertNotNull(parameters);
-            for (String propKey : expectedProps.keySet()) {
-                Assert.assertEquals(parameters.get(propKey), expectedProps.get(propKey));
-            }
-        } else {
-            //Check if properties dont exist
-            if (expectedProps != null && parameters != null) {
-                for (String propKey : expectedProps.keySet()) {
-                    Assert.assertFalse(parameters.containsKey(propKey));
-                }
-            }
-        }
+        verifyProperties(ref, expectedProps, checkIfNotExists);
     }
 
     private void verifyTableSdProperties(String tableName, String serdeLib, Map<String, String> expectedProps) throws Exception {
@@ -671,7 +659,7 @@ public class HiveHookIT {
         Referenceable sdRef = (Referenceable) tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
         Struct serdeInfo = (Struct) sdRef.get("serdeInfo");
         Assert.assertEquals(serdeInfo.get("serializationLib"), serdeLib);
-        verifyProperties(serdeInfo, expectedProps, true);
+        verifyProperties(serdeInfo, expectedProps, false);
     }
 
     private void verifyProperties(Struct referenceable, Map<String, String> expectedProps, boolean checkIfNotExists) {
