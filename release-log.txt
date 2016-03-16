@@ -2,6 +2,7 @@ Apache Atlas Release Notes
 ==========================
 
 ALL CHANGES:
+ATLAS-524 Support alter database (sumasai via shwethags)
 ATLAS-523 Support alter view (sumasai via shwethags)
 ATLAS-522 Support Alter table commands (sumasai via shwethags)
 ATLAS-471 Atlas Server could run out of memory due to Scala memory leak (yhemanth via sumasai)
