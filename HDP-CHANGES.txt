@@ -1,5 +1,6 @@
 Changes only in Hortonworks github and not in atlas-2.5.0 and hence not covered by CHANGES.txt.
 
+ATLAS-575 jetty-maven-plugin fails with ShutdownMonitorThread already started
 ATLAS-521 Support Alter Table column commands
 ATLAS-181 Integrate storm topology metadata into Atlas
 ATLAS-182 Add data model for Storm topology elements

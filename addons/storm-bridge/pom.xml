@@ -367,6 +367,7 @@
                     </systemProperties>
                     <stopKey>atlas-stop</stopKey>
                     <stopPort>31001</stopPort>
+                    <stopWait>10</stopWait>
                 </configuration>
                 <executions>
                     <execution>
