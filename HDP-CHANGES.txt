@@ -1,5 +1,6 @@
 Changes only in Hortonworks github and not in atlas-2.5.0 and hence not covered by CHANGES.txt.
 
+ATLAS-521 Support Alter Table column commands
 ATLAS-181 Integrate storm topology metadata into Atlas
 ATLAS-182 Add data model for Storm topology elements
 ATLAS-183 Add a Hook in Storm to post the topology metadata
