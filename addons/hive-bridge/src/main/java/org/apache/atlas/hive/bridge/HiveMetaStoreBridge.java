@@ -435,7 +435,11 @@ public class HiveMetaStoreBridge {
         List<Partition> tableParts = hiveClient.getPartitions(table);
 
         for (Partition hivePart : tableParts) {
-            registerPartition(tableReferenceable, sdReferenceable, hivePart);
+            if (hivePart.getValues() != null && hivePart.getValues().size() > 0) {
+                registerPartition(tableReferenceable, sdReferenceable, hivePart);
+            } else {
+                LOG.info("Skipping partition for table {} since partition values are null", getTableQualifiedName(clusterName, table.getDbName(), table.getTableName()));
+            }
         }
     }
 
