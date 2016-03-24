@@ -86,6 +86,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private static final long keepAliveTimeDefault = 10;
     private static final int queueSizeDefault = 10000;
 
+    private static boolean typesRegistered = false;
+
     private static Configuration atlasProperties;
 
     class HiveEvent {
@@ -199,6 +201,11 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         LOG.info("Entered Atlas hook for hook type {} operation {}", event.hookType, event.operation);
 
         HiveMetaStoreBridge dgiBridge = new HiveMetaStoreBridge(hiveConf, atlasProperties, event.user, event.ugi);
+
+        if (!typesRegistered) {
+            dgiBridge.registerHiveDataModel();
+            typesRegistered = true;
+        }
 
         switch (event.operation) {
         case CREATEDATABASE:
