@@ -16,6 +16,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
+
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -25,8 +26,8 @@
         <relativePath>../../</relativePath>
     </parent>
     <artifactId>hdfs-model</artifactId>
-    <description>Apache Atlas HDFS Model</description>
-    <name>Apache Atlas HDFS Model</name>
+    <description>Apache Atlas FileSystem Model</description>
+    <name>Apache Atlas FileSystem Model</name>
     <packaging>jar</packaging>
 
     <dependencies>
@@ -121,9 +122,9 @@
                 <executions>
                     <execution>
                         <configuration>
-                            <mainClass>org.apache.atlas.hdfs.model.HDFSDataModelGenerator</mainClass>
+                            <mainClass>org.apache.atlas.fs.model.FSDataModelGenerator</mainClass>
                             <arguments>
-                                <argument>${project.build.directory}/models/hdfs_model.json</argument>
+                                <argument>${project.build.directory}/models/fs_model.json</argument>
                             </arguments>
                         </configuration>
                         <phase>package</phase>
