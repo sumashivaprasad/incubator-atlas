@@ -221,6 +221,7 @@ public class HiveLineageJerseyResourceIT extends BaseResourceIT {
             String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(HIVE_TABLE_TYPE, traitNames);
         referenceable.set("name", name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("description", description);
         referenceable.set("owner", owner);
         referenceable.set("tableType", tableType);
@@ -238,6 +239,7 @@ public class HiveLineageJerseyResourceIT extends BaseResourceIT {
             String queryPlan, String queryId, String queryGraph, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(HIVE_PROCESS_TYPE, traitNames);
         referenceable.set("name", name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("user", user);
         referenceable.set("startTime", System.currentTimeMillis());
         referenceable.set("endTime", System.currentTimeMillis() + 10000);

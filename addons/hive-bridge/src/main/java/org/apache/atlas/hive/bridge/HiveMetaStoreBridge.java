@@ -308,8 +308,8 @@ public class HiveMetaStoreBridge {
             tableReference = new Referenceable(HiveDataTypes.HIVE_TABLE.getName());
         }
         String tableQualifiedName = getTableQualifiedName(clusterName, hiveTable.getDbName(), hiveTable.getTableName());
-        tableReference.set(HiveDataModelGenerator.NAME, tableQualifiedName);
-        tableReference.set(HiveDataModelGenerator.TABLE_NAME, hiveTable.getTableName().toLowerCase());
+        tableReference.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
+        tableReference.set(HiveDataModelGenerator.NAME, hiveTable.getTableName().toLowerCase());
         tableReference.set("owner", hiveTable.getOwner());
 
         tableReference.set("createTime", hiveTable.getMetadata().getProperty(hive_metastoreConstants.DDL_TIME));
@@ -324,7 +324,8 @@ public class HiveMetaStoreBridge {
         tableReference.set("columns", getColumns(hiveTable.getCols(), tableQualifiedName));
 
         // add reference to the StorageDescriptor
-        Referenceable sdReferenceable = fillStorageDescStruct(hiveTable.getSd(), tableQualifiedName, tableQualifiedName);
+        final String sdQualifiedName = tableQualifiedName + "_sd";
+        Referenceable sdReferenceable = fillStorageDescStruct(hiveTable.getSd(), tableQualifiedName, sdQualifiedName);
         tableReference.set("sd", sdReferenceable);
 
         // add reference to the Partition Keys

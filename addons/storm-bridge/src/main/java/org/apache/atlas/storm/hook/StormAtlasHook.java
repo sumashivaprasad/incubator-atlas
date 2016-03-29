@@ -128,6 +128,7 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                 StormDataTypes.STORM_TOPOLOGY.getName());
         topologyReferenceable.set("id", topologyInfo.get_id());
         topologyReferenceable.set("name", topologyInfo.get_name());
+        topologyReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, topologyInfo.get_name());
         String owner = topologyInfo.get_owner();
         if (StringUtils.isEmpty(owner)) {
             owner = ANONYMOUS_OWNER;
@@ -251,9 +252,9 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                 dataSetReferenceable = new Referenceable("hive_table");
                 final String tableQualifiedName = HiveMetaStoreBridge.getTableQualifiedName(clusterName,
                         databaseName, hiveTableName);
-                dataSetReferenceable.set(HiveDataModelGenerator.NAME, tableQualifiedName);
+                dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
                 dataSetReferenceable.set(HiveDataModelGenerator.DB, dbReferenceable);
-                dataSetReferenceable.set(HiveDataModelGenerator.TABLE_NAME, hiveTableName);
+                dataSetReferenceable.set(HiveDataModelGenerator.NAME, hiveTableName);
                 break;
 
             default:

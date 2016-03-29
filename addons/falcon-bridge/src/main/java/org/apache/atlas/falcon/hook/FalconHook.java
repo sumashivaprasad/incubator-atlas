@@ -251,10 +251,10 @@ public class FalconHook extends FalconEventPublisher {
 
                 if (!inputs.isEmpty() || !outputs.isEmpty()) {
                     Referenceable processEntity = new Referenceable(FalconDataTypes.FALCON_PROCESS_ENTITY.getName());
-                    processEntity.set(FalconDataModelGenerator.NAME, String.format("%s@%s", process.getName(),
-                            cluster.getName()));
-                    processEntity.set(FalconDataModelGenerator.PROCESS_NAME, process.getName());
-
+                    final String processName = String.format("%s@%s", process.getName(),
+                        cluster.getName());
+                    processEntity.set(FalconDataModelGenerator.NAME, process.getName());
+                    processEntity.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, processName);
                     processEntity.set(FalconDataModelGenerator.TIMESTAMP, timestamp);
                     if (!inputs.isEmpty()) {
                         processEntity.set(FalconDataModelGenerator.INPUTS, inputs);
@@ -316,9 +316,9 @@ public class FalconHook extends FalconEventPublisher {
         entities.add(dbRef);
 
         Referenceable tableRef = new Referenceable(HiveDataTypes.HIVE_TABLE.getName());
-        tableRef.set(HiveDataModelGenerator.NAME,
+        tableRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                 HiveMetaStoreBridge.getTableQualifiedName(clusterName, dbName, tableName));
-        tableRef.set(HiveDataModelGenerator.TABLE_NAME, tableName);
+        tableRef.set(HiveDataModelGenerator.NAME, tableName);
         tableRef.set(HiveDataModelGenerator.DB, dbRef);
         entities.add(tableRef);
 

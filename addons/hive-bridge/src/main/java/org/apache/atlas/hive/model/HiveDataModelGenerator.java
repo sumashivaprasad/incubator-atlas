@@ -63,7 +63,6 @@ public class HiveDataModelGenerator {
     public static final String STORAGE_IS_STORED_AS_SUB_DIRS = "storedAsSubDirectories";
 
     public static final String NAME = "name";
-    public static final String TABLE_NAME = "tableName";
     public static final String CLUSTER_NAME = "clusterName";
     public static final String TABLE = "table";
     public static final String DB = "db";
@@ -292,8 +291,6 @@ public class HiveDataModelGenerator {
 
     private void createTableClass() throws AtlasException {
         AttributeDefinition[] attributeDefinitions = new AttributeDefinition[]{
-                new AttributeDefinition(TABLE_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false,
-                        null),
                 new AttributeDefinition(DB, HiveDataTypes.HIVE_DB.getName(), Multiplicity.REQUIRED, false, null),
                 new AttributeDefinition("owner", DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null),
                 new AttributeDefinition("createTime", DataTypes.LONG_TYPE.getName(), Multiplicity.OPTIONAL, false,

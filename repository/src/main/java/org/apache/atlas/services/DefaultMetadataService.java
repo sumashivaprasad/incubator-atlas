@@ -119,36 +119,36 @@ public class DefaultMetadataService implements MetadataService {
     }
 
     private static final AttributeDefinition NAME_ATTRIBUTE =
-            TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE);
+            TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE);
     private static final AttributeDefinition DESCRIPTION_ATTRIBUTE =
             TypesUtil.createOptionalAttrDef("description", DataTypes.STRING_TYPE);
 
     @InterfaceAudience.Private
     private void createSuperTypes() throws AtlasException {
+        HierarchicalTypeDefinition<ClassType> referenceableType = TypesUtil
+            .createClassTypeDef(AtlasClient.REFERENCEABLE_SUPER_TYPE, ImmutableList.<String>of(),
+                TypesUtil.createUniqueRequiredAttrDef(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+                    DataTypes.STRING_TYPE));
+        createType(referenceableType);
+
         HierarchicalTypeDefinition<ClassType> infraType = TypesUtil
-                .createClassTypeDef(AtlasClient.INFRASTRUCTURE_SUPER_TYPE, ImmutableList.<String>of(), NAME_ATTRIBUTE,
+                .createClassTypeDef(AtlasClient.INFRASTRUCTURE_SUPER_TYPE, ImmutableList.<String>of(AtlasClient.REFERENCEABLE_SUPER_TYPE), NAME_ATTRIBUTE,
                         DESCRIPTION_ATTRIBUTE);
         createType(infraType);
 
         HierarchicalTypeDefinition<ClassType> datasetType = TypesUtil
-                .createClassTypeDef(AtlasClient.DATA_SET_SUPER_TYPE, ImmutableList.<String>of(), NAME_ATTRIBUTE,
+                .createClassTypeDef(AtlasClient.DATA_SET_SUPER_TYPE, ImmutableList.<String>of(AtlasClient.REFERENCEABLE_SUPER_TYPE), NAME_ATTRIBUTE,
                         DESCRIPTION_ATTRIBUTE);
         createType(datasetType);
 
         HierarchicalTypeDefinition<ClassType> processType = TypesUtil
-                .createClassTypeDef(AtlasClient.PROCESS_SUPER_TYPE, ImmutableList.<String>of(), NAME_ATTRIBUTE,
+                .createClassTypeDef(AtlasClient.PROCESS_SUPER_TYPE, ImmutableList.<String>of(AtlasClient.REFERENCEABLE_SUPER_TYPE), NAME_ATTRIBUTE,
                         DESCRIPTION_ATTRIBUTE,
                         new AttributeDefinition("inputs", DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
                                 Multiplicity.OPTIONAL, false, null),
                         new AttributeDefinition("outputs", DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
                                 Multiplicity.OPTIONAL, false, null));
         createType(processType);
-
-        HierarchicalTypeDefinition<ClassType> referenceableType = TypesUtil
-                .createClassTypeDef(AtlasClient.REFERENCEABLE_SUPER_TYPE, ImmutableList.<String>of(),
-                        TypesUtil.createUniqueRequiredAttrDef(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
-                                DataTypes.STRING_TYPE));
-        createType(referenceableType);
     }
 
     private void createType(HierarchicalTypeDefinition<ClassType> type) throws AtlasException {

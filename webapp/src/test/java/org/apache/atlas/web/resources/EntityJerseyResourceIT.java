@@ -179,6 +179,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         Referenceable table = new Referenceable(HIVE_TABLE_TYPE);
         final String tableName = randomString();
         table.set("name", tableName);
+        table.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableName);
         table.set("db", db);
 
         serviceClient.createEntity(table);
@@ -682,7 +683,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         }});
 
         LOG.debug("Updating entity= " + tableUpdated);
-        serviceClient.updateEntity(BaseResourceIT.HIVE_TABLE_TYPE, "name", (String) tableInstance.get("name"),
+        serviceClient.updateEntity(BaseResourceIT.HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, (String) tableInstance.get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME),
                 tableUpdated);
 
         response = getEntityDefinition(tableId._getId());

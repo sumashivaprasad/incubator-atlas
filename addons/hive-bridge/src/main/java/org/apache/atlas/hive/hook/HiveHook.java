@@ -21,6 +21,7 @@ package org.apache.atlas.hive.hook;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.atlas.ApplicationProperties;
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
@@ -263,18 +264,13 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                     Referenceable tableEntity = createEntities(dgiBridge, writeEntity);
                     String oldQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
                             oldTable.getDbName(), oldTable.getTableName());
-                    tableEntity.set(HiveDataModelGenerator.NAME, oldQualifiedName);
-                    tableEntity.set(HiveDataModelGenerator.TABLE_NAME, oldTable.getTableName().toLowerCase());
-
 
                     String newQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
                             newTable.getDbName(), newTable.getTableName());
 
-                    Referenceable newEntity = new Referenceable(HiveDataTypes.HIVE_TABLE.getName());
-                    newEntity.set(HiveDataModelGenerator.NAME, newQualifiedName);
-                    newEntity.set(HiveDataModelGenerator.TABLE_NAME, newTable.getTableName().toLowerCase());
+                    Referenceable newEntity = dgiBridge.createTableInstance((Referenceable) tableEntity.get("db"), newTable);
                     messages.add(new HookNotification.EntityPartialUpdateRequest(HiveDataTypes.HIVE_TABLE.getName(),
-                            HiveDataModelGenerator.NAME, oldQualifiedName, newEntity));
+                            AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, oldQualifiedName, newEntity));
                 }
             }
         }
@@ -358,6 +354,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
         processReferenceable.set("name", queryStr);
+        processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, queryStr);
         processReferenceable.set("operationType", event.operation.getOperationName());
         processReferenceable.set("startTime", event.queryStartTime);
         processReferenceable.set("userName", event.user);

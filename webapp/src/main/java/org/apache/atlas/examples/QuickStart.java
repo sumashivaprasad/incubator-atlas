@@ -164,8 +164,7 @@ public class QuickStart {
                         attrDef("queryGraph", DataTypes.STRING_TYPE, Multiplicity.REQUIRED));
 
         HierarchicalTypeDefinition<ClassType> viewClsDef = TypesUtil
-                .createClassTypeDef(VIEW_TYPE, null,
-                        TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
+                .createClassTypeDef(VIEW_TYPE, ImmutableList.of("DataSet"),
                         new AttributeDefinition("db", DATABASE_TYPE, Multiplicity.REQUIRED, false, null),
                         new AttributeDefinition("inputTables", DataTypes.arrayTypeName(TABLE_TYPE),
                                 Multiplicity.COLLECTION, false, null));
@@ -334,6 +333,7 @@ public class QuickStart {
             List<Referenceable> columns, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(TABLE_TYPE, traitNames);
         referenceable.set("name", name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("description", description);
         referenceable.set("owner", owner);
         referenceable.set("tableType", tableType);
@@ -353,6 +353,7 @@ public class QuickStart {
         Referenceable referenceable = new Referenceable(LOAD_PROCESS_TYPE, traitNames);
         // super type attributes
         referenceable.set("name", name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("description", description);
         referenceable.set(INPUTS_ATTRIBUTE, inputTables);
         referenceable.set(OUTPUTS_ATTRIBUTE, outputTables);
@@ -372,6 +373,7 @@ public class QuickStart {
     Id view(String name, Id dbId, List<Id> inputTables, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(VIEW_TYPE, traitNames);
         referenceable.set("name", name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("db", dbId);
 
         referenceable.set(INPUT_TABLES_ATTRIBUTE, inputTables);

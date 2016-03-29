@@ -20,6 +20,7 @@ package org.apache.atlas.discovery;
 
 import com.thinkaurelius.titan.core.TitanGraph;
 import org.apache.atlas.ApplicationProperties;
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
@@ -52,7 +53,7 @@ public class HiveLineageService implements LineageService {
     private static final Logger LOG = LoggerFactory.getLogger(HiveLineageService.class);
 
     private static final Option<List<String>> SELECT_ATTRIBUTES =
-            Some.<List<String>>apply(List.<String>fromArray(new String[]{"name"}));
+            Some.<List<String>>apply(List.<String>fromArray(new String[]{AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME}));
 
     public static final String HIVE_TABLE_SCHEMA_QUERY_PREFIX = "atlas.lineage.hive.table.schema.query.";
 
@@ -75,7 +76,7 @@ public class HiveLineageService implements LineageService {
             HIVE_PROCESS_OUTPUT_ATTRIBUTE_NAME = propertiesConf.getString("atlas.lineage.hive.process.outputs.name", "outputs");
 
             HIVE_TABLE_EXISTS_QUERY = propertiesConf.getString("atlas.lineage.hive.table.exists.query",
-                    "from " + HIVE_TABLE_TYPE_NAME + " where name=\"%s\"");
+                    "from " + HIVE_TABLE_TYPE_NAME + " where " + AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME + "=\"%s\"");
         } catch (AtlasException e) {
             throw new RuntimeException(e);
         }
