@@ -18,6 +18,7 @@
 
 package org.apache.atlas.hive.bridge;
 
+import com.google.common.base.Joiner;
 import com.sun.jersey.api.client.ClientResponse;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
@@ -438,7 +439,7 @@ public class HiveMetaStoreBridge {
             if (hivePart.getValues() != null && hivePart.getValues().size() > 0) {
                 registerPartition(tableReferenceable, sdReferenceable, hivePart);
             } else {
-                LOG.info("Skipping partition for table {} since partition values are null", getTableQualifiedName(clusterName, table.getDbName(), table.getTableName()));
+                LOG.info("Skipping partition for table {} since partition values are {}", getTableQualifiedName(clusterName, table.getDbName(), table.getTableName()), StringUtils.join(hivePart.getValues(), ","));
             }
         }
     }
