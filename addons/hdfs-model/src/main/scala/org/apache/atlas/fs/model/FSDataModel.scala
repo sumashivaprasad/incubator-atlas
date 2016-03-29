@@ -40,13 +40,13 @@ object FSDataModel extends App {
         _class(FSDataTypes.FS_PATH.toString, List("DataSet", AtlasClient.REFERENCEABLE_SUPER_TYPE)) {
             // fully qualified path/URI to file or dir is stored in 'qualifiedName'. Hence not having a separate attribute to specify path. This is to keep search consistent
             "path" ~ (string, required, indexed)
-            "createTime" ~ (date, required, indexed)
-            "modifiedTime" ~ (date, required, indexed)
+            "createTime" ~ (date, optional, indexed)
+            "modifiedTime" ~ (date, optional, indexed)
             //Is a regular file or a directory. If true, it is a file else a directory
             "isFile" ~ (boolean, optional, indexed)
             //Is a symlink or not
             "isSymlink" ~ (boolean, optional, indexed)
-            //Is is a relative or absolute path
+            //Is this a relative or absolute path
             "isRelative" ~ (boolean, optional, indexed)
             //Optional and may not be set for a directory
             "fileSize" ~ (int, optional, indexed)
