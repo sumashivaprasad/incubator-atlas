@@ -18,26 +18,25 @@
 
 package org.apache.atlas.fs.model;
 
-import backtype.storm.ILocalCluster;
-import backtype.storm.generated.StormTopology;
-import org.apache.atlas.ApplicationProperties;
-import org.apache.atlas.AtlasClient;
-import org.apache.atlas.fs.model.FSDataModel;
-import org.apache.atlas.fs.model.FSDataTypes;
-import org.apache.atlas.hook.AtlasHook;
+import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.util.TitanCleanup;
+import org.apache.atlas.RepositoryMetadataModule;
+import org.apache.atlas.repository.graph.GraphProvider;
 import org.apache.atlas.services.MetadataService;
-import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.TypesSerialization;
-import org.apache.commons.configuration.Configuration;
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONObject;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import scala.Enumeration;
+import scala.collection.Iterator;
+
+import javax.inject.Inject;
 
 @Test
 @Guice(modules = RepositoryMetadataModule.class)
@@ -58,6 +57,18 @@ public class HDFSModelTest {
 
     @AfterClass
     public void tearDown() throws Exception {
+        TypeSystem.getInstance().reset();
+        try {
+            //TODO - Fix failure during shutdown while using BDB
+            graphProvider.get().shutdown();
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            TitanCleanup.clear(graphProvider.get());
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -71,8 +82,15 @@ public class HDFSModelTest {
         metadataService.createType(fsTypesAsJSON);
 
         // verify types are registered
-        for (FSDataTypes fsDataType : FSDataTypes.values()) {
-            Assert.assertNotNull(atlasClient.getType(fsDataType.getName()));
+        final Iterator<Enumeration.Value> valueIterator = FSDataTypes.values().iterator();
+        while (valueIterator.hasNext() ) {
+            final Enumeration.Value typeEnum = valueIterator.next();
+            String typeDefStr = metadataService.getTypeDefinition(typeEnum.toString());
+            Assert.assertNotNull(typeDefStr);
+
+            TypesDef typesDef = TypesSerialization.fromJson(typeDefStr);
+            Assert.assertNotNull(typesDef);
         }
     }
+
 }

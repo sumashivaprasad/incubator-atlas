@@ -32,6 +32,7 @@ object FSDataModel extends App {
     var typesDef : TypesDef = null
 
     val typesBuilder = new TypesBuilder
+
     import typesBuilder._
 
     typesDef = types {
@@ -50,24 +51,25 @@ object FSDataModel extends App {
             "isRelative" ~ (boolean, optional, indexed)
             //Optional and may not be set for a directory
             "fileSize" ~ (int, optional, indexed)
-            PosixPermissions.OWNER.toString.toLowerCase ~ (string, optional, indexed)
-            PosixPermissions.GROUP.toString.toLowerCase ~ (string, optional, indexed)
-            PosixPermissions.POSIX_PERMISSIONS.toString.toLowerCase ~ (FSDataTypes.FS_PERMISSIONS.toString, optional, indexed)
+            "owner" ~ (string, optional, indexed)
+            "group" ~ (string, optional, indexed)
+            "posixPermissions" ~ (FSDataTypes.FS_PERMISSIONS.toString, optional, indexed)
         }
 
-        enum(PosixPermissions.FS_ACTION.toString,  FsAction.values().map(x => x.name()) : _*)
+        enum(FSDataTypes.FS_ACTION.toString,  FsAction.values().map(x => x.name()) : _*)
 
         struct(FSDataTypes.FS_PERMISSIONS.toString) {
-            PosixPermissions.PERM_USER.toString ~ (PosixPermissions.FS_ACTION.toString, required, indexed)
-            PosixPermissions.PERM_GROUP.toString ~ (PosixPermissions.FS_ACTION.toString, required, indexed)
-            PosixPermissions.PERM_OTHER.toString ~ (PosixPermissions.FS_ACTION.toString, required, indexed)
+            PosixPermissions.PERM_USER.toString ~ (FSDataTypes.FS_ACTION.toString, required, indexed)
+            PosixPermissions.PERM_GROUP.toString ~ (FSDataTypes.FS_ACTION.toString, required, indexed)
+            PosixPermissions.PERM_OTHER.toString ~ (FSDataTypes.FS_ACTION.toString, required, indexed)
             PosixPermissions.STICKY_BIT.toString ~ (boolean, required, indexed)
             //TODO - ACL
-            //TODO - encryption related
+            //TODO - encryption related - ?
         }
 
         //HDFS DataSet
         _class(FSDataTypes.HDFS_PATH.toString, List(FSDataTypes.FS_PATH.toString)) {
+            //Making cluster optional since path is already unique containing the namenode URI
             "cluster" ~ (string, required, indexed)
             "numberOfReplicas" ~ (int, optional, indexed)
         }
@@ -75,17 +77,17 @@ object FSDataModel extends App {
 
     // add the types to atlas
     val typesAsJSON = TypesSerialization.toJson(typesDef)
-    println("HDFS Data Model as JSON: ")
+    println("FS Data Model as JSON: ")
     println(typesAsJSON)
 
 }
 
 object FSDataTypes extends Enumeration {
     type FSDataTypes = Value
-    val FS_PATH, HDFS_PATH, FS_PERMISSIONS = Value
+    val FS_ACTION, FS_PATH, HDFS_PATH, FS_PERMISSIONS = Value
 }
 
 object PosixPermissions extends Enumeration {
     type PosixPermissions = Value
-    final val FS_ACTION, OWNER, GROUP, POSIX_PERMISSIONS, PERM_USER, PERM_GROUP, PERM_OTHER, STICKY_BIT = Value
+    final val PERM_USER, PERM_GROUP, PERM_OTHER, STICKY_BIT = Value
 }
