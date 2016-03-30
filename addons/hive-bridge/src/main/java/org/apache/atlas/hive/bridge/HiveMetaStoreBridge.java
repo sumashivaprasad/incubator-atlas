@@ -28,7 +28,6 @@ import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.commons.configuration.Configuration;
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jettison.json.JSONArray;
@@ -250,10 +248,6 @@ public class HiveMetaStoreBridge {
         for (String tableName : hiveTables) {
             Table table = hiveClient.getTable(databaseName, tableName);
             Referenceable tableReferenceable = registerTable(databaseReferenceable, table);
-
-            // Import Partitions
-            Referenceable sdReferenceable = getSDForTable(databaseName, tableName);
-            registerPartitions(tableReferenceable, sdReferenceable, table);
         }
     }
 
@@ -386,35 +380,6 @@ public class HiveMetaStoreBridge {
         return new Referenceable(guid, typeName, null);
     }
 
-    private Referenceable getPartitionReference(String dbName, String tableName, List<String> values) throws Exception {
-        String valuesStr = joinPartitionValues(values);
-        LOG.debug("Getting reference for partition for {}.{} with values {}", dbName, tableName, valuesStr);
-
-        //todo replace gremlin with DSL
-        //        String dslQuery = String.format("%s as p where values = %s, tableName where name = '%s', "
-        //                        + "dbName where name = '%s' and clusterName = '%s' select p", typeName, valuesStr,
-        // tableName,
-        //                dbName, clusterName);
-
-        String tableEntityName = getTableQualifiedName(clusterName, dbName, tableName);
-
-        String gremlinQuery = getPartitionGremlinQuery(valuesStr, tableEntityName);
-
-        return getEntityReferenceFromGremlin(HiveDataTypes.HIVE_PARTITION.getName(), gremlinQuery);
-    }
-
-    static String joinPartitionValues(List<String> values) {
-        return "['" + StringUtils.join(values, "', '") + "']";
-    }
-
-    static String getPartitionGremlinQuery(String valuesStr, String tableEntityName) {
-        String typeName = HiveDataTypes.HIVE_PARTITION.getName();
-        String datasetType = AtlasClient.DATA_SET_SUPER_TYPE;
-        return String.format("g.V.has('__typeName', '%s').has('%s.values', %s).as('p')."
-                        + "out('__%s.table').has('%s.name', '%s').back('p').toList()", typeName, typeName, valuesStr,
-                typeName, datasetType, tableEntityName);
-    }
-
     private Referenceable getSDForTable(String dbName, String tableName) throws Exception {
         Referenceable tableRef = getTableReference(dbName, tableName);
         if (tableRef == null) {
@@ -425,81 +390,6 @@ public class HiveMetaStoreBridge {
         Referenceable tableInstance = dgiClient.getEntity(tableRef.getId().id);
         Referenceable sd = (Referenceable) tableInstance.get("sd");
         return new Referenceable(sd.getId().id, sd.getTypeName(), null);
-    }
-
-    private void registerPartitions(Referenceable tableReferenceable, Referenceable sdReferenceable,
-                                    Table table) throws Exception {
-        String dbName = table.getDbName();
-        String tableName = table.getTableName();
-        LOG.info("Registering partitions for {}.{}", dbName, tableName);
-        List<Partition> tableParts = hiveClient.getPartitions(table);
-
-        for (Partition hivePart : tableParts) {
-            registerPartition(tableReferenceable, sdReferenceable, hivePart);
-        }
-    }
-
-    private Referenceable registerPartition(Referenceable tableReferenceable, Referenceable sdReferenceable,
-                                            Partition hivePart) throws Exception {
-        LOG.info("Registering partition for {} with values {}", tableReferenceable,
-                StringUtils.join(hivePart.getValues(), ","));
-        String dbName = hivePart.getTable().getDbName();
-        String tableName = hivePart.getTable().getTableName();
-
-        Referenceable partRef = getPartitionReference(dbName, tableName, hivePart.getValues());
-        if (partRef == null) {
-            partRef = createPartitionReferenceable(tableReferenceable, sdReferenceable, hivePart);
-            partRef = registerInstance(partRef);
-        } else {
-            LOG.info("Partition {}.{} with values {} is already registered with id {}. Updating entity",
-                    dbName, tableName,
-                    StringUtils.join(hivePart.getValues(), ","), partRef.getId().id);
-            partRef =
-                    createOrUpdatePartitionReferenceable(tableReferenceable, sdReferenceable, hivePart, partRef);
-            updateInstance(partRef);
-        }
-        return partRef;
-    }
-
-    private Referenceable createOrUpdatePartitionReferenceable(Referenceable tableReferenceable,
-                                                               Referenceable sdReferenceable,
-                                                               Partition hivePart, Referenceable partRef) {
-        if (partRef == null) {
-            partRef = new Referenceable(HiveDataTypes.HIVE_PARTITION.getName());
-        }
-        partRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getPartitionQualifiedName(hivePart));
-        partRef.set("values", hivePart.getValues());
-
-        partRef.set(HiveDataModelGenerator.TABLE, tableReferenceable);
-
-        //todo fix
-        partRef.set("createTime", hivePart.getLastAccessTime());
-        partRef.set(LAST_ACCESS_TIME_ATTR, hivePart.getLastAccessTime());
-
-        // sdStruct = fillStorageDescStruct(hivePart.getSd());
-        // Instead of creating copies of the sdstruct for partitions we are reusing existing
-        // ones will fix to identify partitions with differing schema.
-        partRef.set("sd", sdReferenceable);
-
-        partRef.set(HiveDataModelGenerator.PARAMETERS, hivePart.getParameters());
-        return partRef;
-    }
-
-    /**
-     * Create a Hive partition instance in Atlas
-     * @param tableReferenceable The Hive Table {@link Referenceable} to which this partition belongs.
-     * @param sdReferenceable The Storage descriptor {@link Referenceable} for this table.
-     * @param hivePart The Hive {@link Partition} object being created
-     * @return Newly created Hive partition instance
-     */
-    public Referenceable createPartitionReferenceable(Referenceable tableReferenceable, Referenceable sdReferenceable,
-                                                      Partition hivePart) {
-        return createOrUpdatePartitionReferenceable(tableReferenceable, sdReferenceable, hivePart, null);
-    }
-
-    private String getPartitionQualifiedName(Partition partition) {
-        return String.format("%s.%s.%s@%s", partition.getTable().getDbName(),
-                partition.getTable().getTableName(), StringUtils.join(partition.getValues(), "-"), clusterName);
     }
 
     public Referenceable fillStorageDescStruct(StorageDescriptor storageDesc, String tableQualifiedName,

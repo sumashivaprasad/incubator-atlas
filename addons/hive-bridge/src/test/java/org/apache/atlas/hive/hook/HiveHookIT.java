@@ -131,7 +131,7 @@ public class HiveHookIT {
     }
 
     private String createTable() throws Exception {
-        return createTable(true);
+        return createTable(false);
     }
 
     private String createTable(boolean partition) throws Exception {
@@ -271,15 +271,26 @@ public class HiveHookIT {
         String tableName = createTable();
         String insertTableName = createTable();
         String query =
-                "insert into " + insertTableName + " partition(dt = '2015-01-01') select id, name from " + tableName
-                        + " where dt = '2015-01-01'";
+                "insert into " + insertTableName + " select id, name from " + tableName;
 
         runCommand(query);
-        assertProcessIsRegistered(query);
-        String partId = assertPartitionIsRegistered(DEFAULT_DB, insertTableName, "2015-01-01");
-        Referenceable partitionEntity = dgiCLient.getEntity(partId);
-        Assert.assertEquals(partitionEntity.get("qualifiedName"),
-            String.format("%s.%s.%s@%s", "default", insertTableName.toLowerCase(), "2015-01-01", CLUSTER_NAME));
+        String processId = assertProcessIsRegistered(query);
+
+        assertTableIsRegistered(DEFAULT_DB, tableName);
+        assertTableIsRegistered(DEFAULT_DB, insertTableName);
+
+        Referenceable processReferenceable = dgiCLient.getEntity(processId);
+    }
+
+    @Test
+    public void testIgnorePartition() throws Exception {
+        String tableName = createTable(true);
+        String insertTableName = createTable(true);
+        String query =
+            "insert into " + insertTableName + " partition(dt = '2015-01-01') select id, name from " + tableName
+                + " where dt = '2015-01-01'";
+        runCommand(query);
+        assertProcessIsNotRegistered(query);
     }
 
     private String random() {
@@ -693,6 +704,18 @@ public class HiveHookIT {
         return assertEntityIsRegistered(gremlinQuery);
     }
 
+    private void assertProcessIsNotRegistered(String queryStr) throws Exception {
+        //        String dslQuery = String.format("%s where queryText = \"%s\"", HiveDataTypes.HIVE_PROCESS.getName(),
+        //                normalize(queryStr));
+        //        assertEntityIsRegistered(dslQuery, true);
+        //todo replace with DSL
+        String typeName = HiveDataTypes.HIVE_PROCESS.getName();
+        String gremlinQuery =
+            String.format("g.V.has('__typeName', '%s').has('%s.queryText', \"%s\").toList()", typeName, typeName,
+                normalize(queryStr));
+        assertEntityIsNotRegistered(gremlinQuery);
+    }
+
     private String normalize(String str) {
         if (StringUtils.isEmpty(str)) {
             return null;
@@ -729,17 +752,6 @@ public class HiveHookIT {
         String query = String.format("%s where name = '%s' and clusterName = '%s'", HiveDataTypes.HIVE_DB.getName(),
                 dbName.toLowerCase(), CLUSTER_NAME);
         return assertEntityIsRegistered(query);
-    }
-
-    private String assertPartitionIsRegistered(String dbName, String tableName, String value) throws Exception {
-        String typeName = HiveDataTypes.HIVE_PARTITION.getName();
-
-        LOG.debug("Searching for partition of {}.{} with values {}", dbName, tableName, value);
-        String dslQuery = String.format("%s as p where values = ['%s'], table where tableName = '%s', "
-                        + "db where name = '%s' and clusterName = '%s' select p", typeName, value,
-                tableName.toLowerCase(), dbName.toLowerCase(), CLUSTER_NAME);
-
-        return assertEntityIsRegistered(dslQuery, "p");
     }
 
     private String assertEntityIsRegistered(final String query, String... arg) throws Exception {

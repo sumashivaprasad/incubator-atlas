@@ -40,7 +40,6 @@ import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.hooks.HookContext;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
-import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -268,7 +267,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         assert event.outputs != null && event.outputs.size() > 0;
 
         for (WriteEntity writeEntity : event.outputs) {
-           //Below check should  filter out partition related
+           //Below check should  filter out partition related ddls
            if (writeEntity.getType() == Entity.Type.TABLE) {
                //Create/update table entity
                createOrUpdateEntities(dgiBridge, writeEntity);
@@ -314,7 +313,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private Referenceable createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, Entity entity) throws Exception {
         Database db = null;
         Table table = null;
-        Partition partition = null;
         List<Referenceable> entities = new ArrayList<>();
 
         switch (entity.getType()) {
@@ -324,12 +322,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
             case TABLE:
                 table = entity.getTable();
-                db = dgiBridge.hiveClient.getDatabase(table.getDbName());
-                break;
-
-            case PARTITION:
-                partition = entity.getPartition();
-                table = partition.getTable();
                 db = dgiBridge.hiveClient.getDatabase(table.getDbName());
                 break;
         }
@@ -344,13 +336,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             tableEntity = dgiBridge.createTableInstance(dbEntity, table);
             entities.add(tableEntity);
         }
-
-        if (partition != null) {
-            Referenceable partitionEntity = dgiBridge.createPartitionReferenceable(tableEntity,
-                    (Referenceable) tableEntity.get("sd"), partition);
-            entities.add(partitionEntity);
-        }
-
         messages.add(new HookNotification.EntityUpdateRequest(entities));
         return tableEntity;
     }
@@ -377,10 +362,21 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         //Even explain CTAS has operation name as CREATETABLE_AS_SELECT
         if (inputs.isEmpty() && outputs.isEmpty()) {
             LOG.info("Explain statement. Skipping...");
+            return;
         }
 
         if (event.queryId == null) {
             LOG.info("Query plan is missing. Skipping...");
+            return;
+        }
+
+        //Filter out select queries
+        if (outputs.isEmpty()) {
+            LOG.info("Read only Query(eg : select) with no outputs. Skipping...");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Skipped processing query : " + event.queryStr);
+            }
+            return;
         }
 
         String queryStr = normalize(event.queryStr);
@@ -395,7 +391,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         List<Referenceable> source = new ArrayList<>();
         for (ReadEntity readEntity : inputs) {
-            if (readEntity.getType() == Type.TABLE || readEntity.getType() == Type.PARTITION) {
+            if (readEntity.getType() == Type.TABLE) {
                 Referenceable inTable = createOrUpdateEntities(dgiBridge, readEntity);
                 source.add(inTable);
             }
@@ -404,7 +400,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         List<Referenceable> target = new ArrayList<>();
         for (WriteEntity writeEntity : outputs) {
-            if (writeEntity.getType() == Type.TABLE || writeEntity.getType() == Type.PARTITION) {
+            if (writeEntity.getType() == Type.TABLE) {
                 Referenceable outTable = createOrUpdateEntities(dgiBridge, writeEntity);
                 target.add(outTable);
             }
@@ -419,7 +415,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         processReferenceable.set("queryGraph", "queryGraph");
         messages.add(new HookNotification.EntityCreateRequest(processReferenceable));
     }
-
 
     private JSONObject getQueryPlan(HiveConf hiveConf, QueryPlan queryPlan) throws Exception {
         try {
