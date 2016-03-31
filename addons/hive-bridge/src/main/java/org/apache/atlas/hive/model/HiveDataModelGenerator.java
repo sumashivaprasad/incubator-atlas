@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.addons.ModelDefinitionDump;
 import org.apache.atlas.typesystem.TypesDef;
@@ -69,7 +70,6 @@ public class HiveDataModelGenerator {
 
     public static final String NAME = "name";
     public static final String TABLE_NAME = "tableName";
-    public static final String CLUSTER_NAME = "clusterName";
     public static final String TABLE = "table";
     public static final String DB = "db";
 
@@ -196,7 +196,7 @@ public class HiveDataModelGenerator {
     private void createDBClass() throws AtlasException {
         AttributeDefinition[] attributeDefinitions = new AttributeDefinition[]{
                 new AttributeDefinition(NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false, null),
-                new AttributeDefinition(CLUSTER_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false,
+                new AttributeDefinition(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false,
                         null),
                 new AttributeDefinition("description", DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false,
                         null),

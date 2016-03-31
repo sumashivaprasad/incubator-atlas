@@ -370,50 +370,56 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             return;
         }
 
-        //Filter out select queries
-        if (outputs.isEmpty()) {
-            LOG.info("Read only Query(eg : select) with no outputs. Skipping...");
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Skipped processing query : " + event.queryStr);
-            }
-            return;
-        }
-
         String queryStr = normalize(event.queryStr);
 
         LOG.debug("Registering query: {}", queryStr);
 
-        Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
-        processReferenceable.set("name", queryStr);
-        processReferenceable.set("operationType", event.operation.getOperationName());
-        processReferenceable.set("startTime", event.queryStartTime);
-        processReferenceable.set("userName", event.user);
-
         List<Referenceable> source = new ArrayList<>();
-        for (ReadEntity readEntity : inputs) {
-            if (readEntity.getType() == Type.TABLE) {
-                Referenceable inTable = createOrUpdateEntities(dgiBridge, readEntity);
-                source.add(inTable);
-            }
-        }
-        processReferenceable.set("inputs", source);
-
         List<Referenceable> target = new ArrayList<>();
-        for (WriteEntity writeEntity : outputs) {
-            if (writeEntity.getType() == Type.TABLE) {
-                Referenceable outTable = createOrUpdateEntities(dgiBridge, writeEntity);
-                target.add(outTable);
-            }
-        }
-        processReferenceable.set("outputs", target);
-        processReferenceable.set("queryText", queryStr);
-        processReferenceable.set("queryId", event.queryId);
-        processReferenceable.set("queryPlan", event.jsonPlan.toString());
-        processReferenceable.set("endTime", System.currentTimeMillis());
 
-        //TODO set
-        processReferenceable.set("queryGraph", "queryGraph");
-        messages.add(new HookNotification.EntityCreateRequest(processReferenceable));
+
+        boolean isPartitionWrite = isPartitionReadorWrite(outputs);
+        boolean isPartitionRead = isPartitionReadorWrite(inputs);
+        boolean isSelectQuery = isSelectQuery(event);
+
+        //If input is a table or a partition and output is a 'partition' do not capture the process
+        // Also filter out select queries which do not modify data
+        if (!isPartitionWrite && !isSelectQuery) {
+            for (ReadEntity readEntity : inputs) {
+                if (readEntity.getType() == Type.TABLE) {
+                    Referenceable inTable = createOrUpdateEntities(dgiBridge, readEntity);
+                    source.add(inTable);
+                }
+            }
+            for (WriteEntity writeEntity : outputs) {
+                if (writeEntity.getType() == Type.TABLE) {
+                    Referenceable outTable = createOrUpdateEntities(dgiBridge, writeEntity);
+                    target.add(outTable);
+                }
+            }
+
+            if (source.size() > 0 || target.size() > 0) {
+                Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
+                processReferenceable.set("inputs", source);
+                processReferenceable.set("outputs", target);
+                processReferenceable.set("name", queryStr);
+                processReferenceable.set("operationType", event.operation.getOperationName());
+                processReferenceable.set("startTime", event.queryStartTime);
+                processReferenceable.set("userName", event.user);
+                processReferenceable.set("queryText", queryStr);
+                processReferenceable.set("queryId", event.queryId);
+                processReferenceable.set("queryPlan", event.jsonPlan.toString());
+                processReferenceable.set("endTime", System.currentTimeMillis());
+                //TODO set queryGraph
+                messages.add(new HookNotification.EntityCreateRequest(processReferenceable));
+            } else {
+                LOG.info("Skipped query {} since it has no inputs or resulting outputs", queryStr);
+            }
+        } else if (isPartitionWrite) {
+            LOG.info("Skipped query {} for processing since it is writing into a partition ", queryStr);
+        } else if (isSelectQuery) {
+            LOG.info("Skipped query {} for processing since it is a select query ", queryStr);
+        }
     }
 
     private JSONObject getQueryPlan(HiveConf hiveConf, QueryPlan queryPlan) throws Exception {
@@ -429,4 +435,38 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
 
+    private boolean isPartitionReadorWrite(Set<? extends Entity> entities) {
+        //For partition , there are three write outputs sent -  one each for database, table, partition. Check if one of them is partition type
+        for (Entity entity : entities) {
+            if (entity.getType() == Type.PARTITION) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isSelectQuery(HiveEvent event) {
+        if (event.operation == HiveOperation.QUERY) {
+            Set<WriteEntity> outputs = event.outputs;
+
+            for(WriteEntity output : outputs) {
+                //If output is a table then its is definitely not a select query
+                if (output.getType() == Type.TABLE) {
+                    return false;
+                }
+
+                /* Strangely select queries have DFS_DIR as the type which seems like a bug in hive. Filter out by checking if the path is a temporary URI
+                 * Insert into/overwrite queries onto local or dfs paths have DFS_DIR or LOCAL_DIR as the type and WriteType.PATH_WRITE and tempUri = false
+                 * Insert into a temporary table has isTempURI = false. So will not skip as expected
+                 */
+                if (output.getType() == Type.DFS_DIR || output.getType() == Type.LOCAL_DIR) {
+                    if (output.getWriteType() == WriteEntity.WriteType.PATH_WRITE &&
+                        output.isTempURI()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }
