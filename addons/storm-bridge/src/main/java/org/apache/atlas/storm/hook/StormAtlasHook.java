@@ -225,7 +225,7 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                 dbReferenceable.set(HiveDataModelGenerator.NAME, databaseName);
                 dbReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                         HiveMetaStoreBridge.getDBQualifiedName(getClusterName(stormConf), databaseName));
-                dbReferenceable.set(HiveDataModelGenerator.CLUSTER_NAME, getClusterName(stormConf));
+                dbReferenceable.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, getClusterName(stormConf));
                 dependentEntities.add(dbReferenceable);
                 clusterName = extractComponentClusterName(new HiveConf(), stormConf);
                 final String hiveTableName = config.get("HiveBolt.options.tableName");

@@ -376,7 +376,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
 
         String queryStr = normalize(event.queryStr);
-
         LOG.debug("Registering query: {}", queryStr);
 
         Map<String, Referenceable>  source = new LinkedHashMap<>();
@@ -388,9 +387,10 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (!isSelectQuery) {
             for (ReadEntity readEntity : inputs) {
                 if (readEntity.getType() == Type.TABLE || readEntity.getType() == Type.PARTITION) {
-                    if (!source.containsKey(dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),readEntity.getTable().getDbName(), readEntity.getTable().getTableName()))) {
+                    final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),readEntity.getTable().getDbName(), readEntity.getTable().getTableName());
+                    if (!source.containsKey(tblQFName)) {
                         Referenceable inTable = createOrUpdateEntities(dgiBridge, event.user, readEntity);
-                        source.put(readEntity.getTable().getTableName(), inTable);
+                        source.put(tblQFName, inTable);
                     }
                 }
             }
@@ -398,8 +398,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             for (WriteEntity writeEntity : outputs) {
                 if (writeEntity.getType() == Type.TABLE || writeEntity.getType() == Type.PARTITION) {
                     Referenceable outTable = createOrUpdateEntities(dgiBridge, event.user, writeEntity);
-                    if (!target.containsKey(dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), writeEntity.getTable().getDbName(), writeEntity.getTable().getTableName()))) {
-                        target.put(writeEntity.getTable().getTableName(), outTable);
+                    final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), writeEntity.getTable().getDbName(), writeEntity.getTable().getTableName());
+                    if (!target.containsKey(tblQFName)) {
+                        target.put(tblQFName, outTable);
                     }
                 }
             }
@@ -426,7 +427,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             } else {
                 LOG.info("Skipped query {} since it has no inputs or resulting outputs", queryStr);
             }
-        } else if (isSelectQuery) {
+        } else {
             LOG.info("Skipped query {} for processing since it is a select query ", queryStr);
         }
     }
@@ -449,7 +450,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
             //Select query has only one output
             if (outputs.size() == 1) {
-
                 WriteEntity output = outputs.iterator().next();
                 /* Strangely select queries have DFS_DIR as the type which seems like a bug in hive. Filter out by checking if the path is a temporary URI
                  * Insert into/overwrite queries onto local or dfs paths have DFS_DIR or LOCAL_DIR as the type and WriteType.PATH_WRITE and tempUri = false
