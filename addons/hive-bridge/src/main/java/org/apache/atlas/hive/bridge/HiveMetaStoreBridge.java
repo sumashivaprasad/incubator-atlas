@@ -18,6 +18,7 @@
 
 package org.apache.atlas.hive.bridge;
 
+import com.google.common.base.Joiner;
 import com.sun.jersey.api.client.ClientResponse;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
