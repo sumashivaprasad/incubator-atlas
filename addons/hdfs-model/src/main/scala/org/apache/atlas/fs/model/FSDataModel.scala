@@ -17,11 +17,14 @@
  */
 package org.apache.atlas.fs.model
 
-import org.apache.atlas.AtlasClient
+import org.apache.atlas.{AtlasConstants, AtlasClient}
 import org.apache.atlas.typesystem.TypesDef
 import org.apache.atlas.typesystem.builders.TypesBuilder
 import org.apache.atlas.typesystem.json.TypesSerialization
+import org.apache.atlas.typesystem.types.DataTypes.MapType
 import org.apache.hadoop.fs.permission.FsAction
+
+import scala.tools.scalap.scalax.rules.scalasig.ClassFileParser.EnumConstValue
 
 /**
  * This represents the data model for a HDFS Path
@@ -38,7 +41,7 @@ object FSDataModel extends App {
 
         // FS DataSet
         _class(FSDataTypes.FS_PATH.toString, List("DataSet", AtlasClient.REFERENCEABLE_SUPER_TYPE)) {
-            // fully qualified path/URI to file or dir is stored in 'qualifiedName'. Hence not having a separate attribute to specify path. This is to keep search consistent
+            //fully qualified path/URI to the filesystem path is stored in 'qualifiedName' and 'path'.
             "path" ~ (string, required, indexed)
             "createTime" ~ (date, optional, indexed)
             "modifiedTime" ~ (date, optional, indexed)
@@ -46,10 +49,8 @@ object FSDataModel extends App {
             "isFile" ~ (boolean, optional, indexed)
             //Is a symlink or not
             "isSymlink" ~ (boolean, optional, indexed)
-            //Is this a relative or absolute path
-            "isRelative" ~ (boolean, optional, indexed)
             //Optional and may not be set for a directory
-            "fileSize" ~ (int, optional, indexed)
+            "fileSize" ~ (long, optional, indexed)
             "owner" ~ (string, optional, indexed)
             "group" ~ (string, optional, indexed)
             "posixPermissions" ~ (FSDataTypes.FS_PERMISSIONS.toString, optional, indexed)
@@ -62,16 +63,16 @@ object FSDataModel extends App {
             PosixPermissions.PERM_GROUP.toString ~ (FSDataTypes.FS_ACTION.toString, required, indexed)
             PosixPermissions.PERM_OTHER.toString ~ (FSDataTypes.FS_ACTION.toString, required, indexed)
             PosixPermissions.STICKY_BIT.toString ~ (boolean, required, indexed)
-            //TODO - ACL
-            //TODO - encryption related - ?
         }
 
         //HDFS DataSet
         _class(FSDataTypes.HDFS_PATH.toString, List(FSDataTypes.FS_PATH.toString)) {
             //Making cluster optional since path is already unique containing the namenode URI
-            "cluster" ~ (string, required, indexed)
+            AtlasConstants.CLUSTER_NAME_ATTRIBUTE ~ (string, optional, indexed)
             "numberOfReplicas" ~ (int, optional, indexed)
+            "extendedAttributes" ~ (map(string, string), optional, indexed)
         }
+        //TODO - ACLs - https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#ACLs_Access_Control_Lists
     }
 
     // add the types to atlas
@@ -83,10 +84,16 @@ object FSDataModel extends App {
 
 object FSDataTypes extends Enumeration {
     type FSDataTypes = Value
-    val FS_ACTION, FS_PATH, HDFS_PATH, FS_PERMISSIONS = Value
+    val FS_ACTION = Value("file_action")
+    val FS_PATH = Value("fs_path")
+    val HDFS_PATH = Value("hdfs_path")
+    val FS_PERMISSIONS = Value("fs_permissions")
 }
 
 object PosixPermissions extends Enumeration {
     type PosixPermissions = Value
-    final val PERM_USER, PERM_GROUP, PERM_OTHER, STICKY_BIT = Value
+    val PERM_USER = Value("user")
+    val PERM_GROUP = Value("group")
+    val PERM_OTHER = Value("others")
+    val STICKY_BIT = Value("sticky")
 }
