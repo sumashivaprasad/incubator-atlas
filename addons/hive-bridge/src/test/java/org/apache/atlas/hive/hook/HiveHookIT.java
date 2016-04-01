@@ -279,14 +279,19 @@ public class HiveHookIT {
     }
 
     @Test
-    public void testIgnoreLoadDataIntoPartition() throws Exception {
+    public void testLoadDataIntoPartition() throws Exception {
         String tableName = createTable(true);
 
         String loadFile = file("load");
         String query = "load data local inpath 'file://" + loadFile + "' into table " + tableName +  " partition(dt = '2015-01-01')";
         runCommand(query);
 
-        assertProcessIsNotRegistered(query);
+        String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        Assert.assertNull(process.get("inputs"));
+
+        System.out.println(" Ref Ops : " + process.get("outputs"));
+        Assert.assertEquals(((List<Referenceable>) process.get("outputs")).size(), 1);
     }
 
     @Test
@@ -298,6 +303,9 @@ public class HiveHookIT {
 
         runCommand(query);
         String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        Assert.assertEquals(((List<Referenceable>) process.get("inputs")).size(), 1);
+        Assert.assertEquals(((List<Referenceable>) process.get("outputs")).size(), 1);
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
         assertTableIsRegistered(DEFAULT_DB, insertTableName);
@@ -311,7 +319,11 @@ public class HiveHookIT {
             "insert overwrite LOCAL DIRECTORY '" + randomLocalPath.getAbsolutePath() + "' select id, name from " + tableName;
 
         runCommand(query);
-        assertProcessIsRegistered(query);
+        String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        Assert.assertEquals(((List<Referenceable>) process.get("inputs")).size(), 1);
+        Assert.assertNull(process.get("outputs"));
+
         assertTableIsRegistered(DEFAULT_DB, tableName);
     }
 
@@ -323,7 +335,11 @@ public class HiveHookIT {
             "insert overwrite DIRECTORY '" + pFile  + "' select id, name from " + tableName;
 
         runCommand(query);
-        assertProcessIsRegistered(query);
+        String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        Assert.assertEquals(((List<Referenceable>) process.get("inputs")).size(), 1);
+        Assert.assertNull(process.get("outputs"));
+
         assertTableIsRegistered(DEFAULT_DB, tableName);
     }
 
@@ -335,21 +351,27 @@ public class HiveHookIT {
             "insert into " + insertTableName + " select id, name from " + tableName;
 
         runCommand(query);
-        assertProcessIsRegistered(query);
+        String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        Assert.assertEquals(((List<Referenceable>) process.get("inputs")).size(), 1);
+        Assert.assertEquals(((List<Referenceable>) process.get("outputs")).size(), 1);
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
         assertTableIsRegistered(DEFAULT_DB, insertTableName);
     }
 
     @Test
-    public void testIgnorePartition() throws Exception {
+    public void testInsertIntoPartition() throws Exception {
         String tableName = createTable(true);
         String insertTableName = createTable(true);
         String query =
             "insert into " + insertTableName + " partition(dt = '2015-01-01') select id, name from " + tableName
                 + " where dt = '2015-01-01'";
         runCommand(query);
-        assertProcessIsNotRegistered(query);
+        String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        Assert.assertEquals(((List<Referenceable>) process.get("inputs")).size(), 1);
+        Assert.assertEquals(((List<Referenceable>) process.get("outputs")).size(), 1);
     }
 
     private String random() {

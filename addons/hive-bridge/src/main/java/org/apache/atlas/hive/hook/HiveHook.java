@@ -40,6 +40,7 @@ import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.hooks.HookContext;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
+import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -49,6 +50,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -313,17 +315,24 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private Referenceable createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, Entity entity) throws Exception {
         Database db = null;
         Table table = null;
+        Partition partition = null;
         List<Referenceable> entities = new ArrayList<>();
 
         switch (entity.getType()) {
-            case DATABASE:
-                db = entity.getDatabase();
-                break;
+        case DATABASE:
+            db = entity.getDatabase();
+            break;
 
-            case TABLE:
-                table = entity.getTable();
-                db = dgiBridge.hiveClient.getDatabase(table.getDbName());
-                break;
+        case TABLE:
+            table = entity.getTable();
+            db = dgiBridge.hiveClient.getDatabase(table.getDbName());
+            break;
+
+        case PARTITION:
+            partition = entity.getPartition();
+            table = partition.getTable();
+            db = dgiBridge.hiveClient.getDatabase(table.getDbName());
+            break;
         }
 
         db = dgiBridge.hiveClient.getDatabase(db.getName());
@@ -336,7 +345,17 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             tableEntity = dgiBridge.createTableInstance(dbEntity, table);
             entities.add(tableEntity);
         }
+
         messages.add(new HookNotification.EntityUpdateRequest(entities));
+        return tableEntity;
+    }
+
+    private Referenceable createTableEntity(HiveMetaStoreBridge dgiBridge, Table table, Referenceable dbEntity) throws Exception {
+        Referenceable tableEntity = null;
+        if (table != null) {
+            table = dgiBridge.hiveClient.getTable(table.getDbName(), table.getTableName());
+            tableEntity = dgiBridge.createTableInstance(dbEntity, table);
+        }
         return tableEntity;
     }
 
@@ -366,33 +385,29 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
 
         if (event.queryId == null) {
-            LOG.info("Query plan is missing. Skipping...");
-            return;
+            LOG.info("Query id/plan is missing for {}" , event.queryStr);
         }
 
         String queryStr = normalize(event.queryStr);
 
         LOG.debug("Registering query: {}", queryStr);
 
-        List<Referenceable> source = new ArrayList<>();
-        List<Referenceable> target = new ArrayList<>();
+        Set<Referenceable> source = new LinkedHashSet<>();
+        Set<Referenceable> target = new LinkedHashSet<>();
 
-
-        boolean isPartitionWrite = isPartitionReadorWrite(outputs);
-        boolean isPartitionRead = isPartitionReadorWrite(inputs);
         boolean isSelectQuery = isSelectQuery(event);
 
-        //If input is a table or a partition and output is a 'partition' do not capture the process
         // Also filter out select queries which do not modify data
-        if (!isPartitionWrite && !isSelectQuery) {
+        if (!isSelectQuery) {
             for (ReadEntity readEntity : inputs) {
-                if (readEntity.getType() == Type.TABLE) {
+                if (readEntity.getType() == Type.TABLE || readEntity.getType() == Type.PARTITION) {
                     Referenceable inTable = createOrUpdateEntities(dgiBridge, readEntity);
                     source.add(inTable);
                 }
             }
+
             for (WriteEntity writeEntity : outputs) {
-                if (writeEntity.getType() == Type.TABLE) {
+                if (writeEntity.getType() == Type.TABLE || writeEntity.getType() == Type.PARTITION) {
                     Referenceable outTable = createOrUpdateEntities(dgiBridge, writeEntity);
                     target.add(outTable);
                 }
@@ -415,8 +430,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             } else {
                 LOG.info("Skipped query {} since it has no inputs or resulting outputs", queryStr);
             }
-        } else if (isPartitionWrite) {
-            LOG.info("Skipped query {} for processing since it is writing into a partition ", queryStr);
         } else if (isSelectQuery) {
             LOG.info("Skipped query {} for processing since it is a select query ", queryStr);
         }
@@ -434,27 +447,14 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-
-    private boolean isPartitionReadorWrite(Set<? extends Entity> entities) {
-        //For partition , there are three write outputs sent -  one each for database, table, partition. Check if one of them is partition type
-        for (Entity entity : entities) {
-            if (entity.getType() == Type.PARTITION) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private boolean isSelectQuery(HiveEvent event) {
         if (event.operation == HiveOperation.QUERY) {
             Set<WriteEntity> outputs = event.outputs;
 
-            for(WriteEntity output : outputs) {
-                //If output is a table then its is definitely not a select query
-                if (output.getType() == Type.TABLE) {
-                    return false;
-                }
+            //Select query has only one output
+            if (outputs.size() == 1) {
 
+                WriteEntity output = outputs.iterator().next();
                 /* Strangely select queries have DFS_DIR as the type which seems like a bug in hive. Filter out by checking if the path is a temporary URI
                  * Insert into/overwrite queries onto local or dfs paths have DFS_DIR or LOCAL_DIR as the type and WriteType.PATH_WRITE and tempUri = false
                  * Insert into a temporary table has isTempURI = false. So will not skip as expected

@@ -21,6 +21,7 @@ package org.apache.atlas.hive.bridge;
 import com.sun.jersey.api.client.ClientResponse;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
@@ -160,7 +161,7 @@ public class HiveMetaStoreBridge {
         String dbName = hiveDB.getName().toLowerCase();
         dbRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getDBQualifiedName(clusterName, dbName));
         dbRef.set(HiveDataModelGenerator.NAME, dbName);
-        dbRef.set(HiveDataModelGenerator.CLUSTER_NAME, clusterName);
+        dbRef.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, clusterName);
         dbRef.set(DESCRIPTION_ATTR, hiveDB.getDescription());
         dbRef.set("locationUri", hiveDB.getLocationUri());
         dbRef.set(HiveDataModelGenerator.PARAMETERS, hiveDB.getParameters());
@@ -206,7 +207,7 @@ public class HiveMetaStoreBridge {
 
     static String getDatabaseDSLQuery(String clusterName, String databaseName, String typeName) {
         return String.format("%s where %s = '%s' and %s = '%s'", typeName, HiveDataModelGenerator.NAME,
-                databaseName.toLowerCase(), HiveDataModelGenerator.CLUSTER_NAME, clusterName);
+                databaseName.toLowerCase(), AtlasConstants.CLUSTER_NAME_ATTRIBUTE, clusterName);
     }
 
     private Referenceable getEntityReferenceFromDSL(String typeName, String dslQuery) throws Exception {
