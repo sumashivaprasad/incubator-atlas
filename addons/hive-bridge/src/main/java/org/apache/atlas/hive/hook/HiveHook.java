@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -378,8 +379,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         LOG.debug("Registering query: {}", queryStr);
 
-        Set<Referenceable> source = new LinkedHashSet<>();
-        Set<Referenceable> target = new LinkedHashSet<>();
+        Map<String, Referenceable>  source = new LinkedHashMap<>();
+        Map<String, Referenceable> target = new LinkedHashMap<>();
 
         boolean isSelectQuery = isSelectQuery(event);
 
@@ -387,22 +388,31 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (!isSelectQuery) {
             for (ReadEntity readEntity : inputs) {
                 if (readEntity.getType() == Type.TABLE || readEntity.getType() == Type.PARTITION) {
-                    Referenceable inTable = createOrUpdateEntities(dgiBridge, event.user, readEntity);
-                    source.add(inTable);
+                    if (!source.containsKey(dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),readEntity.getTable().getDbName(), readEntity.getTable().getTableName()))) {
+                        Referenceable inTable = createOrUpdateEntities(dgiBridge, event.user, readEntity);
+                        source.put(readEntity.getTable().getTableName(), inTable);
+                    }
                 }
             }
 
             for (WriteEntity writeEntity : outputs) {
                 if (writeEntity.getType() == Type.TABLE || writeEntity.getType() == Type.PARTITION) {
                     Referenceable outTable = createOrUpdateEntities(dgiBridge, event.user, writeEntity);
-                    target.add(outTable);
+                    if (!target.containsKey(dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), writeEntity.getTable().getDbName(), writeEntity.getTable().getTableName()))) {
+                        target.put(writeEntity.getTable().getTableName(), outTable);
+                    }
                 }
             }
 
             if (source.size() > 0 || target.size() > 0) {
                 Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
-                processReferenceable.set("inputs", source);
-                processReferenceable.set("outputs", target);
+
+                List<Referenceable> sourceList = new ArrayList<>(source.values());
+                List<Referenceable> targetList = new ArrayList<>(target.values());
+
+                //The serialization code expected a list
+                processReferenceable.set("inputs", sourceList);
+                processReferenceable.set("outputs", targetList);
                 processReferenceable.set("name", queryStr);
                 processReferenceable.set("operationType", event.operation.getOperationName());
                 processReferenceable.set("startTime", event.queryStartTime);
