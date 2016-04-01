@@ -34,6 +34,7 @@ import org.apache.atlas.storm.model.StormDataTypes;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.slf4j.Logger;
@@ -213,12 +214,13 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                 String hdfsUri = config.get("HdfsBolt.rotationActions") == null
                         ? config.get("HdfsBolt.fileNameFormat.path")
                         : config.get("HdfsBolt.rotationActions");
-                final String hdfsPath = config.get("HdfsBolt.fsUrl") + hdfsUri;
+                final String hdfsPathStr = config.get("HdfsBolt.fsUrl") + hdfsUri;
                 dataSetReferenceable.set(HiveDataModelGenerator.CLUSTER_NAME, getClusterName(stormConf));
-                dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, hdfsPath);
-                dataSetReferenceable.set("path", hdfsPath);
+                dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, hdfsPathStr);
+                dataSetReferenceable.set("path", hdfsPathStr);
                 dataSetReferenceable.set("owner", stormConf.get("hdfs.kerberos.principal"));
-                dataSetReferenceable.set(AtlasClient.NAME, hdfsPath);
+                final Path hdfsPath = new Path(hdfsPathStr);
+                dataSetReferenceable.set(AtlasClient.NAME, hdfsPath.getName());
                 break;
 
             case "HiveBolt":
