@@ -198,7 +198,7 @@ public class EntityResource {
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public Response updateByUniqueAttribute(@QueryParam("type") String entityType,
                                             @QueryParam("property") String attribute,
-                                            @QueryParam("value") String value, @Context HttpServletRequest request) {
+                                            @QueryParam("value") Object value, @Context HttpServletRequest request) {
         try {
             String entities = Servlets.getRequestPayload(request);
 
@@ -308,6 +308,41 @@ public class EntityResource {
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
         } catch (Throwable e) {
             LOG.error("Unable to add property {} to entity id {}", property, guid, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
+        }
+    }
+
+    /**
+     * Delete entity identified by its type and unique attribute value from the repository
+     *
+     * @param entityType the entity type
+     * @param attribute the unique attribute used to identify the entity
+     * @param value the unique attribute value used to identify the entity
+     * @return guids of entities(including composite) that were deleted
+     */
+    @DELETE
+    @Consumes(Servlets.JSON_MEDIA_TYPE)
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    public Response deleteEntity(@QueryParam("type") String entityType,
+                                 @QueryParam("property") String attribute,
+                                 @QueryParam("value") String value,
+                                 @Context HttpServletRequest request) {
+
+        try {
+            List<String> deletedGuids = metadataService.deleteEntityByUniqueAttribute(entityType, attribute, value);
+            JSONObject response = new JSONObject();
+            response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
+            JSONArray guidArray = new JSONArray(deletedGuids.size());
+            for (String guid : deletedGuids) {
+                guidArray.put(guid);
+            }
+            response.put(AtlasClient.GUID, guidArray);
+            return Response.ok(response).build();
+        }  catch (AtlasException | IllegalArgumentException e) {
+            LOG.error("Unable to delete entities by unique attribute {} {} {} ", entityType, attribute, value, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
+        } catch (Throwable e) {
+            LOG.error("Unable to delete entities  by unique attribute {}", entityType, attribute, value, e);
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
         }
     }

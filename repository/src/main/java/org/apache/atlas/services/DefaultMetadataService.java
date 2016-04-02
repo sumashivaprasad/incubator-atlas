@@ -355,7 +355,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         return InstanceSerialization.toJson(instance, true);
     }
 
-    private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value)
+    private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, Object value)
             throws AtlasException {
         validateTypeExists(entityType);
         validateUniqueAttribute(entityType, attribute);
@@ -519,7 +519,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     @Override
-    public String updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName, String attrValue,
+    public String updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName, Object attrValue,
                                                 Referenceable updatedEntity) throws AtlasException {
         ParamChecker.notEmpty(typeName, "typeName cannot be null");
         ParamChecker.notEmpty(uniqueAttributeName, "uniqueAttributeName cannot be null");
@@ -692,6 +692,23 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     @Override
     public List<String> deleteEntities(List<String> deleteCandidateGuids) throws AtlasException {
         ParamChecker.notEmpty(deleteCandidateGuids, "delete candidate guids cannot be empty");
+        Pair<List<String>, List<ITypedReferenceableInstance>> deleteEntitiesResult = repository.deleteEntities(deleteCandidateGuids);
+        if (deleteEntitiesResult.right.size() > 0) {
+            onEntitiesDeleted(deleteEntitiesResult.right);
+        }
+        return deleteEntitiesResult.left;
+    }
+
+    @Override
+    public List<String> deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName, Object attrValue) throws AtlasException {
+        ParamChecker.notEmpty(typeName, "delete candidate typeName cannot be empty");
+        ParamChecker.notEmpty(typeName, "delete candidate unique attribute name cannot be empty");
+        ParamChecker.notEmpty(typeName, "delete candidate unique attribute value cannot be empty");
+
+        //Throws EntityNotFoundException if the entity could not be found by its unique attribute
+        ITypedReferenceableInstance instance = getEntityDefinitionReference(typeName, uniqueAttributeName, attrValue);
+        final Id instanceId = instance.getId();
+        List<String> deleteCandidateGuids  = new ArrayList<String>() {{ add(instanceId._getId());}};
         Pair<List<String>, List<ITypedReferenceableInstance>> deleteEntitiesResult = repository.deleteEntities(deleteCandidateGuids);
         if (deleteEntitiesResult.right.size() > 0) {
             onEntitiesDeleted(deleteEntitiesResult.right);
