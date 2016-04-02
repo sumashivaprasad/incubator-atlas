@@ -144,7 +144,7 @@ public interface MetadataService {
      * @return Guid of updated entity
      * @throws AtlasException
      */
-    String updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName, Object attrValue,
+    String updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName, String attrValue,
                                          Referenceable updatedEntity) throws AtlasException;
 
     /**
@@ -206,5 +206,5 @@ public interface MetadataService {
      * @return List of guids for deleted entities
      * @throws AtlasException
      */
-    List<String> deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName, Object attrValue) throws AtlasException;
+    List<String> deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName, String attrValue) throws AtlasException;
 }

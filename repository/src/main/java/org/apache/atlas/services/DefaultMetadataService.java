@@ -76,7 +76,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Simple wrapper over TypeSystem and MetadataRepository services with hooks
@@ -355,7 +354,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         return InstanceSerialization.toJson(instance, true);
     }
 
-    private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, Object value)
+    private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value)
             throws AtlasException {
         validateTypeExists(entityType);
         validateUniqueAttribute(entityType, attribute);
@@ -519,7 +518,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     @Override
-    public String updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName, Object attrValue,
+    public String updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName, String attrValue,
                                                 Referenceable updatedEntity) throws AtlasException {
         ParamChecker.notEmpty(typeName, "typeName cannot be null");
         ParamChecker.notEmpty(uniqueAttributeName, "uniqueAttributeName cannot be null");
@@ -700,7 +699,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     @Override
-    public List<String> deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName, Object attrValue) throws AtlasException {
+    public List<String> deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName, String attrValue) throws AtlasException {
         ParamChecker.notEmpty(typeName, "delete candidate typeName cannot be empty");
         ParamChecker.notEmpty(typeName, "delete candidate unique attribute name cannot be empty");
         ParamChecker.notEmpty(typeName, "delete candidate unique attribute value cannot be empty");

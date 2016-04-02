@@ -930,7 +930,6 @@ public class DefaultMetadataServiceTest {
         table1Entity.set(COLUMNS_ATTR_NAME, ImmutableList.of(col1, col2, col3));
         createInstance(table1Entity);
 
-        // Retrieve the table entities from the repository,
         // to get their guids and the composite column guids.
         String entityJson = metadataService.getEntityDefinition(TestUtils.TABLE_TYPE,
             NAME, (String)table1Entity.get(NAME));
@@ -947,7 +946,7 @@ public class DefaultMetadataServiceTest {
 
         // Delete the table entities.  The deletion should cascade
         // to their composite columns.
-        List<String> deletedGuids = metadataService.deleteEntityByUniqueAttribute(TestUtils.TABLE_TYPE, NAME, table1Entity.get(NAME));
+        List<String> deletedGuids = metadataService.deleteEntityByUniqueAttribute(TestUtils.TABLE_TYPE, NAME, (String) table1Entity.get(NAME));
 
         // Verify that deleteEntities() response has guids for tables and their composite columns.
         Assert.assertTrue(deletedGuids.contains(table1Entity.getId()._getId()));

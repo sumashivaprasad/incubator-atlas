@@ -198,7 +198,7 @@ public class EntityResource {
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public Response updateByUniqueAttribute(@QueryParam("type") String entityType,
                                             @QueryParam("property") String attribute,
-                                            @QueryParam("value") Object value, @Context HttpServletRequest request) {
+                                            @QueryParam("value") String value, @Context HttpServletRequest request) {
         try {
             String entities = Servlets.getRequestPayload(request);
 
@@ -321,9 +321,10 @@ public class EntityResource {
      * @return guids of entities(including composite) that were deleted
      */
     @DELETE
+    @Path("qualifiedName")
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public Response deleteEntity(@QueryParam("type") String entityType,
+    public Response deleteEntityByUniqueAttribute(@QueryParam("type") String entityType,
                                  @QueryParam("property") String attribute,
                                  @QueryParam("value") String value,
                                  @Context HttpServletRequest request) {
