@@ -318,7 +318,7 @@ public class EntityResource {
      * @param entityType the entity type
      * @param attribute the unique attribute used to identify the entity
      * @param value the unique attribute value used to identify the entity
-     * @return guids of entities(including composite) that were deleted
+     * @return guids of entities(including composite references from that entity) that were deleted
      */
     @DELETE
     @Path("qualifiedName")

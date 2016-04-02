@@ -427,9 +427,10 @@ public class AtlasClient {
 
     /**
      * Supports Deletion of an entity identified by its unique attribute value
-     * @param entityType Type of the entity being updated
+     * @param entityType Type of the entity being deleted
      * @param uniqueAttributeName Attribute Name that uniquely identifies the entity
      * @param uniqueAttributeValue Attribute Value that uniquely identifies the entity
+     * @return List of deleted entity guids(including composite references from that entity)
      */
     public List<String> deleteEntity(String entityType, String uniqueAttributeName, String uniqueAttributeValue) throws AtlasServiceException {
         API api = API.DELETE_ENTITY;
