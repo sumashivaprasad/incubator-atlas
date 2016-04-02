@@ -104,6 +104,20 @@ public class EntityNotificationIT extends BaseResourceIT {
                 newNotificationPredicate(EntityNotification.OperationType.ENTITY_UPDATE, HIVE_TABLE_TYPE, guid));
     }
 
+
+    @Test(dependsOnMethods = "testCreateEntity")
+    public void testDeleteEntity() throws Exception {
+        final String property = "name";
+
+        final String name = (String) tableId.get(property);
+        final String guid = tableId._getId();
+
+        serviceClient.deleteEntity(HIVE_TABLE_TYPE, property, name);
+
+        waitForNotification(notificationConsumer, MAX_WAIT_TIME,
+            newNotificationPredicate(EntityNotification.OperationType.ENTITY_DELETE, HIVE_TABLE_TYPE, guid));
+    }
+
     @Test(dependsOnMethods = "testCreateEntity")
     public void testAddTrait() throws Exception {
         String superSuperTraitName = "SuperTrait" + randomString();
