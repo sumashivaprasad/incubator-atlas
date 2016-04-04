@@ -23,12 +23,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
-
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.repository.audit.EntityAuditRepository;
 import org.apache.atlas.repository.audit.HBaseBasedAuditRepository;
 import org.apache.atlas.repository.audit.HBaseTestUtils;
-import org.apache.atlas.services.DefaultMetadataService;
 import org.apache.atlas.typesystem.exception.TypeNotFoundException;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -38,6 +36,7 @@ import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.RepositoryMetadataModule;
+import org.apache.atlas.RequestContext;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.repository.graph.GraphProvider;
@@ -106,6 +105,8 @@ public class DefaultMetadataServiceTest {
             HBaseTestUtils.startCluster();
             ((HBaseBasedAuditRepository) repository).start();
         }
+        RequestContext.createContext();
+        RequestContext.get().setUser("testuser");
 
         TypesDef typesDef = TestUtils.defineHiveTypes();
         try {
