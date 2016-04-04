@@ -228,7 +228,8 @@ public class HookNotification implements JsonDeserializer<HookNotification.HookN
             this(HookNotificationType.ENTITY_DELETE, user, typeName, attribute, attributeValue);
         }
 
-        protected EntityDeleteRequest(HookNotificationType type, String user, String typeName, String attribute, String attributeValue) {
+        protected EntityDeleteRequest(HookNotificationType type,
+            String user, String typeName, String attribute, String attributeValue) {
             super(type, user);
             this.typeName = typeName;
             this.attribute = attribute;
