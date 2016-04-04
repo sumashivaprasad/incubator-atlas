@@ -56,6 +56,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -313,55 +314,34 @@ public class EntityResource {
     }
 
     /**
-     * Delete entity identified by its type and unique attribute value from the repository
-     *
+     * Delete entities from the repository identified by their guids (including their composite references)
+     * or
+     * Deletes a single entity identified by its type and unique attribute value from the repository (including their composite references)
+     * 
+     * @param guids list of deletion candidate guids
+     *              or
      * @param entityType the entity type
      * @param attribute the unique attribute used to identify the entity
      * @param value the unique attribute value used to identify the entity
-     * @return guids of entities(including composite references from that entity) that were deleted
-     */
-    @DELETE
-    @Path("qualifiedName")
-    @Consumes(Servlets.JSON_MEDIA_TYPE)
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public Response deleteEntityByUniqueAttribute(@QueryParam("type") String entityType,
-                                 @QueryParam("property") String attribute,
-                                 @QueryParam("value") String value,
-                                 @Context HttpServletRequest request) {
-
-        try {
-            List<String> deletedGuids = metadataService.deleteEntityByUniqueAttribute(entityType, attribute, value);
-            JSONObject response = new JSONObject();
-            response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
-            JSONArray guidArray = new JSONArray(deletedGuids.size());
-            for (String guid : deletedGuids) {
-                guidArray.put(guid);
-            }
-            response.put(AtlasClient.GUID, guidArray);
-            return Response.ok(response).build();
-        }  catch (AtlasException | IllegalArgumentException e) {
-            LOG.error("Unable to delete entities by unique attribute {} {} {} ", entityType, attribute, value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
-        } catch (Throwable e) {
-            LOG.error("Unable to delete entities  by unique attribute {}", entityType, attribute, value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
-        }
-    }
-
-    /**
-     * Delete entities from the repository
-     * 
-     * @param guids deletion candidate guids
-     * @param request
-     * @return response payload as json
+     * @param request - Ignored
+     * @return response payload as json - including guids of entities(including composite references from that entity) that were deleted
      */
     @DELETE
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public Response deleteEntities(@QueryParam("guid") List<String> guids, @Context HttpServletRequest request) {
+    public Response deleteEntities(@QueryParam("guid") List<String> guids,
+        @QueryParam("type") String entityType,
+        @QueryParam("property") String attribute,
+        @QueryParam("value") String value,
+        @Context HttpServletRequest request) {
         
         try {
-            List<String> deletedGuids = metadataService.deleteEntities(guids);
+            List<String> deletedGuids = new ArrayList<>();
+            if (guids != null && !guids.isEmpty()) {
+                deletedGuids = metadataService.deleteEntities(guids);
+            } else {
+                deletedGuids = metadataService.deleteEntityByUniqueAttribute(entityType, attribute, value);
+            }
             JSONObject response = new JSONObject();
             response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
             JSONArray guidArray = new JSONArray(deletedGuids.size());
@@ -370,6 +350,9 @@ public class EntityResource {
             }
             response.put(AtlasClient.GUID, guidArray);
             return Response.ok(response).build();
+        } catch (EntityNotFoundException e) {
+            LOG.error("An entity with GUID={} or qualifiedName {}-{}-{} does not exist", guids, entityType, attribute, value, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
         }  catch (AtlasException | IllegalArgumentException e) {
             LOG.error("Unable to delete entities {}", guids, e);
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));

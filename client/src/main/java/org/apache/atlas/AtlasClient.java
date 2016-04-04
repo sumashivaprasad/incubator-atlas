@@ -434,7 +434,7 @@ public class AtlasClient {
      */
     public List<String> deleteEntity(String entityType, String uniqueAttributeName, String uniqueAttributeValue) throws AtlasServiceException {
         API api = API.DELETE_ENTITY;
-        WebResource resource = getResource(api, "qualifiedName");
+        WebResource resource = getResource(api);
         resource = resource.queryParam(TYPE, entityType);
         resource = resource.queryParam(ATTRIBUTE_NAME, uniqueAttributeName);
         resource = resource.queryParam(ATTRIBUTE_VALUE, uniqueAttributeValue);
