@@ -22,8 +22,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
-import org.apache.atlas.fs.model.FSDataModel;
-import org.apache.atlas.fs.model.FSDataModelGenerator;
 import org.apache.atlas.fs.model.FSDataTypes;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
@@ -671,6 +669,7 @@ public class HiveHookIT {
 
     @Test
     public void testAlterTableLocation() throws Exception {
+        //Its an external table, so the HDFS location should also be registered as an entity
         String tableName = createTable(true, true, false);
         final String testPath = createTestDFSPath("testBaseDir");
         String query = "alter table " + tableName + " set location '" + testPath + "'";

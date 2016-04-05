@@ -453,6 +453,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             }
         } else if (entity.getType() == Type.DFS_DIR) {
             final String pathUri = normalize(new Path(entity.getLocation()).toString());
+            LOG.info("Registering DFS Path {} ", pathUri);
             Referenceable hdfsPath = dgiBridge.fillHDFSDataSet(pathUri);
             dataSets.put(pathUri, hdfsPath);
         }
@@ -499,7 +500,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         final String location = normalize(hiveTable.getDataLocation().toString());
         if (hiveTable != null && TableType.EXTERNAL_TABLE.equals(hiveTable.getTableType())) {
-            LOG.info("Registering external table query {} ", event.getQueryStr());
+            LOG.info("Registering external table process {} ", event.getQueryStr());
             List<Referenceable> inputs = new ArrayList<Referenceable>() {{
                 add(dgiBridge.fillHDFSDataSet(location));
             }};
