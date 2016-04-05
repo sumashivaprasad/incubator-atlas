@@ -78,7 +78,7 @@ public abstract class BaseResourceIT {
     protected WebResource service;
     protected AtlasClient serviceClient;
     public static final Logger LOG = LoggerFactory.getLogger(BaseResourceIT.class);
-    protected static final int MAX_WAIT_TIME = 10000;
+    protected static final int MAX_WAIT_TIME = 1000;
 
     @BeforeClass
     public void setUp() throws Exception {
