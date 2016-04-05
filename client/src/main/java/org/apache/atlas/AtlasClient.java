@@ -629,23 +629,6 @@ public class AtlasClient {
     }
 
     /**
-     * Supports Deletion of an entity identified by its unique attribute value
-     * @param entityType Type of the entity being deleted
-     * @param uniqueAttributeName Attribute Name that uniquely identifies the entity
-     * @param uniqueAttributeValue Attribute Value that uniquely identifies the entity
-     * @return List of deleted entity guids(including composite references from that entity)
-     */
-    public List<String> deleteEntity(String entityType, String uniqueAttributeName, String uniqueAttributeValue) throws AtlasServiceException {
-        API api = API.DELETE_ENTITY;
-        WebResource resource = getResource(api);
-        resource = resource.queryParam(TYPE, entityType);
-        resource = resource.queryParam(ATTRIBUTE_NAME, uniqueAttributeName);
-        resource = resource.queryParam(ATTRIBUTE_VALUE, uniqueAttributeValue);
-        JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource);
-        return extractResults(jsonResponse, GUID);
-    }
-    
-    /**
      * Get an entity given the entity id
      * @param guid entity id
      * @return result object
