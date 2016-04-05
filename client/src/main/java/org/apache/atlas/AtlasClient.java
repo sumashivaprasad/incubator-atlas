@@ -624,7 +624,7 @@ public class AtlasClient {
         resource = resource.queryParam(TYPE, entityType);
         resource = resource.queryParam(ATTRIBUTE_NAME, uniqueAttributeName);
         resource = resource.queryParam(ATTRIBUTE_VALUE, uniqueAttributeValue);
-        JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource);
+        JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource, null);
         return extractResults(jsonResponse, GUID);
     }
     
