@@ -117,6 +117,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.atlas</groupId>
+            <artifactId>atlas-repository</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
         </dependency>

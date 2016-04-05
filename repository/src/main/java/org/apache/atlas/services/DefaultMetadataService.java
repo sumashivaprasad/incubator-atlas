@@ -162,6 +162,9 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     private static final AttributeDefinition DESCRIPTION_ATTRIBUTE =
             TypesUtil.createOptionalAttrDef("description", DataTypes.STRING_TYPE);
 
+    public static final String PROCESS_INPUTS_ATTRIBUTE = "inputs";
+    public static final String PROCESS_OUTPUTS_ATTRIBUTE = "outputs";
+
     @InterfaceAudience.Private
     private void createSuperTypes() throws AtlasException {
         HierarchicalTypeDefinition<ClassType> infraType = TypesUtil
