@@ -351,7 +351,11 @@ public class EntityResource {
             response.put(AtlasClient.GUID, guidArray);
             return Response.ok(response).build();
         } catch (EntityNotFoundException e) {
-            LOG.error("An entity with GUID={} or qualifiedName {}-{}-{} does not exist", guids, entityType, attribute, value, e);
+            if(guids != null || !guids.isEmpty()) {
+                LOG.error("An entity with GUID={} does not exist", guids, e);
+            } else {
+                LOG.error("An entity with qualifiedName {}-{}-{} does not exist", entityType, attribute, value, e);
+            }
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
         }  catch (AtlasException | IllegalArgumentException e) {
             LOG.error("Unable to delete entities {}", guids, e);
