@@ -91,7 +91,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private static final long keepAliveTimeDefault = 10;
     private static final int queueSizeDefault = 10000;
 
-    public static class HiveEventContext {
+    static class HiveEventContext {
         private Set<ReadEntity> inputs;
         private Set<WriteEntity> outputs;
 
@@ -279,6 +279,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERVIEW_PROPERTIES:
         case ALTERTABLE_SERDEPROPERTIES:
         case ALTERTABLE_SERIALIZER:
+        case ALTERTABLE_ADDCOLS:
+        case ALTERTABLE_REPLACECOLS:
+        case ALTERTABLE_RENAMECOL:
             handleEventOutputs(dgiBridge, event, Type.TABLE);
             break;
         case ALTERTABLE_LOCATION:
@@ -287,12 +290,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 //Track altered lineage in case of external tables
                 handleExternalTables(dgiBridge, event, tablesUpdated.get(0).getLeft(), tablesUpdated.get(0).getRight());
             }
-        case ALTERTABLE_ADDCOLS:
-        case ALTERTABLE_REPLACECOLS:
-        case ALTERTABLE_RENAMECOL:
-            handleEventOutputs(dgiBridge, event, Type.TABLE);
-            break;
-
         case ALTERDATABASE:
         case ALTERDATABASE_OWNER:
             handleEventOutputs(dgiBridge, event, Type.DATABASE);

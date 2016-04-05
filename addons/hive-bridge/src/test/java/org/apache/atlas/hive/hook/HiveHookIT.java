@@ -208,11 +208,23 @@ public class HiveHookIT {
         String tableId = assertTableIsRegistered(dbName, tableName);
 
         Referenceable processReference = validateProcess(query, 1, 1);
-
         validateHDFSPaths(processReference, pFile, INPUTS);
+        validateOutputTables(processReference, tableId);
+    }
 
-        List<Id> outTableRef = (List<Id>) processReference.get(OUTPUTS);
-        Assert.assertEquals(outTableRef.get(0)._getId(), tableId);
+    private void validateOutputTables(Referenceable processReference, String... expectedTableGuids) throws Exception {
+       validateTables(processReference, OUTPUTS, expectedTableGuids);
+    }
+
+    private void validateInputTables(Referenceable processReference, String... expectedTableGuids) throws Exception {
+        validateTables(processReference, INPUTS, expectedTableGuids);
+    }
+
+    private void validateTables(Referenceable processReference, String attrName, String... expectedTableGuids) throws Exception {
+        List<Id> tableRef = (List<Id>) processReference.get(attrName);
+        for(int i = 0; i < expectedTableGuids.length; i++) {
+            Assert.assertEquals(tableRef.get(i)._getId(), expectedTableGuids[i]);
+        }
     }
 
     private String assertColumnIsRegistered(String colName) throws Exception {
@@ -342,8 +354,7 @@ public class HiveHookIT {
 
         validateHDFSPaths(processReference, loadFile, INPUTS);
 
-        List<Id> outTableRef = (List<Id>) processReference.get(OUTPUTS);
-        Assert.assertEquals(outTableRef.get(0)._getId(), tableId);
+        validateOutputTables(processReference, tableId);
     }
 
     private Referenceable validateProcess(String query, int numInputs, int numOutputs) throws Exception {
@@ -364,6 +375,26 @@ public class HiveHookIT {
         return process;
     }
 
+    private Referenceable validateProcess(String query, String[] inputs, String[] outputs) throws Exception {
+        String processId = assertProcessIsRegistered(query);
+        Referenceable process = dgiCLient.getEntity(processId);
+        if (inputs == null) {
+            Assert.assertNull(process.get(INPUTS));
+        } else {
+            Assert.assertEquals(((List<Referenceable>) process.get(INPUTS)).size(), inputs.length);
+            validateInputTables(process, inputs);
+        }
+
+        if (outputs == null) {
+            Assert.assertNull(process.get(OUTPUTS));
+        } else {
+            Assert.assertEquals(((List<Id>) process.get(OUTPUTS)).size(), outputs.length);
+            validateOutputTables(process, outputs);
+        }
+
+        return process;
+    }
+
     @Test
     public void testInsertIntoTable() throws Exception {
         String tableName = createTable();
@@ -372,10 +403,11 @@ public class HiveHookIT {
                 "insert into " + insertTableName + " select id, name from " + tableName;
 
         runCommand(query);
-        validateProcess(query, 1, 1);
 
-        assertTableIsRegistered(DEFAULT_DB, tableName);
-        assertTableIsRegistered(DEFAULT_DB, insertTableName);
+        String inputTableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        String opTableId = assertTableIsRegistered(DEFAULT_DB, insertTableName);
+
+        validateProcess(query, new String[] {inputTableId}, new String[] {opTableId});
     }
 
     @Test
@@ -404,8 +436,7 @@ public class HiveHookIT {
 
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
 
-        List<Id> inTableRef = (List<Id>) processReference.get(INPUTS);
-        Assert.assertEquals(inTableRef.get(0)._getId(), tableId);
+        validateInputTables(processReference, tableId);
     }
 
     @Test
@@ -418,8 +449,9 @@ public class HiveHookIT {
         runCommand(query);
         validateProcess(query, 1, 1);
 
-        assertTableIsRegistered(DEFAULT_DB, tableName);
-        assertTableIsRegistered(DEFAULT_DB, insertTableName);
+        String ipTableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        String opTableId = assertTableIsRegistered(DEFAULT_DB, insertTableName);
+        validateProcess(query, new String[] {ipTableId}, new String[] {opTableId});
     }
 
     @Test
@@ -431,6 +463,10 @@ public class HiveHookIT {
                 + " where dt = '2015-01-01'";
         runCommand(query);
         validateProcess(query, 1, 1);
+
+        String ipTableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        String opTableId = assertTableIsRegistered(DEFAULT_DB, insertTableName);
+        validateProcess(query, new String[] {ipTableId}, new String[] {opTableId});
     }
 
     private String random() {
@@ -463,8 +499,7 @@ public class HiveHookIT {
         Referenceable processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, filename, OUTPUTS);
 
-        List<Id> inTableRef = (List<Id>) processReference.get(INPUTS);
-        Assert.assertEquals(inTableRef.get(0)._getId(), tableId);
+        validateInputTables(processReference, tableId);
 
         //Import
         tableName = createTable(false);
@@ -475,8 +510,7 @@ public class HiveHookIT {
         processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, filename, INPUTS);
 
-        List<Id> outTableRef = (List<Id>) processReference.get(OUTPUTS);
-        Assert.assertEquals(outTableRef.get(0)._getId(), tableId);
+        validateOutputTables(processReference, tableId);
 
     }
 
@@ -496,8 +530,7 @@ public class HiveHookIT {
         Referenceable processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, filename, OUTPUTS);
 
-        List<Id> inTableRef = (List<Id>) processReference.get(INPUTS);
-        Assert.assertEquals(inTableRef.get(0)._getId(), tableId);
+        validateInputTables(processReference, tableId);
 
         //Import
         tableName = createTable(true);
@@ -508,8 +541,8 @@ public class HiveHookIT {
         processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, filename, INPUTS);
 
-        List<Id> outTableRef = (List<Id>) processReference.get(OUTPUTS);
-        Assert.assertEquals(outTableRef.get(0)._getId(), tableId);
+        validateOutputTables(processReference, tableId);
+
 
     }
 
@@ -684,11 +717,11 @@ public class HiveHookIT {
         Referenceable processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, testPath, INPUTS);
 
-        List<Id> outTableRef = (List<Id>) processReference.get(OUTPUTS);
-        Assert.assertEquals(outTableRef.get(0)._getId(), tableId);
+        validateOutputTables(processReference, tableId);
+
     }
 
-    private void validateHDFSPaths(Referenceable processReference, String testPath, String attributeName) throws Exception {
+    private String validateHDFSPaths(Referenceable processReference, String testPath, String attributeName) throws Exception {
         List<Id> hdfsPathRefs = (List<Id>) processReference.get(attributeName);
 
         final String testPathNormed = normalize(new Path(testPath).toString());
@@ -700,6 +733,8 @@ public class HiveHookIT {
         Assert.assertEquals(hdfsPathRef.get("name"), testPathNormed);
 //        Assert.assertEquals(hdfsPathRef.get("name"), new Path(testPath).getName());
         Assert.assertEquals(hdfsPathRef.get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME), testPathNormed);
+
+        return hdfsPathRef.getId()._getId();
     }
 
 
