@@ -335,8 +335,8 @@ public class HiveMetaStoreBridge {
 
         tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getCols(), tableQualifiedName));
 
-        // add reference to the StorageDescriptorx
-        Referenceable sdReferenceable = fillStorageDescStruct(hiveTable.getSd(), tableQualifiedName, tableQualifiedName);
+        // add reference to the StorageDescriptor
+        Referenceable sdReferenceable = fillStorageDesc(hiveTable.getSd(), tableQualifiedName, getStorageDescQFName(tableQualifiedName));
         tableReference.set("sd", sdReferenceable);
 
         // add reference to the Partition Keys
@@ -357,6 +357,10 @@ public class HiveMetaStoreBridge {
         tableReference.set("temporary", hiveTable.isTemporary());
 
         return tableReference;
+    }
+
+    private String getStorageDescQFName(String entityQualifiedName) {
+        return entityQualifiedName + "_storage";
     }
 
     private Referenceable registerTable(Referenceable dbReference, Table table) throws Exception {
@@ -410,7 +414,7 @@ public class HiveMetaStoreBridge {
         return new Referenceable(sd.getId().id, sd.getTypeName(), null);
     }
 
-    public Referenceable fillStorageDescStruct(StorageDescriptor storageDesc, String tableQualifiedName,
+    public Referenceable fillStorageDesc(StorageDescriptor storageDesc, String tableQualifiedName,
         String sdQualifiedName) throws Exception {
         LOG.debug("Filling storage descriptor information for " + storageDesc);
 
@@ -469,7 +473,6 @@ public class HiveMetaStoreBridge {
         //TODO - Fix after ATLAS-542 to shorter Name
         ref.set("name", pathUri);
         ref.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, pathUri);
-        ref.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, clusterName);
         return ref;
     }
 
