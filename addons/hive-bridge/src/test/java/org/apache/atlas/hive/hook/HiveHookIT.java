@@ -26,7 +26,6 @@ import org.apache.atlas.fs.model.FSDataTypes;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
-import org.apache.atlas.services.DefaultMetadataService;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.persistence.Id;
@@ -66,8 +65,8 @@ public class HiveHookIT {
     private AtlasClient dgiCLient;
     private SessionState ss;
     
-    private static final String INPUTS = DefaultMetadataService.PROCESS_INPUTS_ATTRIBUTE;
-    private static final String OUTPUTS = DefaultMetadataService.PROCESS_OUTPUTS_ATTRIBUTE;
+    private static final String INPUTS = AtlasClient.PROCESS_ATTRIBUTE_INPUTS;
+    private static final String OUTPUTS = AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS;
 
     private enum QUERY_TYPE {
         GREMLIN,

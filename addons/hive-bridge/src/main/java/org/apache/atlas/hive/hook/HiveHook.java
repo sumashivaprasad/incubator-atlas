@@ -104,6 +104,52 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         private String queryStr;
         private Long queryStartTime;
 
+        private String queryType;
+
+        public void setInputs(Set<ReadEntity> inputs) {
+            this.inputs = inputs;
+        }
+
+        public void setOutputs(Set<WriteEntity> outputs) {
+            this.outputs = outputs;
+        }
+
+        public void setUser(String user) {
+            this.user = user;
+        }
+
+        public void setUgi(UserGroupInformation ugi) {
+            this.ugi = ugi;
+        }
+
+        public void setOperation(HiveOperation operation) {
+            this.operation = operation;
+        }
+
+        public void setHookType(HookContext.HookType hookType) {
+            this.hookType = hookType;
+        }
+
+        public void setJsonPlan(JSONObject jsonPlan) {
+            this.jsonPlan = jsonPlan;
+        }
+
+        public void setQueryId(String queryId) {
+            this.queryId = queryId;
+        }
+
+        public void setQueryStr(String queryStr) {
+            this.queryStr = queryStr;
+        }
+
+        public void setQueryStartTime(Long queryStartTime) {
+            this.queryStartTime = queryStartTime;
+        }
+
+        public void setQueryType(String queryType) {
+            this.queryType = queryType;
+        }
+
         public Set<ReadEntity> getInputs() {
             return inputs;
         }
@@ -144,17 +190,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             return queryStartTime;
         }
 
-        public HiveEventContext(Set<ReadEntity> inputs, Set<WriteEntity> outputs, String user, UserGroupInformation ugi, HiveOperation operation, HookContext.HookType hookType, org.json.JSONObject jsonPlan, String queryId, String queryStr, Long queryStartTime) {
-            this.inputs = inputs;
-            this.outputs = outputs;
-            this.user = user;
-            this.ugi = ugi;
-            this.operation = operation;
-            this.hookType = hookType;
-            this.jsonPlan = jsonPlan;
-            this.queryId = queryId;
-            this.queryStr = queryStr;
-            this.queryStartTime = queryStartTime;
+        public String getQueryType() {
+            return queryType;
         }
     }
 
@@ -217,11 +254,18 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         final HiveConf conf = new HiveConf(hookContext.getConf());
 
-        final HiveEventContext event = new HiveEventContext(hookContext.getInputs(), hookContext.getOutputs(),
-            getUser(hookContext.getUserName(), hookContext.getUgi()), hookContext.getUgi(),
-            OPERATION_MAP.get(hookContext.getOperationName()), hookContext.getHookType(),
-            getQueryPlan(hookContext.getConf(), hookContext.getQueryPlan()), hookContext.getQueryPlan().getQueryId(), hookContext.getQueryPlan().getQueryStr(),
-            hookContext.getQueryPlan().getQueryStartTime());
+        final HiveEventContext event = new HiveEventContext();
+        event.setInputs(hookContext.getInputs());
+        event.setOutputs(hookContext.getOutputs());
+        event.setJsonPlan(getQueryPlan(hookContext.getConf(), hookContext.getQueryPlan()));
+        event.setHookType(hookContext.getHookType());
+        event.setUgi(hookContext.getUgi());
+        event.setUser(hookContext.getUserName());
+        event.setOperation(OPERATION_MAP.get(hookContext.getOperationName()));
+        event.setQueryId(hookContext.getQueryPlan().getQueryId());
+        event.setQueryStr(hookContext.getQueryPlan().getQueryStr());
+        event.setQueryStartTime(hookContext.getQueryPlan().getQueryStartTime());
+        event.setQueryType(hookContext.getQueryPlan().getQueryPlan().getQueryType());
 
         boolean sync = conf.get(CONF_SYNC, "false").equals("true");
         if (sync) {
