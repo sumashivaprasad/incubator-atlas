@@ -410,16 +410,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return entitiesCreatedOrUpdated;
     }
 
-//    private <T extends Entity> Set<T> filterEntitiesOfType(Set<T> entities, Type type) {
-//        Set<T> result = new LinkedHashSet<>();
-//        for (T entity : entities) {
-//            if(type.equals(entity.getType())) {
-//                result.add(entity);
-//            }
-//        }
-//        return result;
-//    }
-
     private String normalize(String str) {
         if (StringUtils.isEmpty(str)) {
             return null;
