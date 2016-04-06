@@ -466,10 +466,9 @@ public class HiveMetaStoreBridge {
         ref.set("path", pathUri);
 //        Path path = new Path(pathUri);
 //        ref.set("name", path.getName());
-        //TODO - Fix after ATLAS-542 to shorter Name
+//        TODO - Fix after ATLAS-542 to shorter Name
         ref.set("name", pathUri);
         ref.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, pathUri);
-        ref.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, clusterName);
         return ref;
     }
 
