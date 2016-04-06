@@ -266,7 +266,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case IMPORT:
         case QUERY:
         case TRUNCATETABLE:
-            //TODO - Add TC for truncate table
             registerProcess(dgiBridge, event);
             break;
 
@@ -281,14 +280,12 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_PROPERTIES:
         case ALTERVIEW_PROPERTIES:
         case DROPVIEW_PROPERTIES:
-            //TODO - Add TC for drop view properties
         case ALTERTABLE_SERDEPROPERTIES:
         case ALTERTABLE_SERIALIZER:
         case ALTERTABLE_ADDCOLS:
         case ALTERTABLE_REPLACECOLS:
         case ALTERTABLE_RENAMECOL:
         case ALTERTABLE_PARTCOLTYPE:
-            //TODO - Add TC for ALTER TABLE <table_name> PARTITION COLUMN (<column_name> <new type>);
             handleEventOutputs(dgiBridge, event, Type.TABLE);
             break;
         case ALTERTABLE_LOCATION:

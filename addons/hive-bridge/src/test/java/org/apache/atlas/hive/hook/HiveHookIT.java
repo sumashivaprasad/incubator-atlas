@@ -682,11 +682,11 @@ public class HiveHookIT {
         Assert.assertEquals(columns.get(0).get(HiveDataModelGenerator.NAME), "id");
     }
 
-    @Test(enabled = false)
-    //TODO - Check why truncate table doesnt register as a process
+    @Test()
     public void testTruncateTable() throws Exception {
-        String tableName = createTable(true, true, false);
+        String tableName = createTable(false);
         String query = String.format("truncate table %s", tableName);
+        runCommand(query);
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
         validateProcess(query, 0, 1);
