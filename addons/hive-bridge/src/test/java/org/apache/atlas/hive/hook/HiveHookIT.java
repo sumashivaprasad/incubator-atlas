@@ -686,8 +686,15 @@ public class HiveHookIT {
         String query = String.format("truncate table %s", tableName);
         runCommand(query);
 
-        assertTableIsRegistered(DEFAULT_DB, tableName);
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
         validateProcess(query, 0, 1);
+
+        //Check lineage
+        String datasetName = HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName);
+        JSONObject response = dgiCLient.getInputGraph(datasetName);
+        JSONObject vertices = response.getJSONObject("values").getJSONObject("vertices");
+        //Below should be assertTrue - Fix https://issues.apache.org/jira/browse/ATLAS-653
+        Assert.assertFalse(vertices.has(tableId));
     }
 
     @Test
@@ -875,6 +882,19 @@ public class HiveHookIT {
         assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), "id"));
         assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), "name"));
         assertTableIsNotRegistered(DEFAULT_DB, tableName);
+    }
+
+    @Test
+    public void testDropNonExistingTable() throws Exception {
+        //Test Deletion of a non existing table
+        final String tableName = "nonexistingtable";
+        assertTableIsNotRegistered(DEFAULT_DB, tableName);
+        final String query = String.format("drop table if exists %s", tableName);
+        runCommand(query);
+
+        //Should have no effect
+        assertTableIsNotRegistered(DEFAULT_DB, tableName);
+        assertProcessIsNotRegistered(query);
     }
 
     @Test
