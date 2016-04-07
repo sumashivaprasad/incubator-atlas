@@ -497,7 +497,6 @@ public class HiveHookIT {
         runCommand(query);
         Referenceable processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, filename, OUTPUTS);
-
         validateInputTables(processReference, tableId);
 
         //Import
@@ -726,7 +725,7 @@ public class HiveHookIT {
 
     @Test
     public void testAlterTableLocation() throws Exception {
-        //Its an external table, so the HDFS location should also be registered as an entity\
+        //Its an external table, so the HDFS location should also be registered as an entity
         String tableName = createTable(true, true, false);
         final String testPath = createTestDFSPath("testBaseDir");
         String query = "alter table " + tableName + " set location '" + testPath + "'";
