@@ -338,6 +338,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 //Track altered lineage in case of external tables
                 handleExternalTables(dgiBridge, event, tablesUpdated.get(0).getLeft(), tablesUpdated.get(0).getRight());
             }
+            break;
         case ALTERDATABASE:
         case ALTERDATABASE_OWNER:
             handleEventOutputs(dgiBridge, event, Type.DATABASE);

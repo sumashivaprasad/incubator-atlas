@@ -497,7 +497,6 @@ public class HiveHookIT {
         runCommand(query);
         Referenceable processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, filename, OUTPUTS);
-
         validateInputTables(processReference, tableId);
 
         //Import
@@ -689,6 +688,16 @@ public class HiveHookIT {
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
         validateProcess(query, 0, 1);
+
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        validateProcess(query, 0, 1);
+
+        //Check lineage
+        String datasetName = HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName);
+        JSONObject response = dgiCLient.getInputGraph(datasetName);
+        JSONObject vertices = response.getJSONObject("values").getJSONObject("vertices");
+        //Below should be assertTrue - Fix https://issues.apache.org/jira/browse/ATLAS-653
+        Assert.assertFalse(vertices.has(tableId));
     }
 
     @Test
@@ -726,7 +735,7 @@ public class HiveHookIT {
 
     @Test
     public void testAlterTableLocation() throws Exception {
-        //Its an external table, so the HDFS location should also be registered as an entity\
+        //Its an external table, so the HDFS location should also be registered as an entity
         String tableName = createTable(true, true, false);
         final String testPath = createTestDFSPath("testBaseDir");
         String query = "alter table " + tableName + " set location '" + testPath + "'";
@@ -871,7 +880,6 @@ public class HiveHookIT {
         assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), "name"));
 
         final String query = String.format("drop table %s ", tableName);
-
         runCommand(query);
         assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), "id"));
         assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), "name"));
@@ -922,6 +930,19 @@ public class HiveHookIT {
         runCommand(query);
 
         assertDBIsNotRegistered(dbName);
+    }
+
+    @Test
+    public void testDropNonExistingTable() throws Exception {
+        //Test Deletion of a non existing table
+        final String tableName = "nonexistingtable";
+        assertTableIsNotRegistered(DEFAULT_DB, tableName);
+        final String query = String.format("drop table if exists %s", tableName);
+        runCommand(query);
+
+        //Should have no effect
+        assertTableIsNotRegistered(DEFAULT_DB, tableName);
+        assertProcessIsNotRegistered(query);
     }
 
     @Test
