@@ -933,6 +933,19 @@ public class HiveHookIT {
     }
 
     @Test
+    public void testDropNonExistingDB() throws Exception {
+        //Test Deletion of a non existing table
+        final String dbName = "nonexistingdb";
+        assertDBIsNotRegistered(dbName);
+        final String query = String.format("drop database if exists %s cascade", dbName);
+        runCommand(query);
+
+        //Should have no effect
+        assertDBIsNotRegistered(dbName);
+        assertProcessIsNotRegistered(query);
+    }
+
+    @Test
     public void testDropNonExistingTable() throws Exception {
         //Test Deletion of a non existing table
         final String tableName = "nonexistingtable";
