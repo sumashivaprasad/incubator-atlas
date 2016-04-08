@@ -323,7 +323,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_BUCKETNUM:
         case ALTERTABLE_PROPERTIES:
         case ALTERVIEW_PROPERTIES:
-        case DROPVIEW_PROPERTIES:
         case ALTERTABLE_SERDEPROPERTIES:
         case ALTERTABLE_SERIALIZER:
         case ALTERTABLE_ADDCOLS:
@@ -378,7 +377,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     private void deleteDatabase(HiveMetaStoreBridge dgiBridge, HiveEventContext event) {
-        if (event.outputs.size() == 1) {
+        if (event.outputs.size() > 1) {
             LOG.info("Starting deletion of tables and databases with cascade {} " , event.queryStr);
         }
 
@@ -387,11 +386,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 deleteTable(dgiBridge, event, output);
             } else if (Type.DATABASE.equals(output.getType())) {
                 final String dbQualifiedName = HiveMetaStoreBridge.getDBQualifiedName(dgiBridge.getClusterName(), output.getDatabase().getName());
-                if (event.outputs.size() == 1) {
-                    LOG.info("Deleting database without cascade {} ", dbQualifiedName);
-                } else {
-                    LOG.info("Deleting database with cascade {} ", dbQualifiedName);
-                }
                 messages.add(
                     new HookNotification.EntityDeleteRequest(event.getUser(),
                         HiveDataTypes.HIVE_DB.getName(),

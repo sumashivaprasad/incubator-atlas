@@ -686,9 +686,6 @@ public class HiveHookIT {
         String query = String.format("truncate table %s", tableName);
         runCommand(query);
 
-        assertTableIsRegistered(DEFAULT_DB, tableName);
-        validateProcess(query, 0, 1);
-
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
         validateProcess(query, 0, 1);
 
@@ -934,7 +931,7 @@ public class HiveHookIT {
 
     @Test
     public void testDropNonExistingDB() throws Exception {
-        //Test Deletion of a non existing table
+        //Test Deletion of a non existing DB
         final String dbName = "nonexistingdb";
         assertDBIsNotRegistered(dbName);
         final String query = String.format("drop database if exists %s cascade", dbName);
