@@ -322,7 +322,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_BUCKETNUM:
         case ALTERTABLE_PROPERTIES:
         case ALTERVIEW_PROPERTIES:
-        case DROPVIEW_PROPERTIES:
         case ALTERTABLE_SERDEPROPERTIES:
         case ALTERTABLE_SERIALIZER:
         case ALTERTABLE_ADDCOLS:
