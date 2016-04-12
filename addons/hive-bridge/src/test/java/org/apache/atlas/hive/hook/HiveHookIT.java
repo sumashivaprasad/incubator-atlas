@@ -438,7 +438,8 @@ public class HiveHookIT {
         validateInputTables(processReference, tableId);
     }
 
-    @Test
+    //TODO - Fix in ATLAS-626
+    @Test(enabled = false)
     public void testInsertIntoTempTable() throws Exception {
         String tableName = createTable();
         String insertTableName = createTable(false, false, true);

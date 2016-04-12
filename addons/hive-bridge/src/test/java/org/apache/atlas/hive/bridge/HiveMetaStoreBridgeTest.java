@@ -22,16 +22,14 @@ import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.hive.model.HiveDataTypes;
 import org.apache.atlas.typesystem.Referenceable;
+import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.Database;
-import org.apache.hadoop.hive.ql.metadata.Hive;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.ql.metadata.Partition;
-import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.thrift.TException;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -55,7 +53,7 @@ public class HiveMetaStoreBridgeTest {
     public static final String TEST_TABLE_NAME = "test_table";
 
     @Mock
-    private Hive hiveClient;
+    private HiveMetaStoreClient hiveClient;
 
     @Mock
     private AtlasClient atlasClient;
@@ -89,7 +87,7 @@ public class HiveMetaStoreBridgeTest {
     public void testImportThatUpdatesRegisteredTable() throws Exception {
         setupDB(hiveClient, TEST_DB_NAME);
 
-        setupTable(hiveClient, TEST_DB_NAME, TEST_TABLE_NAME);
+        setupMetastoreTable(hiveClient, TEST_DB_NAME, TEST_TABLE_NAME);
 
         returnExistingDatabase(TEST_DB_NAME, atlasClient, CLUSTER_NAME);
 
@@ -115,45 +113,17 @@ public class HiveMetaStoreBridgeTest {
                 getEntityReference("72e06b34-9151-4023-aa9d-b82103a50e76"));
     }
 
-    private Table setupTable(Hive hiveClient, String databaseName, String tableName) throws HiveException {
+    private org.apache.hadoop.hive.metastore.api.Table setupMetastoreTable(HiveMetaStoreClient hiveClient, String databaseName, String tableName) throws HiveException, TException {
         when(hiveClient.getAllTables(databaseName)).thenReturn(Arrays.asList(new String[]{tableName}));
-        Table testTable = createTestTable(databaseName, tableName);
+        org.apache.hadoop.hive.metastore.api.Table testTable = createTestTable(databaseName, tableName);
         when(hiveClient.getTable(databaseName, tableName)).thenReturn(testTable);
         return testTable;
     }
 
-    private void setupDB(Hive hiveClient, String databaseName) throws HiveException {
+    private void setupDB(HiveMetaStoreClient hiveClient, String databaseName) throws HiveException, TException {
         when(hiveClient.getAllDatabases()).thenReturn(Arrays.asList(new String[]{databaseName}));
         when(hiveClient.getDatabase(databaseName)).thenReturn(
                 new Database(databaseName, "Default database", "/user/hive/default", null));
-    }
-
-    @Test
-    public void testImportWhenPartitionKeysAreNull() throws Exception {
-        setupDB(hiveClient, TEST_DB_NAME);
-        Table hiveTable = setupTable(hiveClient, TEST_DB_NAME, TEST_TABLE_NAME);
-
-        returnExistingDatabase(TEST_DB_NAME, atlasClient, CLUSTER_NAME);
-
-        when(atlasClient.searchByDSL(HiveMetaStoreBridge.getTableDSLQuery(CLUSTER_NAME, TEST_DB_NAME,
-            TEST_TABLE_NAME,
-            HiveDataTypes.HIVE_TABLE.getName()))).thenReturn(
-            getEntityReference("82e06b34-9151-4023-aa9d-b82103a50e77"));
-        when(atlasClient.getEntity("82e06b34-9151-4023-aa9d-b82103a50e77")).thenReturn(createTableReference());
-
-        Partition partition = mock(Partition.class);
-        when(partition.getTable()).thenReturn(hiveTable);
-        List partitionValues = Arrays.asList(new String[]{});
-        when(partition.getValues()).thenReturn(partitionValues);
-
-        when(hiveClient.getPartitions(hiveTable)).thenReturn(Arrays.asList(new Partition[]{partition}));
-
-        HiveMetaStoreBridge bridge = new HiveMetaStoreBridge(CLUSTER_NAME, hiveClient, atlasClient);
-        try {
-            bridge.importHiveMetadata();
-        } catch (Exception e) {
-            Assert.fail("Partition with null key caused import to fail with exception ", e);
-        }
     }
 
     private JSONArray getEntityReference(String id) throws JSONException {
@@ -167,10 +137,15 @@ public class HiveMetaStoreBridgeTest {
         return tableReference;
     }
 
-    private Table createTestTable(String databaseName, String tableName) throws HiveException {
-        Table table = new Table(databaseName, tableName);
-        table.setInputFormatClass(TextInputFormat.class);
-        table.setTableType(TableType.EXTERNAL_TABLE);
+    private org.apache.hadoop.hive.metastore.api.Table createTestTable(String databaseName, String tableName) throws HiveException {
+        org.apache.hadoop.hive.metastore.api.Table table = new org.apache.hadoop.hive.metastore.api.Table();
+        table.setDbName(databaseName);
+        table.setTableName(tableName);
+
+        StorageDescriptor sd = new StorageDescriptor();
+        sd.setInputFormat("TEXT");
+        table.setSd(sd);
+        table.setTableType(TableType.EXTERNAL_TABLE.name());
         return table;
     }
 

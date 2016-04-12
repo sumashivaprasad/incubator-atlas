@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.Database;
+import org.apache.hadoop.hive.metastore.api.MetaException;
+import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.ql.QueryPlan;
 import org.apache.hadoop.hive.ql.exec.ExplainTask;
 import org.apache.hadoop.hive.ql.exec.Task;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.thrift.TException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +81,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     public static final String QUEUE_SIZE = CONF_PREFIX + "queueSize";
 
     public static final String HOOK_NUM_RETRIES = CONF_PREFIX + "numRetries";
+
+    private static final String TEMP_TABLE_ERROR_MSG = "Could not get table details from Metastore. Table is temporary";
 
     private static final Map<String, HiveOperation> OPERATION_MAP = new HashMap<>();
 
@@ -285,76 +290,84 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     private void fireAndForget(HiveEventContext event) throws Exception {
+
+
         assert event.getHookType() == HookContext.HookType.POST_EXEC_HOOK : "Non-POST_EXEC_HOOK not supported!";
 
         LOG.info("Entered Atlas hook for hook type {} operation {}", event.getHookType(), event.getOperation());
 
         HiveMetaStoreBridge dgiBridge = new HiveMetaStoreBridge(hiveConf);
 
-        switch (event.getOperation()) {
-        case CREATEDATABASE:
-            handleEventOutputs(dgiBridge, event, Type.DATABASE);
-            break;
+        try {
 
-        case CREATETABLE:
-            List<Pair<? extends Entity, Referenceable>> tablesCreated = handleEventOutputs(dgiBridge, event, Type.TABLE);
-            handleExternalTables(dgiBridge, event, tablesCreated.get(0).getLeft(), tablesCreated.get(0).getRight());
-            break;
+            switch (event.getOperation()) {
+            case CREATEDATABASE:
+                handleEventOutputs(dgiBridge, event, Type.DATABASE);
+                break;
 
-        case CREATETABLE_AS_SELECT:
-        case CREATEVIEW:
-        case ALTERVIEW_AS:
-        case LOAD:
-        case EXPORT:
-        case IMPORT:
-        case QUERY:
-        case TRUNCATETABLE:
-            registerProcess(dgiBridge, event);
-            break;
+            case CREATETABLE:
+                List<Pair<? extends Entity, Referenceable>> tablesCreated = handleEventOutputs(dgiBridge, event, Type.TABLE);
+                handleExternalTables(dgiBridge, event, tablesCreated.get(0).getLeft(), tablesCreated.get(0).getRight());
+                break;
 
-        case ALTERTABLE_RENAME:
-        case ALTERVIEW_RENAME:
-            renameTable(dgiBridge, event);
-            break;
+            case CREATETABLE_AS_SELECT:
+            case CREATEVIEW:
+            case ALTERVIEW_AS:
+            case LOAD:
+            case EXPORT:
+            case IMPORT:
+            case QUERY:
+            case TRUNCATETABLE:
+                registerProcess(dgiBridge, event);
+                break;
 
-        case ALTERTABLE_FILEFORMAT:
-        case ALTERTABLE_CLUSTER_SORT:
-        case ALTERTABLE_BUCKETNUM:
-        case ALTERTABLE_PROPERTIES:
-        case ALTERVIEW_PROPERTIES:
-        case ALTERTABLE_SERDEPROPERTIES:
-        case ALTERTABLE_SERIALIZER:
-        case ALTERTABLE_ADDCOLS:
-        case ALTERTABLE_REPLACECOLS:
-        case ALTERTABLE_RENAMECOL:
-        case ALTERTABLE_PARTCOLTYPE:
-            handleEventOutputs(dgiBridge, event, Type.TABLE);
-            break;
-        case ALTERTABLE_LOCATION:
-            List<Pair<? extends Entity, Referenceable>> tablesUpdated = handleEventOutputs(dgiBridge, event, Type.TABLE);
-            if (tablesUpdated != null && tablesUpdated.size() > 0) {
-                //Track altered lineage in case of external tables
-                handleExternalTables(dgiBridge, event, tablesUpdated.get(0).getLeft(), tablesUpdated.get(0).getRight());
+            case ALTERTABLE_RENAME:
+            case ALTERVIEW_RENAME:
+                renameTable(dgiBridge, event);
+                break;
+
+            case ALTERTABLE_FILEFORMAT:
+            case ALTERTABLE_CLUSTER_SORT:
+            case ALTERTABLE_BUCKETNUM:
+            case ALTERTABLE_PROPERTIES:
+            case ALTERVIEW_PROPERTIES:
+            case ALTERTABLE_SERDEPROPERTIES:
+            case ALTERTABLE_SERIALIZER:
+            case ALTERTABLE_ADDCOLS:
+            case ALTERTABLE_REPLACECOLS:
+            case ALTERTABLE_RENAMECOL:
+            case ALTERTABLE_PARTCOLTYPE:
+                handleEventOutputs(dgiBridge, event, Type.TABLE);
+                break;
+            case ALTERTABLE_LOCATION:
+                List<Pair<? extends Entity, Referenceable>> tablesUpdated = handleEventOutputs(dgiBridge, event, Type.TABLE);
+                if (tablesUpdated != null && tablesUpdated.size() > 0) {
+                    //Track altered lineage in case of external tables
+                    handleExternalTables(dgiBridge, event, tablesUpdated.get(0).getLeft(), tablesUpdated.get(0).getRight());
+                }
+                break;
+            case ALTERDATABASE:
+            case ALTERDATABASE_OWNER:
+                handleEventOutputs(dgiBridge, event, Type.DATABASE);
+                break;
+
+            case DROPTABLE:
+            case DROPVIEW:
+                deleteTable(dgiBridge, event);
+                break;
+
+            case DROPDATABASE:
+                deleteDatabase(dgiBridge, event);
+                break;
+
+            default:
             }
-            break;
-        case ALTERDATABASE:
-        case ALTERDATABASE_OWNER:
-            handleEventOutputs(dgiBridge, event, Type.DATABASE);
-            break;
 
-        case DROPTABLE:
-        case DROPVIEW:
-            deleteTable(dgiBridge, event);
-            break;
-
-        case DROPDATABASE:
-            deleteDatabase(dgiBridge, event);
-            break;
-
-        default:
+            notifyEntities(messages);
+        } finally {
+            //Close the client
+            dgiBridge.hiveClient.close();
         }
-
-        notifyEntities(messages);
     }
 
     private void deleteTable(HiveMetaStoreBridge dgiBridge, HiveEventContext event) {
@@ -459,10 +472,15 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         Referenceable tableEntity = null;
         if (table != null) {
-            table = dgiBridge.hiveClient.getTable(table.getDbName(), table.getTableName());
-            tableEntity = dgiBridge.createTableInstance(dbEntity, table);
-            entities.add(tableEntity);
+            try {
+                final org.apache.hadoop.hive.metastore.api.Table metaStoreTable = dgiBridge.hiveClient.getTable(table.getDbName(), table.getTableName());
+                tableEntity = dgiBridge.createTableInstance(dbEntity, metaStoreTable);
+                entities.add(tableEntity);
+            } catch (NoSuchObjectException nse) {
+                LOG.warn(TEMP_TABLE_ERROR_MSG, nse);
+            }
         }
+
 
         messages.add(new HookNotification.EntityUpdateRequest(user, entities));
         return tableEntity;
@@ -583,24 +601,31 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return false;
     }
 
-    private void handleExternalTables(final HiveMetaStoreBridge dgiBridge, final HiveEventContext event, final Entity entity, final Referenceable tblRef) throws HiveException, MalformedURLException {
+    private void handleExternalTables(final HiveMetaStoreBridge dgiBridge, final HiveEventContext event, final Entity entity, final Referenceable tblRef) throws TException {
         Table hiveTable = entity.getTable();
-        //Refresh to get the correct location
-        hiveTable = dgiBridge.hiveClient.getTable(hiveTable.getDbName(), hiveTable.getTableName());
 
-        final String location = normalize(hiveTable.getDataLocation().toString());
-        if (hiveTable != null && TableType.EXTERNAL_TABLE.equals(hiveTable.getTableType())) {
-            LOG.info("Registering external table process {} ", event.getQueryStr());
-            List<Referenceable> inputs = new ArrayList<Referenceable>() {{
-                add(dgiBridge.fillHDFSDataSet(location));
-            }};
+        try {
+            //Refresh to get the correct location
+            final org.apache.hadoop.hive.metastore.api.Table metaStoreTable = dgiBridge.hiveClient.getTable(hiveTable.getDbName(), hiveTable.getTableName());
 
-            List<Referenceable> outputs = new ArrayList<Referenceable>() {{
-                add(tblRef);
-            }};
+            if (metaStoreTable.getSd() != null) {
+                final String location = normalize(new Path(metaStoreTable.getSd().getLocation()).toString());
+                if (metaStoreTable != null && TableType.EXTERNAL_TABLE.name().equals(metaStoreTable.getTableType())) {
+                    LOG.info("Registering external table process {} ", event.getQueryStr());
+                    List<Referenceable> inputs = new ArrayList<Referenceable>() {{
+                        add(dgiBridge.fillHDFSDataSet(location));
+                    }};
 
-            Referenceable processReferenceable = getProcessReferenceable(event, inputs, outputs);
-            messages.add(new HookNotification.EntityCreateRequest(event.getUser(), processReferenceable));
+                    List<Referenceable> outputs = new ArrayList<Referenceable>() {{
+                        add(tblRef);
+                    }};
+
+                    Referenceable processReferenceable = getProcessReferenceable(event, inputs, outputs);
+                    messages.add(new HookNotification.EntityCreateRequest(event.getUser(), processReferenceable));
+                }
+            }
+        } catch(NoSuchObjectException nse) {
+            LOG.info(TEMP_TABLE_ERROR_MSG, nse);
         }
     }
 

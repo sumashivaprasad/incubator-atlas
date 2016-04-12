@@ -33,15 +33,16 @@ import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
+import org.apache.hadoop.hive.metastore.IMetaStoreClient;
+import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
-import org.apache.hadoop.hive.ql.metadata.Hive;
+import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -49,8 +50,10 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A Bridge Utility that imports metadata from the Hive Meta Store
@@ -70,10 +73,10 @@ public class HiveMetaStoreBridge {
 
     private static final Logger LOG = LoggerFactory.getLogger(HiveMetaStoreBridge.class);
 
-    public final Hive hiveClient;
+    public final IMetaStoreClient hiveClient;
     private AtlasClient atlasClient = null;
 
-    HiveMetaStoreBridge(String clusterName, Hive hiveClient, AtlasClient atlasClient) {
+    HiveMetaStoreBridge(String clusterName, IMetaStoreClient hiveClient, AtlasClient atlasClient) {
         this.clusterName = clusterName;
         this.hiveClient = hiveClient;
         this.atlasClient = atlasClient;
@@ -88,7 +91,7 @@ public class HiveMetaStoreBridge {
      * @param hiveConf {@link HiveConf} for Hive component in the cluster
      */
     public HiveMetaStoreBridge(HiveConf hiveConf) throws Exception {
-        this(hiveConf.get(HIVE_CLUSTER_NAME, DEFAULT_CLUSTER_NAME), Hive.get(hiveConf), null);
+        this(hiveConf.get(HIVE_CLUSTER_NAME, DEFAULT_CLUSTER_NAME), RetryingMetaStoreClient.getProxy(hiveConf) , null);
     }
 
     /**
@@ -96,7 +99,7 @@ public class HiveMetaStoreBridge {
      * @param hiveConf {@link HiveConf} for Hive component in the cluster
      */
     public HiveMetaStoreBridge(HiveConf hiveConf, AtlasClient atlasClient) throws Exception {
-        this(hiveConf.get(HIVE_CLUSTER_NAME, DEFAULT_CLUSTER_NAME), Hive.get(hiveConf), atlasClient);
+        this(hiveConf.get(HIVE_CLUSTER_NAME, DEFAULT_CLUSTER_NAME), RetryingMetaStoreClient.getProxy(hiveConf), atlasClient);
     }
 
     AtlasClient getAtlasClient() {
@@ -148,7 +151,7 @@ public class HiveMetaStoreBridge {
     }
 
     private Referenceable createOrUpdateDBInstance(Database hiveDB, Referenceable dbRef) {
-        LOG.info("Importing objects from databaseName : " + hiveDB.getName());
+        LOG.info("Creating/Updating database  : " + hiveDB.getName());
 
         if (dbRef == null) {
             dbRef = new Referenceable(HiveDataTypes.HIVE_DB.getName());
@@ -293,6 +296,7 @@ public class HiveMetaStoreBridge {
 
     private Referenceable createOrUpdateTableInstance(Referenceable dbReference, Referenceable tableReference,
                                                       final Table hiveTable) throws Exception {
+
         LOG.info("Importing objects from {}.{}", hiveTable.getDbName(), hiveTable.getTableName());
 
         if (tableReference == null) {
@@ -303,26 +307,33 @@ public class HiveMetaStoreBridge {
         tableReference.set(HiveDataModelGenerator.TABLE_NAME, hiveTable.getTableName().toLowerCase());
         tableReference.set("owner", hiveTable.getOwner());
 
-        tableReference.set("createTime", hiveTable.getMetadata().getProperty(hive_metastoreConstants.DDL_TIME));
+        tableReference.set("createTime", hiveTable.getCreateTime());
         tableReference.set("lastAccessTime", hiveTable.getLastAccessTime());
         tableReference.set("retention", hiveTable.getRetention());
 
-        tableReference.set(HiveDataModelGenerator.COMMENT, hiveTable.getParameters().get(HiveDataModelGenerator.COMMENT));
+        final Map<String, String> parameters = hiveTable.getParameters();
+
+        if (parameters != null) {
+            tableReference.set(HiveDataModelGenerator.COMMENT, parameters.get(HiveDataModelGenerator.COMMENT));
+            tableReference.set(HiveDataModelGenerator.PARAMETERS, parameters);
+        }
 
         // add reference to the database
         tableReference.set(HiveDataModelGenerator.DB, dbReference);
 
-        tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getCols(), tableQualifiedName));
+        if (hiveTable.getSd() != null) {
+            tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getSd().getCols(), tableQualifiedName));
 
-        // add reference to the StorageDescriptor
-        Referenceable sdReferenceable = fillStorageDesc(hiveTable.getSd(), tableQualifiedName, getStorageDescQFName(tableQualifiedName));
-        tableReference.set("sd", sdReferenceable);
+            // add reference to the StorageDescriptor
+            Referenceable sdReferenceable = fillStorageDesc(hiveTable.getSd(), tableQualifiedName, getStorageDescQFName(tableQualifiedName));
+            tableReference.set("sd", sdReferenceable);
+        }
 
         // add reference to the Partition Keys
         List<Referenceable> partKeys = getColumns(hiveTable.getPartitionKeys(), tableQualifiedName);
         tableReference.set("partitionKeys", partKeys);
 
-        tableReference.set(HiveDataModelGenerator.PARAMETERS, hiveTable.getParameters());
+
 
         if (hiveTable.getViewOriginalText() != null) {
             tableReference.set("viewOriginalText", hiveTable.getViewOriginalText());
@@ -332,7 +343,7 @@ public class HiveMetaStoreBridge {
             tableReference.set("viewExpandedText", hiveTable.getViewExpandedText());
         }
 
-        tableReference.set(TABLE_TYPE_ATTR, hiveTable.getTableType().name());
+        tableReference.set(TABLE_TYPE_ATTR, hiveTable.getTableType());
         tableReference.set("temporary", hiveTable.isTemporary());
 
         return tableReference;
@@ -404,29 +415,32 @@ public class HiveMetaStoreBridge {
         LOG.debug("serdeInfo = " + serdeInfo);
         // SkewedInfo skewedInfo = storageDesc.getSkewedInfo();
 
-        String serdeInfoName = HiveDataTypes.HIVE_SERDE.getName();
-        Struct serdeInfoStruct = new Struct(serdeInfoName);
+        if (serdeInfo != null) {
+            String serdeInfoName = HiveDataTypes.HIVE_SERDE.getName();
+            Struct serdeInfoStruct = new Struct(serdeInfoName);
+            serdeInfoStruct.set(HiveDataModelGenerator.NAME, serdeInfo.getName());
+            serdeInfoStruct.set("serializationLib", serdeInfo.getSerializationLib());
+            serdeInfoStruct.set(HiveDataModelGenerator.PARAMETERS, serdeInfo.getParameters());
+            sdReferenceable.set("serdeInfo", serdeInfoStruct);
+        }
 
-        serdeInfoStruct.set(HiveDataModelGenerator.NAME, serdeInfo.getName());
-        serdeInfoStruct.set("serializationLib", serdeInfo.getSerializationLib());
-        serdeInfoStruct.set(HiveDataModelGenerator.PARAMETERS, serdeInfo.getParameters());
-
-        sdReferenceable.set("serdeInfo", serdeInfoStruct);
         sdReferenceable.set(HiveDataModelGenerator.STORAGE_NUM_BUCKETS, storageDesc.getNumBuckets());
         sdReferenceable
                 .set(HiveDataModelGenerator.STORAGE_IS_STORED_AS_SUB_DIRS, storageDesc.isStoredAsSubDirectories());
 
         List<Struct> sortColsStruct = new ArrayList<>();
-        for (Order sortcol : storageDesc.getSortCols()) {
-            String hiveOrderName = HiveDataTypes.HIVE_ORDER.getName();
-            Struct colStruct = new Struct(hiveOrderName);
-            colStruct.set("col", sortcol.getCol());
-            colStruct.set("order", sortcol.getOrder());
+        if (storageDesc.getSortCols() != null) {
+            for (Order sortcol : storageDesc.getSortCols()) {
+                String hiveOrderName = HiveDataTypes.HIVE_ORDER.getName();
+                Struct colStruct = new Struct(hiveOrderName);
+                colStruct.set("col", sortcol.getCol());
+                colStruct.set("order", sortcol.getOrder());
 
-            sortColsStruct.add(colStruct);
-        }
-        if (sortColsStruct.size() > 0) {
-            sdReferenceable.set("sortCols", sortColsStruct);
+                sortColsStruct.add(colStruct);
+            }
+            if (sortColsStruct.size() > 0) {
+                sdReferenceable.set("sortCols", sortColsStruct);
+            }
         }
 
         sdReferenceable.set("location", storageDesc.getLocation());
@@ -434,11 +448,13 @@ public class HiveMetaStoreBridge {
         sdReferenceable.set("outputFormat", storageDesc.getOutputFormat());
         sdReferenceable.set("compressed", storageDesc.isCompressed());
 
-        if (storageDesc.getBucketCols().size() > 0) {
+        if (storageDesc.getBucketCols() != null && storageDesc.getBucketCols().size() > 0) {
             sdReferenceable.set("bucketCols", storageDesc.getBucketCols());
         }
 
-        sdReferenceable.set(HiveDataModelGenerator.PARAMETERS, storageDesc.getParameters());
+        if (storageDesc.getParameters() != null) {
+            sdReferenceable.set(HiveDataModelGenerator.PARAMETERS, storageDesc.getParameters());
+        }
         sdReferenceable.set("storedAsSubDirectories", storageDesc.isStoredAsSubDirectories());
 
         return sdReferenceable;
@@ -464,16 +480,18 @@ public class HiveMetaStoreBridge {
 
     public List<Referenceable> getColumns(List<FieldSchema> schemaList, String tableQualifiedName) throws Exception {
         List<Referenceable> colList = new ArrayList<>();
-        for (FieldSchema fs : schemaList) {
-            LOG.debug("Processing field " + fs);
-            Referenceable colReferenceable = new Referenceable(HiveDataTypes.HIVE_COLUMN.getName());
-            colReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+        if (schemaList != null) {
+            for (FieldSchema fs : schemaList) {
+                LOG.debug("Processing field " + fs);
+                Referenceable colReferenceable = new Referenceable(HiveDataTypes.HIVE_COLUMN.getName());
+                colReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                     getColumnQualifiedName(tableQualifiedName, fs.getName()));
-            colReferenceable.set(HiveDataModelGenerator.NAME, fs.getName());
-            colReferenceable.set("type", fs.getType());
-            colReferenceable.set(HiveDataModelGenerator.COMMENT, fs.getComment());
+                colReferenceable.set(HiveDataModelGenerator.NAME, fs.getName());
+                colReferenceable.set("type", fs.getType());
+                colReferenceable.set(HiveDataModelGenerator.COMMENT, fs.getComment());
 
-            colList.add(colReferenceable);
+                colList.add(colReferenceable);
+            }
         }
         return colList;
     }
