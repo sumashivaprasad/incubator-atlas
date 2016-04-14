@@ -29,6 +29,7 @@ import org.apache.atlas.hive.model.HiveDataTypes;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
@@ -37,8 +38,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
+import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.hooks.Entity;
+import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.codehaus.jettison.json.JSONArray;
@@ -49,6 +52,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +73,7 @@ public class HiveHookIT {
     private static final String INPUTS = AtlasClient.PROCESS_ATTRIBUTE_INPUTS;
     private static final String OUTPUTS = AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS;
 
+    private HiveMetaStoreBridge hiveMetaStoreBridge;
     private enum QUERY_TYPE {
         GREMLIN,
         DSL
@@ -89,7 +95,7 @@ public class HiveHookIT {
         Configuration configuration = ApplicationProperties.get();
         dgiCLient = new AtlasClient(configuration.getString(HiveMetaStoreBridge.ATLAS_ENDPOINT, DGI_URL));
 
-        HiveMetaStoreBridge hiveMetaStoreBridge = new HiveMetaStoreBridge(conf, dgiCLient);
+        hiveMetaStoreBridge = new HiveMetaStoreBridge(conf, dgiCLient);
         hiveMetaStoreBridge.registerHiveDataModel();
 
     }
@@ -188,11 +194,32 @@ public class HiveHookIT {
         Assert.assertEquals(tableRef.get(HiveDataModelGenerator.NAME), entityName);
         Assert.assertEquals(tableRef.get(HiveDataModelGenerator.NAME), "default." + tableName.toLowerCase() + "@" + CLUSTER_NAME);
 
+        Table t = hiveMetaStoreBridge.hiveClient.getTable(DEFAULT_DB, tableName);
+        long createTime = Long.parseLong(t.getMetadata().getProperty(hive_metastoreConstants.DDL_TIME)) * HiveMetaStoreBridge.MILLIS_CONVERT_FACTOR;
+
+        verifyTimestamps(tableRef, HiveDataModelGenerator.CREATE_TIME, createTime);
+        verifyTimestamps(tableRef, HiveDataModelGenerator.LAST_ACCESS_TIME, createTime);
+
         final Referenceable sdRef = (Referenceable) tableRef.get("sd");
         Assert.assertEquals(sdRef.get(HiveDataModelGenerator.STORAGE_IS_STORED_AS_SUB_DIRS), false);
 
         //Create table where database doesn't exist, will create database instance as well
         assertDatabaseIsRegistered(DEFAULT_DB);
+    }
+
+    private void verifyTimestamps(Referenceable ref, String property, long expectedTime) throws ParseException {
+        //Verify timestamps.
+        String createTimeStr = (String) ref.get(property);
+        Date createDate = TypeSystem.getInstance().getDateFormat().parse(createTimeStr);
+        Assert.assertNotNull(createTimeStr);
+
+        if (expectedTime > 0) {
+            Assert.assertEquals(expectedTime, createDate.getTime());
+        }
+    }
+
+    private void verifyTimestamps(Referenceable ref, String property) throws ParseException {
+        verifyTimestamps(ref, property, 0);
     }
 
     @Test
@@ -207,6 +234,10 @@ public class HiveHookIT {
         String tableId = assertTableIsRegistered(dbName, tableName);
 
         Referenceable processReference = validateProcess(query, 1, 1);
+
+        verifyTimestamps(processReference, "startTime");
+        verifyTimestamps(processReference, "endTime");
+
         validateHDFSPaths(processReference, pFile, INPUTS);
         validateOutputTables(processReference, tableId);
     }
