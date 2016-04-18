@@ -185,6 +185,8 @@ public class HiveHookIT {
         Referenceable colEntity = atlasClient.getEntity(colId);
         Assert.assertEquals(colEntity.get("qualifiedName"), String.format("%s.%s.%s@%s", dbName.toLowerCase(),
                 tableName.toLowerCase(), colName.toLowerCase(), CLUSTER_NAME));
+        Assert.assertNotNull(colEntity.get(HiveDataModelGenerator.TABLE));
+        Assert.assertEquals(((Id)colEntity.get(HiveDataModelGenerator.TABLE))._getId(), colId);
 
         tableName = createTable();
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);

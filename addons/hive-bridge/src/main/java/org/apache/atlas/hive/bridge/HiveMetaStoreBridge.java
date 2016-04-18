@@ -303,7 +303,7 @@ public class HiveMetaStoreBridge {
         String tableQualifiedName = getTableQualifiedName(clusterName, hiveTable.getDbName(), hiveTable.getTableName());
         tableReference.set(HiveDataModelGenerator.NAME, tableQualifiedName);
         tableReference.set(HiveDataModelGenerator.TABLE_NAME, hiveTable.getTableName().toLowerCase());
-        tableReference.set("owner", hiveTable.getOwner());
+        tableReference.set(HiveDataModelGenerator.OWNER, hiveTable.getOwner());
 
         Date createDate = new Date();
         if (hiveTable.getMetadata().getProperty(hive_metastoreConstants.DDL_TIME) != null){
@@ -327,15 +327,9 @@ public class HiveMetaStoreBridge {
         // add reference to the database
         tableReference.set(HiveDataModelGenerator.DB, dbReference);
 
-        tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getCols(), tableQualifiedName));
-
         // add reference to the StorageDescriptor
         Referenceable sdReferenceable = fillStorageDesc(hiveTable.getSd(), tableQualifiedName, getStorageDescQFName(tableQualifiedName));
         tableReference.set("sd", sdReferenceable);
-
-        // add reference to the Partition Keys
-        List<Referenceable> partKeys = getColumns(hiveTable.getPartitionKeys(), tableQualifiedName);
-        tableReference.set("partitionKeys", partKeys);
 
         tableReference.set(HiveDataModelGenerator.PARAMETERS, hiveTable.getParameters());
 
@@ -349,6 +343,12 @@ public class HiveMetaStoreBridge {
 
         tableReference.set(TABLE_TYPE_ATTR, hiveTable.getTableType().name());
         tableReference.set("temporary", hiveTable.isTemporary());
+
+        // add reference to the Partition Keys
+        List<Referenceable> partKeys = getColumns(hiveTable.getPartitionKeys(), tableQualifiedName, tableReference);
+        tableReference.set("partitionKeys", partKeys);
+
+        tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getCols(), tableQualifiedName, tableReference));
 
         return tableReference;
     }
@@ -477,7 +477,7 @@ public class HiveMetaStoreBridge {
         return String.format("%s.%s@%s", tableName, colName.toLowerCase(), clusterName);
     }
 
-    public List<Referenceable> getColumns(List<FieldSchema> schemaList, String tableQualifiedName) throws Exception {
+    public List<Referenceable> getColumns(List<FieldSchema> schemaList, String tableQualifiedName, Referenceable tableReference) throws Exception {
         List<Referenceable> colList = new ArrayList<>();
         for (FieldSchema fs : schemaList) {
             LOG.debug("Processing field " + fs);
@@ -487,6 +487,7 @@ public class HiveMetaStoreBridge {
             colReferenceable.set(HiveDataModelGenerator.NAME, fs.getName());
             colReferenceable.set("type", fs.getType());
             colReferenceable.set(HiveDataModelGenerator.COMMENT, fs.getComment());
+            colReferenceable.set(HiveDataModelGenerator.TABLE, tableReference);
 
             colList.add(colReferenceable);
         }
