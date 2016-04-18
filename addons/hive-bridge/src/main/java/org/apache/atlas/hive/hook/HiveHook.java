@@ -503,11 +503,14 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         entities.add(dbEntity);
 
         Referenceable tableEntity = null;
-        //If its an external table, even though the temp table skip flag is on, we create the table since we need the HDFS path to temp table lineage.
-        if (table != null && !(skipTempTables && table.isTemporary() && !TableType.EXTERNAL_TABLE.equals(table.getTableType()))) {
+
+        if (table != null) {
             table = dgiBridge.hiveClient.getTable(table.getDbName(), table.getTableName());
-            tableEntity = dgiBridge.createTableInstance(dbEntity, table);
-            entities.add(tableEntity);
+            //If its an external table, even though the temp table skip flag is on, we create the table since we need the HDFS path to temp table lineage.
+            if(!(skipTempTables && table.isTemporary() && !TableType.EXTERNAL_TABLE.equals(table.getTableType()))) {
+                tableEntity = dgiBridge.createTableInstance(dbEntity, table);
+                entities.add(tableEntity);
+            }
         }
 
         messages.add(new HookNotification.EntityUpdateRequest(user, entities));
@@ -553,7 +556,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         boolean isSelectQuery = isSelectQuery(event);
 
-        // Also filter out select queries which do not modify data
+        // filter out select queries which do not modify data
         if (!isSelectQuery) {
             for (ReadEntity readEntity : event.getInputs()) {
                 processHiveEntity(dgiBridge, event, readEntity, source);

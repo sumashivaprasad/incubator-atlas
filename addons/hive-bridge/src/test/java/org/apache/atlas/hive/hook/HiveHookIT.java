@@ -901,7 +901,7 @@ public class HiveHookIT {
             @Override
             public void assertOnEntity(Referenceable tableRef) throws Exception {
                 Referenceable sdRef = (Referenceable) tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
-                Assert.assertEquals(sdRef.get("location"), new Path(testPath).toString());
+                Assert.assertEquals(new Path((String)sdRef.get("location")).toString(), new Path(testPath).toString());
             }
         });
 
