@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.Database;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.QueryPlan;
 import org.apache.hadoop.hive.ql.exec.ExplainTask;
 import org.apache.hadoop.hive.ql.exec.Task;
@@ -298,7 +299,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         case CREATETABLE:
             List<Pair<? extends Entity, Referenceable>> tablesCreated = handleEventOutputs(dgiBridge, event, Type.TABLE);
-            handleExternalTables(dgiBridge, event, tablesCreated.get(0).getLeft(), tablesCreated.get(0).getRight());
+            if (tablesCreated.size() > 0) {
+                handleExternalTables(dgiBridge, event, tablesCreated.get(0).getLeft(), tablesCreated.get(0).getRight());
+            }
             break;
 
         case CREATETABLE_AS_SELECT:
@@ -408,15 +411,57 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 Table newTable = writeEntity.getTable();
                 //Hive sends with both old and new table names in the outputs which is weird. So skipping that with the below check
                 if (!newTable.getDbName().equals(oldTable.getDbName()) || !newTable.getTableName().equals(oldTable.getTableName())) {
-                    //Create/update old table entity - create new entity with oldQFNme and tableName
-                    Referenceable tableEntity = createOrUpdateEntities(dgiBridge, event.getUser(), writeEntity);
                     String oldQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
                         oldTable.getDbName(), oldTable.getTableName());
+
+                    //Create/update old table entity - create new entity with oldQFNme and tableName
+                    Referenceable tableEntity = createOrUpdateEntities(dgiBridge, event.getUser(), writeEntity, true);
                     tableEntity.set(HiveDataModelGenerator.NAME, oldQualifiedName);
                     tableEntity.set(HiveDataModelGenerator.TABLE_NAME, oldTable.getTableName().toLowerCase());
 
+                    //Reset storage desc QF Name to old Name
+                    Referenceable sdRef = ((Referenceable) tableEntity.get(HiveDataModelGenerator.STORAGE_DESC));
+                    sdRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, HiveMetaStoreBridge.getStorageDescQFName(oldQualifiedName));
+
+                    List<Referenceable> cols = (List<Referenceable>) tableEntity.get(HiveDataModelGenerator.COLUMNS);
+                    //Reset column QF Name to old Name
+                    for (Referenceable col : cols) {
+                        String oldColumnQFName = HiveMetaStoreBridge.getColumnQualifiedName(oldQualifiedName, (String) col.get(HiveDataModelGenerator.NAME));
+                        col.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, oldColumnQFName);
+                    }
+
+                    List<Referenceable> partCols = (List<Referenceable>) tableEntity.get(HiveDataModelGenerator.PART_COLS);
+                    //Reset partition col QF Name to old Name
+                    for (Referenceable col : partCols) {
+                        String oldColumnQFName = HiveMetaStoreBridge.getColumnQualifiedName(oldQualifiedName, (String) col.get(HiveDataModelGenerator.NAME));
+                        col.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, oldColumnQFName);
+                    }
+
                     String newQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
                         newTable.getDbName(), newTable.getTableName());
+
+                    //Replace column names first to retain tags
+                    for (FieldSchema oldColumn : oldTable.getAllCols()) {
+                        String oldColumnQFName = HiveMetaStoreBridge.getColumnQualifiedName(oldQualifiedName, oldColumn.getName());
+                        String newColumnQFName = HiveMetaStoreBridge.getColumnQualifiedName(newQualifiedName, oldColumn.getName());
+
+                        Referenceable newEntity = new Referenceable(HiveDataTypes.HIVE_COLUMN.getName());
+                        ///Only QF Name changes
+                        newEntity.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, newColumnQFName);
+                        messages.add(new HookNotification.EntityPartialUpdateRequest(event.getUser(),
+                            HiveDataTypes.HIVE_COLUMN.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+                            oldColumnQFName, newEntity));
+                    }
+
+                    //Replace SD QF name first to retain tags
+                    String oldSDQFName = HiveMetaStoreBridge.getStorageDescQFName(oldQualifiedName);
+                    String newSDQFName = HiveMetaStoreBridge.getStorageDescQFName(newQualifiedName);
+
+                    Referenceable newSDEntity = new Referenceable(HiveDataTypes.HIVE_STORAGEDESC.getName());
+                    newSDEntity.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, newSDQFName);
+                    messages.add(new HookNotification.EntityPartialUpdateRequest(event.getUser(),
+                        HiveDataTypes.HIVE_STORAGEDESC.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+                        oldSDQFName, newSDEntity));
 
                     //Replace entity with new name
                     Referenceable newEntity = new Referenceable(HiveDataTypes.HIVE_TABLE.getName());
@@ -430,7 +475,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    private Referenceable createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, String user, Entity entity) throws Exception {
+    private Referenceable createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, String user, Entity entity, boolean skipTempTables) throws Exception {
         Database db = null;
         Table table = null;
         Partition partition = null;
@@ -458,7 +503,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         entities.add(dbEntity);
 
         Referenceable tableEntity = null;
-        if (table != null) {
+        //If its an external table, even though the temp table skip flag is on, we create the table since we need the HDFS path to temp table lineage.
+        if (table != null && !(skipTempTables && table.isTemporary() && !TableType.EXTERNAL_TABLE.equals(table.getTableType()))) {
             table = dgiBridge.hiveClient.getTable(table.getDbName(), table.getTableName());
             tableEntity = dgiBridge.createTableInstance(dbEntity, table);
             entities.add(tableEntity);
@@ -472,7 +518,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         List<Pair<? extends Entity, Referenceable>> entitiesCreatedOrUpdated = new ArrayList<>();
         for (Entity entity : event.getOutputs()) {
             if (entity.getType() == entityType) {
-                Referenceable entityCreatedOrUpdated = createOrUpdateEntities(dgiBridge, event.getUser(), entity);
+                Referenceable entityCreatedOrUpdated = createOrUpdateEntities(dgiBridge, event.getUser(), entity, true);
                 if (entitiesCreatedOrUpdated != null) {
                     entitiesCreatedOrUpdated.add(Pair.of(entity, entityCreatedOrUpdated));
                 }
@@ -538,7 +584,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (entity.getType() == Type.TABLE || entity.getType() == Type.PARTITION) {
             final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable().getDbName(), entity.getTable().getTableName());
             if (!dataSets.containsKey(tblQFName)) {
-                Referenceable inTable = createOrUpdateEntities(dgiBridge, event.getUser(), entity);
+                Referenceable inTable = createOrUpdateEntities(dgiBridge, event.getUser(), entity, false);
                 dataSets.put(tblQFName, inTable);
             }
         } else if (entity.getType() == Type.DFS_DIR) {

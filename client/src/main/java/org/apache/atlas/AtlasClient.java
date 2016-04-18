@@ -293,6 +293,10 @@ public class AtlasClient {
         }
     }
 
+    public WebResource getResource() {
+        return service;
+    }
+
     /**
      * Return status of the service instance the client is pointing to.
      *

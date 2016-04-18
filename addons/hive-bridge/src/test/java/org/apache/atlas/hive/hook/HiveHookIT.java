@@ -20,20 +20,29 @@ package org.apache.atlas.hive.hook;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.sun.jersey.api.client.ClientResponse;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.fs.model.FSDataTypes;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.json.InstanceSerialization;
+import org.apache.atlas.typesystem.json.TypesSerialization$;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
+import org.apache.atlas.typesystem.types.TraitType;
+import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
@@ -42,12 +51,16 @@ import org.apache.hadoop.hive.ql.hooks.Entity;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
@@ -202,7 +215,7 @@ public class HiveHookIT {
         String colName = columnName();
 
         String pFile = createTestDFSPath("parentPath");
-        final String query = String.format("create EXTERNAL table %s.%s( %s, %s) location '%s'", dbName , tableName , colName + " int", "name string",  pFile);
+        final String query = String.format("create TEMPORARY EXTERNAL table %s.%s( %s, %s) location '%s'", dbName , tableName , colName + " int", "name string",  pFile);
         runCommand(query);
         String tableId = assertTableIsRegistered(dbName, tableName);
 
@@ -230,6 +243,13 @@ public class HiveHookIT {
         LOG.debug("Searching for column {}", colName.toLowerCase());
         String query =
                 String.format("%s where qualifiedName = '%s'", HiveDataTypes.HIVE_COLUMN.getName(), colName.toLowerCase());
+        return assertEntityIsRegistered(query);
+    }
+
+    private String assertSDIsRegistered(String sdQFName) throws Exception {
+        LOG.debug("Searching for sd {}", sdQFName.toLowerCase());
+        String query =
+            String.format("%s where qualifiedName = '%s'", HiveDataTypes.HIVE_STORAGEDESC.getName(), sdQFName.toLowerCase());
         return assertEntityIsRegistered(query);
     }
 
@@ -442,6 +462,9 @@ public class HiveHookIT {
     public void testInsertIntoTempTable() throws Exception {
         String tableName = createTable();
         String insertTableName = createTable(false, false, true);
+
+        assertTableIsRegistered(DEFAULT_DB, tableName);
+        assertTableIsNotRegistered(DEFAULT_DB, insertTableName);
         String query =
             "insert into " + insertTableName + " select id, name from " + tableName;
 
@@ -556,23 +579,98 @@ public class HiveHookIT {
 
     @Test
     public void testAlterTableRename() throws Exception {
-        String tableName = createTable();
+        String tableName = createTable(true);
         final String newDBName = createDatabase();
+
         assertTableIsRegistered(DEFAULT_DB, tableName);
+        String columnGuid = assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), HiveDataModelGenerator.NAME));
+        String sdGuid = assertSDIsRegistered(HiveMetaStoreBridge.getStorageDescQFName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName)));
         assertDatabaseIsRegistered(newDBName);
+
+        //Add trait to column
+        String colTraitDetails = createTrait(columnGuid);
+
+        //Add trait to sd
+        String sdTraitDetails = createTrait(sdGuid);
+
+        String partColumnGuid = assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), "dt"));
+        //Add trait to part col keys
+        String partColTraitDetails = createTrait(partColumnGuid);
 
         String newTableName = tableName();
         String query = String.format("alter table %s rename to %s", DEFAULT_DB + "." + tableName, newDBName + "." + newTableName);
         runCommand(query);
 
-        assertTableIsRegistered(newDBName, newTableName);
+        String newColGuid = assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, newDBName, newTableName), HiveDataModelGenerator.NAME));
+        Assert.assertEquals(newColGuid, columnGuid);
+
+        assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, newDBName, tableName), HiveDataModelGenerator.NAME));
+
+        assertTrait(columnGuid, colTraitDetails);
+        String newSdGuid = assertSDIsRegistered(HiveMetaStoreBridge.getStorageDescQFName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, newDBName, newTableName)));
+        Assert.assertEquals(newSdGuid, sdGuid);
+
+        assertTrait(sdGuid, sdTraitDetails);
+        assertTrait(partColumnGuid, partColTraitDetails);
+
         assertTableIsNotRegistered(DEFAULT_DB, tableName);
+        assertTableIsRegistered(newDBName, newTableName);
     }
 
     private List<Referenceable> getColumns(String dbName, String tableName) throws Exception {
         String tableId = assertTableIsRegistered(dbName, tableName);
         Referenceable tableRef = dgiCLient.getEntity(tableId);
         return ((List<Referenceable>)tableRef.get(HiveDataModelGenerator.COLUMNS));
+    }
+
+
+    private String createTrait(String guid) throws AtlasServiceException, JSONException {
+        //add trait
+        String traitName = "PII_Trait" + RandomStringUtils.random(10);
+        HierarchicalTypeDefinition<TraitType> piiTrait =
+            TypesUtil.createTraitTypeDef(traitName, ImmutableSet.<String>of());
+        String traitDefinitionAsJSON = TypesSerialization$.MODULE$.toJson(piiTrait, true);
+        LOG.debug("traitDefinitionAsJSON = " + traitDefinitionAsJSON);
+        dgiCLient.createType(traitDefinitionAsJSON);
+
+        Struct traitInstance = new Struct(traitName);
+        String traitInstanceAsJSON = InstanceSerialization.toJson(traitInstance, true);
+        LOG.debug("traitInstanceAsJSON = " + traitInstanceAsJSON);
+
+        ClientResponse clientResponse =
+            dgiCLient.getResource().path(AtlasClient.API.ADD_TRAITS.getPath()).path(guid).path("traits").accept(MediaType.APPLICATION_JSON + "; charset=UTF-8")
+                .type(MediaType.APPLICATION_JSON + "; charset=UTF-8")
+                .method(HttpMethod.POST, ClientResponse.class, traitInstanceAsJSON);
+        Assert.assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
+
+        String responseAsString = clientResponse.getEntity(String.class);
+        Assert.assertNotNull(responseAsString);
+
+        JSONObject response = new JSONObject(responseAsString);
+        Assert.assertNotNull(response.get(AtlasClient.GUID));
+
+        return traitName;
+    }
+
+    private String assertTrait(String guid, String traitName) throws AtlasServiceException, JSONException {
+
+        ClientResponse clientResponse =
+            dgiCLient.getResource().path(AtlasClient.API.LIST_TRAITS.getPath()).path(guid).path("traits").accept(MediaType.APPLICATION_JSON + "; charset=UTF-8")
+                .type(MediaType.APPLICATION_JSON + "; charset=UTF-8")
+                .method(HttpMethod.GET, ClientResponse.class);
+        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+
+        String responseAsString = clientResponse.getEntity(String.class);
+        Assert.assertNotNull(responseAsString);
+
+        JSONObject response = new JSONObject(responseAsString);
+        Assert.assertNotNull(response.getJSONArray(AtlasClient.RESULTS));
+
+        JSONArray results = response.getJSONArray(AtlasClient.RESULTS);
+        Assert.assertEquals(results.getString(0), traitName);
+        Assert.assertEquals(response.getInt(AtlasClient.COUNT), 1);
+
+        return response.getString(AtlasClient.GUID);
     }
 
     @Test
@@ -746,7 +844,7 @@ public class HiveHookIT {
         //Verify the number of columns present in the table
         Referenceable tableRef = dgiCLient.getEntity(tableId);
         Referenceable sdRef = (Referenceable)tableRef.get(HiveDataModelGenerator.STORAGE_DESC);
-        Assert.assertEquals(sdRef.get("location"), testPath);
+        Assert.assertEquals(sdRef.get("location"), new Path(testPath).toString());
 
         Referenceable processReference = validateProcess(query, 1, 1);
         validateHDFSPaths(processReference, testPath, INPUTS);
@@ -1279,7 +1377,7 @@ public class HiveHookIT {
         boolean eval;
         while (!(eval = predicate.evaluate()) && System.currentTimeMillis() < mustEnd) {
             LOG.info("Waiting up to {} msec", mustEnd - System.currentTimeMillis());
-            Thread.sleep(100);
+            Thread.sleep(300);
         }
         if (!eval) {
             throw new Exception("Waiting timed out after " + timeout + " msec");

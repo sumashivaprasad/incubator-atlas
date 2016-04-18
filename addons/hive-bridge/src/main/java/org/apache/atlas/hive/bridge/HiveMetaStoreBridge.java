@@ -63,7 +63,6 @@ public class HiveMetaStoreBridge {
     public static final String DESCRIPTION_ATTR = "description";
     public static final String TABLE_TYPE_ATTR = "tableType";
     public static final String SEARCH_ENTRY_GUID_ATTR = "__guid";
-    public static final String LAST_ACCESS_TIME_ATTR = "lastAccessTime";
     private final String clusterName;
 
     public static final String ATLAS_ENDPOINT = "atlas.rest.address";
@@ -338,7 +337,7 @@ public class HiveMetaStoreBridge {
         return tableReference;
     }
 
-    private String getStorageDescQFName(String entityQualifiedName) {
+    public static String getStorageDescQFName(String entityQualifiedName) {
         return entityQualifiedName + "_storage";
     }
 
