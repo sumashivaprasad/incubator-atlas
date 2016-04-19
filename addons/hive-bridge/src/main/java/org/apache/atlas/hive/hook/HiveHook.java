@@ -416,7 +416,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                         oldTable.getDbName(), oldTable.getTableName());
 
                     //Create/update old table entity - create new entity with oldQFNme and tableName
-                    Referenceable tableEntity = createOrUpdateEntities(dgiBridge, event.getUser(), writeEntity, true);
+                    Referenceable tableEntity = createOrUpdateEntities(dgiBridge, event.getUser(), writeEntity);
                     tableEntity.set(HiveDataModelGenerator.NAME, oldQualifiedName);
                     tableEntity.set(HiveDataModelGenerator.TABLE_NAME, oldTable.getTableName().toLowerCase());
 
@@ -476,7 +476,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    private Referenceable createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, String user, Entity entity, boolean skipTempTables) throws Exception {
+    private Referenceable createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, String user, Entity entity) throws Exception {
         Database db = null;
         Table table = null;
         Partition partition = null;
@@ -507,11 +507,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         if (table != null) {
             table = dgiBridge.hiveClient.getTable(table.getDbName(), table.getTableName());
-            //If its an external table, even though the temp table skip flag is on, we create the table since we need the HDFS path to temp table lineage.
-            if(!(skipTempTables && table.isTemporary() && !TableType.EXTERNAL_TABLE.equals(table.getTableType()))) {
-                tableEntity = dgiBridge.createTableInstance(dbEntity, table);
-                entities.add(tableEntity);
-            }
+            tableEntity = dgiBridge.createTableInstance(dbEntity, table);
+            entities.add(tableEntity);
         }
 
         messages.add(new HookNotification.EntityUpdateRequest(user, entities));
@@ -522,7 +519,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         List<Pair<? extends Entity, Referenceable>> entitiesCreatedOrUpdated = new ArrayList<>();
         for (Entity entity : event.getOutputs()) {
             if (entity.getType() == entityType) {
-                Referenceable entityCreatedOrUpdated = createOrUpdateEntities(dgiBridge, event.getUser(), entity, true);
+                Referenceable entityCreatedOrUpdated = createOrUpdateEntities(dgiBridge, event.getUser(), entity);
                 if (entitiesCreatedOrUpdated != null) {
                     entitiesCreatedOrUpdated.add(Pair.of(entity, entityCreatedOrUpdated));
                 }
@@ -588,7 +585,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (entity.getType() == Type.TABLE || entity.getType() == Type.PARTITION) {
             final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable().getDbName(), entity.getTable().getTableName());
             if (!dataSets.containsKey(tblQFName)) {
-                Referenceable inTable = createOrUpdateEntities(dgiBridge, event.getUser(), entity, false);
+                Referenceable inTable = createOrUpdateEntities(dgiBridge, event.getUser(), entity);
                 dataSets.put(tblQFName, inTable);
             }
         } else if (entity.getType() == Type.DFS_DIR) {
