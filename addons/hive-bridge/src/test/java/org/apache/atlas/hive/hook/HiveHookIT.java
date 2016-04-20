@@ -656,50 +656,16 @@ public class HiveHookIT {
     private String createTrait(String guid) throws AtlasServiceException, JSONException {
         //add trait
         String traitName = "PII_Trait" + RandomStringUtils.random(10);
-        HierarchicalTypeDefinition<TraitType> piiTrait =
-            TypesUtil.createTraitTypeDef(traitName, ImmutableSet.<String>of());
-        String traitDefinitionAsJSON = TypesSerialization$.MODULE$.toJson(piiTrait, true);
-        LOG.debug("traitDefinitionAsJSON = " + traitDefinitionAsJSON);
-        atlasClient.createType(traitDefinitionAsJSON);
+        atlasClient.createTraitType(traitName);
 
         Struct traitInstance = new Struct(traitName);
-        String traitInstanceAsJSON = InstanceSerialization.toJson(traitInstance, true);
-        LOG.debug("traitInstanceAsJSON = " + traitInstanceAsJSON);
-
-        ClientResponse clientResponse =
-            atlasClient.getResource().path(AtlasClient.API.ADD_TRAITS.getPath()).path(guid).path("traits").accept(MediaType.APPLICATION_JSON + "; charset=UTF-8")
-                .type(MediaType.APPLICATION_JSON + "; charset=UTF-8")
-                .method(HttpMethod.POST, ClientResponse.class, traitInstanceAsJSON);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
-        Assert.assertNotNull(response.get(AtlasClient.GUID));
-
+        atlasClient.addTrait(guid, traitInstance);
         return traitName;
     }
 
-    private String assertTrait(String guid, String traitName) throws AtlasServiceException, JSONException {
-
-        ClientResponse clientResponse =
-            atlasClient.getResource().path(AtlasClient.API.LIST_TRAITS.getPath()).path(guid).path("traits").accept(MediaType.APPLICATION_JSON + "; charset=UTF-8")
-                .type(MediaType.APPLICATION_JSON + "; charset=UTF-8")
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
-        Assert.assertNotNull(response.getJSONArray(AtlasClient.RESULTS));
-
-        JSONArray results = response.getJSONArray(AtlasClient.RESULTS);
-        Assert.assertEquals(results.getString(0), traitName);
-        Assert.assertEquals(response.getInt(AtlasClient.COUNT), 1);
-
-        return response.getString(AtlasClient.GUID);
+    private void assertTrait(String guid, String traitName) throws AtlasServiceException, JSONException {
+        List<String> traits = atlasClient.listTraits(guid);
+        Assert.assertEquals(traits.get(0), traitName);
     }
 
     @Test
@@ -1476,7 +1442,7 @@ public class HiveHookIT {
                     fail("Assertions failed. Failing after waiting for timeout " + timeout + " msecs", e);
                 }
                 LOG.debug("Waiting up to " + (mustEnd - System.currentTimeMillis()) + " msec as assertion failed", e);
-                Thread.sleep(300);
+                Thread.sleep(400);
             }
         }
     }
