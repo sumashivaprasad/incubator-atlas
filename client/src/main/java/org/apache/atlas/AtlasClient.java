@@ -302,10 +302,6 @@ public class AtlasClient {
         }
     }
 
-    public WebResource getResource() {
-        return service;
-    }
-
     /**
      * Return status of the service instance the client is pointing to.
      *
@@ -448,8 +444,8 @@ public class AtlasClient {
         HierarchicalTypeDefinition<TraitType> piiTrait =
             TypesUtil.createTraitTypeDef(traitName, superTraits, attributeDefinitions);
 
-        String traitDefinitionAsJSON = TypesSerialization$.MODULE$.toJson(piiTrait, true);
-        LOG.debug("traitDefinitionAsJSON = " + traitDefinitionAsJSON);
+        String traitDefinitionAsJSON = TypesSerialization.toJson(piiTrait, true);
+        LOG.debug("Creating trait type {} {}" , traitName, traitDefinitionAsJSON);
         return createType(traitDefinitionAsJSON);
     }
 
