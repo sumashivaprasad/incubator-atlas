@@ -370,7 +370,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     private void deleteTable(HiveMetaStoreBridge dgiBridge, HiveEventContext event, WriteEntity output) {
-        final String tblQualifiedName = HiveMetaStoreBridge.getTableQualifiedName(dgiBridge.getClusterName(), output.getTable().getDbName(), output.getTable().getTableName());
+        final String tblQualifiedName = HiveMetaStoreBridge.getTableQualifiedName(dgiBridge.getClusterName(), output.getTable().getDbName(), output.getTable().getTableName(), output.getTable().isTemporary());
         LOG.info("Deleting table {} ", tblQualifiedName);
         messages.add(
             new HookNotification.EntityDeleteRequest(event.getUser(),
@@ -413,9 +413,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 //Hive sends with both old and new table names in the outputs which is weird. So skipping that with the below check
                 if (!newTable.getDbName().equals(oldTable.getDbName()) || !newTable.getTableName().equals(oldTable.getTableName())) {
                     final String oldQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
-                        oldTable.getDbName(), oldTable.getTableName());
+                        oldTable.getDbName(), oldTable.getTableName(), oldTable.isTemporary());
                     final String newQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
-                        newTable.getDbName(), newTable.getTableName());
+                        newTable.getDbName(), newTable.getTableName(), newTable.isTemporary());
 
                     //Create/update old table entity - create entity with oldQFNme and old tableName if it doesnt exist. If exists, will update
                     //We always use the new entity while creating the table since some flags, attributes of the table are not set in inputEntity and Hive.getTable(oldTableName) also fails since the table doesnt exist in hive anymore
@@ -603,7 +603,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
     private void processHiveEntity(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, Map<String, Referenceable> dataSets) throws Exception {
         if (entity.getType() == Type.TABLE || entity.getType() == Type.PARTITION) {
-            final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable().getDbName(), entity.getTable().getTableName());
+            final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable().getDbName(), entity.getTable().getTableName(), entity.getTable().isTemporary());
             if (!dataSets.containsKey(tblQFName)) {
                 Referenceable inTable = createOrUpdateEntities(dgiBridge, event.getUser(), entity, false);
                 dataSets.put(tblQFName, inTable);
