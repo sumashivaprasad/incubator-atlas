@@ -22,10 +22,11 @@ import org.apache.atlas.hive.rewrite.HiveEventContext;
 import org.apache.atlas.hive.rewrite.RewriteException;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-public class HivePartitionRewriterTest {
+public class HiveLiteralRewriterTest {
 
     private HiveConf conf;
 
@@ -39,15 +40,23 @@ public class HivePartitionRewriterTest {
     }
 
     @Test
-    public void testPartitionRewrite() {
+    public void testLiteralRewrite() {
         HiveEventContext ctx = new HiveEventContext();
         ctx.setIsPartitionBasedQuery(true);
-        ctx.setQueryStr("insert into table testTable partition(dt='2014-01-01') select * from test1 where dt = '2014-01-01'");
+        ctx.setQueryStr("insert into table testTable partition(dt='2014-01-01') select * from test1 where dt = '2014-01-01'" +
+            "and intColumn = 10" +
+            " and decimalColumn = 1.10 " +
+            " and charColumn = 'a' " +
+            " and hexColumn = unhex('\\0xFF') " +
+            " and expColumn = cast('-1.5e2' as int)");
 
         try {
             HiveASTRewriter queryRewriter  = new HiveASTRewriter(ctx, conf);
             String result = queryRewriter.rewrite(ctx.getQueryStr());
-            System.out.println(" translated sql : " + result);
+            System.out.println("normlized sql : " + result);
+
+            final String normalizedSL = "insert into table testTable partition(dt='STRING_LITERAL') select * from test1 where dt = 'STRING_LITERAL'and intColumn = NUMBER_LITERAL and decimalColumn = NUMBER_LITERAL  and charColumn = 'STRING_LITERAL'  and hexColumn = unhex('STRING_LITERAL')  and expColumn = cast('STRING_LITERAL' as int)";
+            Assert.assertEquals(result, normalizedSL);
         } catch (RewriteException e) {
             e.printStackTrace();
         }
