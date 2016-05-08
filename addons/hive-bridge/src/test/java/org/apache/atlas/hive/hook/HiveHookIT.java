@@ -76,6 +76,8 @@ public class HiveHookIT {
     private AtlasClient atlasClient;
     private HiveMetaStoreBridge hiveMetaStoreBridge;
     private SessionState ss;
+
+    private HiveConf conf;
     
     private static final String INPUTS = AtlasClient.PROCESS_ATTRIBUTE_INPUTS;
     private static final String OUTPUTS = AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS;
@@ -83,7 +85,7 @@ public class HiveHookIT {
     @BeforeClass
     public void setUp() throws Exception {
         //Set-up hive session
-        HiveConf conf = new HiveConf();
+        conf = new HiveConf();
         //Run in local mode
         conf.set("mapreduce.framework.name", "local");
         conf.set("fs.default.name", "file:///'");
@@ -98,7 +100,6 @@ public class HiveHookIT {
 
         hiveMetaStoreBridge = new HiveMetaStoreBridge(conf, atlasClient);
         hiveMetaStoreBridge.registerHiveDataModel();
-
     }
 
     private void runCommand(String cmd) throws Exception {
@@ -740,7 +741,7 @@ public class HiveHookIT {
         });
 
         assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(
-                HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), oldColName));
+            HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), oldColName));
 
         //Change name and add comment
         oldColName = "name2";
@@ -1298,8 +1299,10 @@ public class HiveHookIT {
     }
 
     private String assertProcessIsRegistered(String queryStr) throws Exception {
-        LOG.debug("Searching for process with query {}", queryStr);
-        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.NAME, normalize(queryStr), null);
+        HiveASTRewriter astRewriter = new HiveASTRewriter(conf);
+        String normalizedQuery = astRewriter.rewrite(normalize(queryStr));
+        LOG.debug("Searching for process with query {}", normalizedQuery);
+        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.NAME, normalizedQuery, null);
     }
 
     private void assertProcessIsNotRegistered(String queryStr) throws Exception {

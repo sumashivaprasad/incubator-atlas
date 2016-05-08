@@ -25,7 +25,6 @@ import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
 import org.apache.atlas.hive.rewrite.HiveASTRewriter;
-import org.apache.atlas.hive.rewrite.HiveEventContext;
 import org.apache.atlas.hive.rewrite.RewriteException;
 import org.apache.atlas.hook.AtlasHook;
 import org.apache.atlas.notification.hook.HookNotification;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,7 +154,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         final HiveConf conf = new HiveConf(hookContext.getConf());
 
         final HiveEventContext event = new HiveEventContext();
-        hookContext.getQueryPlan().getColumnAccessInfo().getTableToColumnAccessMap();
         event.setInputs(hookContext.getInputs());
         event.setOutputs(hookContext.getOutputs());
         event.setJsonPlan(getQueryPlan(hookContext.getConf(), hookContext.getQueryPlan()));
@@ -411,10 +410,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             partition = entity.getPartition();
             table = partition.getTable();
             db = dgiBridge.hiveClient.getDatabase(table.getDbName());
-            if ( !context.isPartitionBasedQuery() ) {
-                context.setIsPartitionBasedQuery(true);
-            }
-            context.addPartitionContext(partition);
             break;
         }
 
@@ -459,7 +454,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         if (result != null) {
             try {
-                HiveASTRewriter rewriter = new HiveASTRewriter(eventContext, hiveConf);
+                HiveASTRewriter rewriter = new HiveASTRewriter(hiveConf);
                 return rewriter.rewrite(result);
             } catch (RewriteException e) {
                 LOG.error("Could not rewrite query due to error. Proceeding with original query {}", eventContext.getQueryStr(), e);
@@ -607,5 +602,110 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         processReferenceable.set("endTime", new Date(System.currentTimeMillis()));
         //TODO set queryGraph
         return processReferenceable;
+    }
+
+    public static class HiveEventContext {
+        private Set<ReadEntity> inputs;
+        private Set<WriteEntity> outputs;
+
+        private String user;
+        private UserGroupInformation ugi;
+        private HiveOperation operation;
+        private HookContext.HookType hookType;
+        private JSONObject jsonPlan;
+        private String queryId;
+        private String queryStr;
+        private Long queryStartTime;
+
+        private String queryType;
+
+        public void setInputs(Set<ReadEntity> inputs) {
+            this.inputs = inputs;
+        }
+
+        public void setOutputs(Set<WriteEntity> outputs) {
+            this.outputs = outputs;
+        }
+
+        public void setUser(String user) {
+            this.user = user;
+        }
+
+        public void setUgi(UserGroupInformation ugi) {
+            this.ugi = ugi;
+        }
+
+        public void setOperation(HiveOperation operation) {
+            this.operation = operation;
+        }
+
+        public void setHookType(HookContext.HookType hookType) {
+            this.hookType = hookType;
+        }
+
+        public void setJsonPlan(JSONObject jsonPlan) {
+            this.jsonPlan = jsonPlan;
+        }
+
+        public void setQueryId(String queryId) {
+            this.queryId = queryId;
+        }
+
+        public void setQueryStr(String queryStr) {
+            this.queryStr = queryStr;
+        }
+
+        public void setQueryStartTime(Long queryStartTime) {
+            this.queryStartTime = queryStartTime;
+        }
+
+        public void setQueryType(String queryType) {
+            this.queryType = queryType;
+        }
+
+        public Set<ReadEntity> getInputs() {
+            return inputs;
+        }
+
+        public Set<WriteEntity> getOutputs() {
+            return outputs;
+        }
+
+        public String getUser() {
+            return user;
+        }
+
+        public UserGroupInformation getUgi() {
+            return ugi;
+        }
+
+        public HiveOperation getOperation() {
+            return operation;
+        }
+
+        public HookContext.HookType getHookType() {
+            return hookType;
+        }
+
+        public JSONObject getJsonPlan() {
+            return jsonPlan;
+        }
+
+        public String getQueryId() {
+            return queryId;
+        }
+
+        public String getQueryStr() {
+            return queryStr;
+        }
+
+        public Long getQueryStartTime() {
+            return queryStartTime;
+        }
+
+        public String getQueryType() {
+            return queryType;
+        }
+
     }
 }

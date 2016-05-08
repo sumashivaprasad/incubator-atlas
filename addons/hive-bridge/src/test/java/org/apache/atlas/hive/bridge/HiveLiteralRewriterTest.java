@@ -17,8 +17,8 @@
  */
 package org.apache.atlas.hive.bridge;
 
+import org.apache.atlas.hive.hook.HiveHook;
 import org.apache.atlas.hive.rewrite.HiveASTRewriter;
-import org.apache.atlas.hive.rewrite.HiveEventContext;
 import org.apache.atlas.hive.rewrite.RewriteException;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.session.SessionState;
@@ -41,8 +41,7 @@ public class HiveLiteralRewriterTest {
 
     @Test
     public void testLiteralRewrite() {
-        HiveEventContext ctx = new HiveEventContext();
-        ctx.setIsPartitionBasedQuery(true);
+        HiveHook.HiveEventContext ctx = new HiveHook.HiveEventContext();
         ctx.setQueryStr("insert into table testTable partition(dt='2014-01-01') select * from test1 where dt = '2014-01-01'" +
             "and intColumn = 10" +
             " and decimalColumn = 1.10 " +
@@ -51,7 +50,7 @@ public class HiveLiteralRewriterTest {
             " and expColumn = cast('-1.5e2' as int)");
 
         try {
-            HiveASTRewriter queryRewriter  = new HiveASTRewriter(ctx, conf);
+            HiveASTRewriter queryRewriter  = new HiveASTRewriter(conf);
             String result = queryRewriter.rewrite(ctx.getQueryStr());
             System.out.println("normlized sql : " + result);
 
