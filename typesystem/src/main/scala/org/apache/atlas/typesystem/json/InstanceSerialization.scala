@@ -244,7 +244,7 @@ object InstanceSerialization {
      * - otherwise convert each value with asJava and construct as new JavaMap.
      * @return
      */
-    def convert : Any = {
+    def  convert : Any = {
       reference.map(asJava(_)(format)).getOrElse {
         struct.map(asJava(_)(format)).getOrElse {
           convertId.map(asJava(_)(format)).getOrElse {
