@@ -599,6 +599,10 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         processReferenceable.set("queryText", queryStr);
         processReferenceable.set("queryId", hiveEvent.getQueryId());
         processReferenceable.set("queryPlan", hiveEvent.getJsonPlan());
+
+        List<String> recentQueries = new ArrayList<>(1);
+        recentQueries.add(hiveEvent.getQueryStr());
+        processReferenceable.set("recentQueries", recentQueries);
         processReferenceable.set("endTime", new Date(System.currentTimeMillis()));
         //TODO set queryGraph
         return processReferenceable;

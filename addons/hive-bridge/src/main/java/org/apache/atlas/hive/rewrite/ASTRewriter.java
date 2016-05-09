@@ -22,5 +22,5 @@ import org.apache.hadoop.hive.ql.parse.ASTNode;
 
 public interface ASTRewriter {
 
-    void process(RewriteContext ctx, ASTNode node) throws RewriteException;
+    void rewrite(RewriteContext ctx, ASTNode node) throws RewriteException;
 }

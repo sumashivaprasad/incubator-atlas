@@ -1298,11 +1298,17 @@ public class HiveHookIT {
         }
     }
 
-    private String assertProcessIsRegistered(String queryStr) throws Exception {
+    private String assertProcessIsRegistered(final String queryStr) throws Exception {
         HiveASTRewriter astRewriter = new HiveASTRewriter(conf);
         String normalizedQuery = astRewriter.rewrite(normalize(queryStr));
         LOG.debug("Searching for process with query {}", normalizedQuery);
-        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.NAME, normalizedQuery, null);
+        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.NAME, normalizedQuery, new AssertPredicate() {
+            @Override
+            public void assertOnEntity(final Referenceable entity) throws Exception {
+                List<String> recentQueries = (List<String>) entity.get("recentQueries");
+                Assert.assertEquals(recentQueries.get(0), queryStr);
+            }
+        });
     }
 
     private void assertProcessIsNotRegistered(String queryStr) throws Exception {
