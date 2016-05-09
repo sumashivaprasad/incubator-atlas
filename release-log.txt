@@ -3,6 +3,8 @@ Apache Atlas Release Notes
 
 --trunk - unreleased
 INCOMPATIBLE CHANGES:
+ATLAS-497 Simple Authorization (saqeeb.s via yhemanth)
+ATLAS-661 REST API Authentication (nixonrodrigues via yhemanth)
 ATLAS-672 UI: Make dashboard v2 the default UI implementation (bergenholtz via yhemanth)
 ATLAS-532 Change Data types of all timestamps in Hive model(currently long)(sumasai via yhemanth)
 ATLAS-622 Introduce soft delete (shwethags)
@@ -18,6 +20,8 @@ ATLAS-409 Atlas will not import avro tables with schema read from a file (dosset
 ATLAS-379 Create sqoop and falcon metadata addons (venkatnrangan,bvellanki,sowmyaramesh via shwethags)
 
 ALL CHANGES:
+ATLAS-747 Hive CTAS entity registration fails because userName is null (shwethags)
+ATLAS-759 HiveHookIT.testAlterTableChangeColumn is consistently failing on master (yhemanth)
 ATLAS-690 Read timed out exceptions when tables are imported into Atlas (yhemanth via shwethags)
 ATLAS-585 NotificationHookConsumer creates new AtlasClient for every message (shwethags)
 ATLAS-682 Set HBase root dir to be relative to test target directory for HBaseBasedAuditRepositoryTest (shwethags via yhemanth)

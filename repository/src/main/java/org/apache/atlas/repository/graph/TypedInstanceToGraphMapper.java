@@ -557,7 +557,7 @@ public final class TypedInstanceToGraphMapper {
                                           ITypedReferenceableInstance newAttributeValue, AttributeInfo attributeInfo,
                                           String edgeLabel) throws AtlasException {
         Vertex newReferenceVertex = getClassVertex(newAttributeValue);
-        if(newReferenceVertex == null && newAttributeValue != null) {
+        if (newReferenceVertex == null && newAttributeValue != null) {
             LOG.error("Could not find vertex for Class Reference " + newAttributeValue);
             throw new EntityNotFoundException("Could not find vertex for Class Reference " + newAttributeValue);
         }
@@ -576,7 +576,7 @@ public final class TypedInstanceToGraphMapper {
     private Edge addClassEdge(Vertex instanceVertex, Vertex toVertex, String edgeLabel) throws AtlasException {
         // add an edge to the class vertex from the instance
         return graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
-    }
+
 
     private Vertex getClassVertex(ITypedReferenceableInstance typedReference) throws EntityNotFoundException {
         Vertex referenceVertex = null;

@@ -42,11 +42,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
+import org.apache.hadoop.hive.ql.CommandNeedRetryException;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.hooks.Entity;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
@@ -91,7 +93,7 @@ public class HiveHookIT {
         conf.set("fs.default.name", "file:///'");
         conf.setClassLoader(Thread.currentThread().getContextClassLoader());
         driver = new Driver(conf);
-        ss = new SessionState(conf, System.getProperty("user.name"));
+        ss = new SessionState(conf);
         ss = SessionState.start(ss);
         SessionState.setCurrentSessionState(ss);
 
@@ -103,10 +105,7 @@ public class HiveHookIT {
     }
 
     private void runCommand(String cmd) throws Exception {
-        LOG.debug("Running command '{}'", cmd);
-        ss.setCommandType(null);
-        CommandProcessorResponse response = driver.run(cmd);
-        assertEquals(response.getResponseCode(), 0);
+        runCommandWithDelay(cmd, 0);
     }
 
     @Test
@@ -243,6 +242,7 @@ public class HiveHookIT {
         String tableId = assertTableIsRegistered(dbName, tableName);
 
         Referenceable processReference = validateProcess(query, 1, 1);
+        assertEquals(processReference.get("userName"), UserGroupInformation.getCurrentUser().getShortUserName());
 
         verifyTimestamps(processReference, "startTime");
         verifyTimestamps(processReference, "endTime");
@@ -711,7 +711,8 @@ public class HiveHookIT {
         String newColName = "name1";
         String tableName = createTable();
         String query = String.format("alter table %s change %s %s string", tableName, oldColName, newColName);
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
+
         assertColumnIsNotRegistered(HiveMetaStoreBridge.getColumnQualifiedName(
                 HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), oldColName));
         assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(
@@ -726,7 +727,7 @@ public class HiveHookIT {
         newColName = "name2";
         final String newColType = "int";
         query = String.format("alter table %s change column %s %s %s", tableName, oldColName, newColName, newColType);
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
 
         columns = getColumns(DEFAULT_DB, tableName);
         Assert.assertEquals(columns.size(), 2);
@@ -749,7 +750,7 @@ public class HiveHookIT {
         final String comment = "added comment";
         query = String.format("alter table %s change column %s %s %s COMMENT '%s' after id", tableName, oldColName,
             newColName, newColType, comment);
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
 
         columns = getColumns(DEFAULT_DB, tableName);
         Assert.assertEquals(columns.size(), 2);
@@ -758,7 +759,6 @@ public class HiveHookIT {
             HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), oldColName));
         newColQualifiedName = HiveMetaStoreBridge.getColumnQualifiedName(
                 HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), newColName);
-
         assertColumnIsRegistered(newColQualifiedName, new AssertPredicate() {
             @Override
             public void assertOnEntity(Referenceable entity) throws Exception {
@@ -771,7 +771,7 @@ public class HiveHookIT {
         newColName = "name4";
         query = String.format("alter table %s change column %s %s %s first", tableName, oldColName, newColName,
                 newColType);
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
 
         columns = getColumns(DEFAULT_DB, tableName);
         Assert.assertEquals(columns.size(), 2);
@@ -798,7 +798,7 @@ public class HiveHookIT {
         oldColName = "name4";
         newColName = "name5";
         query = String.format("alter table %s change column %s %s %s after id", tableName, oldColName, newColName, newColType);
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
 
         columns = getColumns(DEFAULT_DB, tableName);
         Assert.assertEquals(columns.size(), 2);
@@ -821,6 +821,16 @@ public class HiveHookIT {
                 }
             }
         );
+    }
+
+    private void runCommandWithDelay(String cmd, int sleepMs) throws CommandNeedRetryException, InterruptedException {
+        LOG.debug("Running command '{}'", cmd);
+        ss.setCommandType(null);
+        CommandProcessorResponse response = driver.run(cmd);
+        assertEquals(response.getResponseCode(), 0);
+        if (sleepMs != 0) {
+            Thread.sleep(sleepMs);
+        }
     }
 
     @Test
