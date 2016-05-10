@@ -29,6 +29,7 @@ import org.apache.atlas.hive.rewrite.RewriteException;
 import org.apache.atlas.hook.AtlasHook;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.typesystem.Referenceable;
+import org.apache.atlas.utils.MD5Utils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
@@ -53,7 +54,10 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -592,7 +596,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (targetList != null || !targetList.isEmpty()) {
             processReferenceable.set("outputs", targetList);
         }
-        processReferenceable.set("name", queryStr);
+        processReferenceable.set(AtlasClient.NAME, queryStr);
+        processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getProcessQualifiedName(queryStr, sourceList, targetList));
         processReferenceable.set("operationType", hiveEvent.getOperation().getOperationName());
         processReferenceable.set("startTime", new Date(hiveEvent.getQueryStartTime()));
         processReferenceable.set("userName", hiveEvent.getUser());
@@ -606,6 +611,36 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         processReferenceable.set("endTime", new Date(System.currentTimeMillis()));
         //TODO set queryGraph
         return processReferenceable;
+    }
+
+    private String getProcessQualifiedName(String normalizedQuery, List<Referenceable> inputs, List<Referenceable> outputs) {
+        try {
+            MessageDigest digester = MD5Utils.getDigester();
+            digester.update(getBytes(normalizedQuery));
+            updateDigest(digester, inputs);
+            updateDigest(digester, outputs);
+
+            return new String(digester.digest(), "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            LOG.error("Unsupport encoding exception while processing qualifiedName ", e);
+        }
+
+        return normalizedQuery;
+    }
+
+    private void updateDigest(MessageDigest digester, List<Referenceable> refs) {
+        for(Referenceable input : refs) {
+            //TODO - Change to qualifiedName later
+            String dataSetQlfdName = (String) input.get(AtlasClient.NAME);
+            digester.update(getBytes(dataSetQlfdName));
+        }
+    }
+
+    byte[] getBytes(String s) {
+        if ( s != null) {
+            return s.getBytes(Charset.forName("UTF-8"));
+        }
+        return null;
     }
 
     public static class HiveEventContext {

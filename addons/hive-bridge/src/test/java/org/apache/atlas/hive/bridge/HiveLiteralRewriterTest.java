@@ -47,7 +47,8 @@ public class HiveLiteralRewriterTest {
             " and decimalColumn = 1.10 " +
             " and charColumn = 'a' " +
             " and hexColumn = unhex('\\0xFF') " +
-            " and expColumn = cast('-1.5e2' as int)");
+            " and expColumn = cast('-1.5e2' as int)" +
+            " and boolCol = true");
 
         try {
             HiveASTRewriter queryRewriter  = new HiveASTRewriter(conf);

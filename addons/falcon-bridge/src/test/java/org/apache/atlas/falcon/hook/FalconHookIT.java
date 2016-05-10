@@ -150,7 +150,7 @@ public class FalconHookIT {
         String pid = assertProcessIsRegistered(cluster.getName(), process.getName());
         Referenceable processEntity = atlasClient.getEntity(pid);
         assertNotNull(processEntity);
-        assertEquals(processEntity.get("processName"), process.getName());
+        assertEquals(processEntity.get(AtlasClient.NAME), process.getName());
 
         Id inId = (Id) ((List)processEntity.get("inputs")).get(0);
         Referenceable inEntity = atlasClient.getEntity(inId._getId());
@@ -207,7 +207,7 @@ public class FalconHookIT {
 
         String pid = assertProcessIsRegistered(cluster.getName(), process.getName());
         Referenceable processEntity = atlasClient.getEntity(pid);
-        assertEquals(processEntity.get("processName"), process.getName());
+        assertEquals(processEntity.get(AtlasClient.NAME), process.getName());
         assertNull(processEntity.get("inputs"));
 
         Id outId = (Id) ((List)processEntity.get("outputs")).get(0);

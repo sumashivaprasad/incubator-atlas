@@ -88,9 +88,6 @@ public class HiveHookIT {
     public void setUp() throws Exception {
         //Set-up hive session
         conf = new HiveConf();
-        //Run in local mode
-        conf.set("mapreduce.framework.name", "local");
-        conf.set("fs.default.name", "file:///'");
         conf.setClassLoader(Thread.currentThread().getContextClassLoader());
         driver = new Driver(conf);
         ss = new SessionState(conf);

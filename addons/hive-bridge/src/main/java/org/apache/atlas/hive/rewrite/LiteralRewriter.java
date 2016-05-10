@@ -17,7 +17,6 @@
  */
 package org.apache.atlas.hive.rewrite;
 
-import org.apache.atlas.hive.hook.HiveHook;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 
@@ -38,8 +37,9 @@ public class LiteralRewriter implements ASTRewriter {
         put(HiveParser.DecimalLiteral, "DECIMAL_LITERAL");
         put(HiveParser.ByteLengthLiteral, "BYTE_LENGTH_LITERAL");
         put(HiveParser.TOK_STRINGLITERALSEQUENCE, "'STRING_LITERAL_SEQ'");
-        put(HiveParser.TOK_CHARSETLITERAL, "'CHARSET_LITERAL");
-        //Not replacing boolean literals
+        put(HiveParser.TOK_CHARSETLITERAL, "'CHARSET_LITERAL'");
+        put(HiveParser.KW_TRUE, "BOOLEAN_LITERAL");
+        put(HiveParser.KW_FALSE, "BOOLEAN_LITERAL");
     }};
 
 
@@ -56,8 +56,7 @@ public class LiteralRewriter implements ASTRewriter {
     private void processLiterals(final RewriteContext ctx, final ASTNode node) {
         // Take child ident.totext
         if (isLiteral(node)) {
-            //ASTNode parent = (ASTNode) node.getParent();
-            replacePartitionLiteral(ctx, node);
+            replaceLiteral(ctx, node);
         }
     }
 
@@ -68,7 +67,7 @@ public class LiteralRewriter implements ASTRewriter {
         return false;
     }
 
-    void replacePartitionLiteral(RewriteContext ctx, ASTNode valueNode) {
+    void replaceLiteral(RewriteContext ctx, ASTNode valueNode) {
         //Reset the token stream
         String literalVal = LITERAL_TOKENS.get(valueNode.getType());
         ctx.getTokenRewriteStream().replace(valueNode.getTokenStartIndex(),

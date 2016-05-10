@@ -60,9 +60,6 @@ public class HiveASTRewriter {
             ParseDriver pd = new ParseDriver();
             tree = pd.parse(sourceQry, queryContext, true);
             tree = ParseUtils.findRootNonNullToken(tree);
-
-            String astString = tree.dump();
-            System.out.println("ast : " + astString);
             this.rwCtx = new RewriteContext(sourceQry, tree, queryContext.getTokenRewriteStream());
             rewrite(tree);
             result = toSQL();
@@ -90,6 +87,11 @@ public class HiveASTRewriter {
 
     public String toSQL() {
         return rwCtx.getTokenRewriteStream().toString();
+    }
+
+    public String printAST() {
+        return rwCtx.getOriginNode().dump();
+//            System.out.println("ast : " + astString);
     }
 
 }
