@@ -80,6 +80,7 @@ public class HiveDataModelGenerator {
     public static final String OWNER = "owner";
 
     public static final String TABLE_TYPE_ATTR = "tableType";
+    public static final String HIVE_TABLE_TYPE = "hive_table";
 
     public static final String CREATE_TIME = "createTime";
     public static final String LAST_ACCESS_TIME = "lastAccessTime";

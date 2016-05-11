@@ -224,7 +224,7 @@ public class BaseHiveRepositoryTest {
             table("sales_fact_daily_mv", "sales fact daily materialized view", reportingDB, sd, "Joe BI", "Managed",
                 salesFactColumns, "Metric");
 
-        loadProcess("loadSalesDaily", "hive query for daily summary", "John ETL", ImmutableList.of(salesFact, timeDim),
+        loadProcess("loadSalesDaily", "loadSalesDaily", "hive query for daily summary", "John ETL", ImmutableList.of(salesFact, timeDim),
             ImmutableList.of(salesFactDaily), "create table as select ", "plan", "id", "graph", "ETL");
 
         Id logDB = database("Logging", "logging database", "Tim ETL", "hdfs://host:8000/apps/warehouse/logging");
@@ -259,14 +259,14 @@ public class BaseHiveRepositoryTest {
             table("sales_fact_monthly_mv", "sales fact monthly materialized view", reportingDB, sd, "Jane BI",
                 "Managed", salesFactColumns, "Metric");
 
-        loadProcess("loadSalesMonthly", "hive query for monthly summary", "John ETL", ImmutableList.of(salesFactDaily),
+        loadProcess("loadSalesMonthly", "loadSalesMonthly", "hive query for monthly summary", "John ETL", ImmutableList.of(salesFactDaily),
             ImmutableList.of(salesFactMonthly), "create table as select ", "plan", "id", "graph", "ETL");
 
         Id loggingFactMonthly =
             table("logging_fact_monthly_mv", "logging fact monthly materialized view", logDB, sd, "Tim ETL",
                 "Managed", logFactColumns, "Log Data");
 
-        loadProcess("loadLogsMonthly", "hive query for monthly summary", "Tim ETL", ImmutableList.of(loggingFactDaily),
+        loadProcess("loadLogsMonthly", "loadLogsMonthly", "hive query for monthly summary", "Tim ETL", ImmutableList.of(loggingFactDaily),
             ImmutableList.of(loggingFactMonthly), "create table as select ", "plan", "id", "graph", "ETL");
 
         partition(new ArrayList() {{ add("2015-01-01"); }}, salesFactDaily);
@@ -327,11 +327,12 @@ public class BaseHiveRepositoryTest {
         return createInstance(referenceable, clsType);
     }
 
-    Id loadProcess(String name, String description, String user, List<Id> inputTables, List<Id> outputTables,
+    Id loadProcess(String name, String qualifiedName, String description, String user, List<Id> inputTables, List<Id> outputTables,
         String queryText, String queryPlan, String queryId, String queryGraph, String... traitNames)
         throws Exception {
         Referenceable referenceable = new Referenceable(HIVE_PROCESS_TYPE, traitNames);
-        referenceable.set("name", name);
+        referenceable.set(AtlasClient.NAME, name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("description", description);
         referenceable.set("user", user);
         referenceable.set("startTime", System.currentTimeMillis());

@@ -19,6 +19,7 @@
 package org.apache.atlas.hive.hook;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
@@ -623,7 +624,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return processReferenceable;
     }
 
-    private String getProcessQualifiedName(String normalizedQuery, List<Referenceable> inputs, List<Referenceable> outputs) {
+    @VisibleForTesting
+    static String getProcessQualifiedName(String normalizedQuery, List<Referenceable> inputs, List<Referenceable> outputs) {
         try {
             MessageDigest digester = MD5Utils.getDigester();
             digester.update(getBytes(normalizedQuery));
@@ -638,7 +640,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return normalizedQuery;
     }
 
-    private void updateDigest(MessageDigest digester, List<Referenceable> refs) {
+    private static void updateDigest(MessageDigest digester, List<Referenceable> refs) {
         for(Referenceable input : refs) {
             //TODO - Change to qualifiedName later
             String dataSetQlfdName = (String) input.get(AtlasClient.NAME);
@@ -646,7 +648,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    byte[] getBytes(String s) {
+    private static byte[] getBytes(String s) {
         if ( s != null) {
             return s.getBytes(Charset.forName("UTF-8"));
         }

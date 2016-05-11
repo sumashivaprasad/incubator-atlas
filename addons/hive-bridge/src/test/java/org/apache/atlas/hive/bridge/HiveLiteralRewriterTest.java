@@ -43,10 +43,10 @@ public class HiveLiteralRewriterTest {
     public void testLiteralRewrite() {
         HiveHook.HiveEventContext ctx = new HiveHook.HiveEventContext();
         ctx.setQueryStr("insert into table testTable partition(dt='2014-01-01') select * from test1 where dt = '2014-01-01'" +
-            "and intColumn = 10" +
-            " and decimalColumn = 1.10 " +
-            " and charColumn = 'a' " +
-            " and hexColumn = unhex('\\0xFF') " +
+            " and intColumn = 10" +
+            " and decimalColumn = 1.10" +
+            " and charColumn = 'a'" +
+            " and hexColumn = unhex('\\0xFF')" +
             " and expColumn = cast('-1.5e2' as int)" +
             " and boolCol = true");
 
@@ -55,8 +55,15 @@ public class HiveLiteralRewriterTest {
             String result = queryRewriter.rewrite(ctx.getQueryStr());
             System.out.println("normlized sql : " + result);
 
-            final String normalizedSL = "insert into table testTable partition(dt='STRING_LITERAL') select * from test1 where dt = 'STRING_LITERAL'and intColumn = NUMBER_LITERAL and decimalColumn = NUMBER_LITERAL  and charColumn = 'STRING_LITERAL'  and hexColumn = unhex('STRING_LITERAL')  and expColumn = cast('STRING_LITERAL' as int)";
-            Assert.assertEquals(result, normalizedSL);
+            final String normalizedSQL = "insert into table testTable partition(dt='STRING_LITERAL') " +
+                "select * from test1 where dt = 'STRING_LITERAL' " +
+                "and intColumn = NUMBER_LITERAL " +
+                "and decimalColumn = NUMBER_LITERAL and " +
+                "charColumn = 'STRING_LITERAL' and " +
+                "hexColumn = unhex('STRING_LITERAL') and " +
+                "expColumn = cast('STRING_LITERAL' as int) and " +
+                "boolCol = BOOLEAN_LITERAL";
+            Assert.assertEquals(result, normalizedSQL);
         } catch (RewriteException e) {
             e.printStackTrace();
         }

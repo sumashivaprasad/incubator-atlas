@@ -576,6 +576,7 @@ public final class TypedInstanceToGraphMapper {
     private Edge addClassEdge(Vertex instanceVertex, Vertex toVertex, String edgeLabel) throws AtlasException {
         // add an edge to the class vertex from the instance
         return graphHelper.addEdge(instanceVertex, toVertex, edgeLabel);
+    }
 
 
     private Vertex getClassVertex(ITypedReferenceableInstance typedReference) throws EntityNotFoundException {
