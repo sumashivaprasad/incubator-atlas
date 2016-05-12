@@ -106,6 +106,7 @@ public class SqoopHook extends SqoopJobDataPublisher {
                                                      SqoopJobDataPublisher.Data data, String clusterName) {
         Referenceable procRef = new Referenceable(SqoopDataTypes.SQOOP_PROCESS.getName());
         procRef.set(SqoopDataModelGenerator.NAME, getSqoopProcessName(data, clusterName));
+        procRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getSqoopProcessName(data, clusterName));
         procRef.set(SqoopDataModelGenerator.OPERATION, data.getOperation());
         procRef.set(SqoopDataModelGenerator.INPUTS, dbStoreRef);
         procRef.set(SqoopDataModelGenerator.OUTPUTS, hiveTableRef);

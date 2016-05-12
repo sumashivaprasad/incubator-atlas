@@ -466,17 +466,18 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     public static String doRewrites(HiveEventContext eventContext) {
-        String result = normalize(eventContext.getQueryStr());
-
-        if (result != null) {
+        String result = null;
+        if (eventContext.getQueryStr() != null) {
             try {
                 HiveASTRewriter rewriter = new HiveASTRewriter(hiveConf);
-                return rewriter.rewrite(result);
+                result = rewriter.rewrite(eventContext.getQueryStr());
             } catch (RewriteException e) {
                 LOG.error("Could not rewrite query due to error. Proceeding with original query {}", eventContext.getQueryStr(), e);
             }
 
         }
+
+        result = normalize(result);
         return result;
     }
 
@@ -626,33 +627,20 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
     @VisibleForTesting
     static String getProcessQualifiedName(String normalizedQuery, List<Referenceable> inputs, List<Referenceable> outputs) {
-        try {
-            MessageDigest digester = MD5Utils.getDigester();
-            digester.update(getBytes(normalizedQuery));
-            updateDigest(digester, inputs);
-            updateDigest(digester, outputs);
-
-            return new String(digester.digest(), "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            LOG.error("Unsupport encoding exception while processing qualifiedName ", e);
-        }
-
-        return normalizedQuery;
+        StringBuffer buffer = new StringBuffer(normalizedQuery);
+        update(buffer, inputs);
+        update(buffer, outputs);
+        return buffer.toString();
     }
 
-    private static void updateDigest(MessageDigest digester, List<Referenceable> refs) {
-        for(Referenceable input : refs) {
-            //TODO - Change to qualifiedName later
-            String dataSetQlfdName = (String) input.get(AtlasClient.NAME);
-            digester.update(getBytes(dataSetQlfdName));
+    private static void update(StringBuffer buffer, List<Referenceable> refs) {
+        if(refs != null) {
+            for (Referenceable input : refs) {
+                //TODO - Change to qualifiedName later
+                String dataSetQlfdName = (String) input.get(AtlasClient.NAME);
+                buffer.append(dataSetQlfdName.toLowerCase().replaceAll("/", ""));
+            }
         }
-    }
-
-    private static byte[] getBytes(String s) {
-        if ( s != null) {
-            return s.getBytes(Charset.forName("UTF-8"));
-        }
-        return null;
     }
 
     public static class HiveEventContext {

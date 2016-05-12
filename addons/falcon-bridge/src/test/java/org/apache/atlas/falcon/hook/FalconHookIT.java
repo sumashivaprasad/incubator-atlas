@@ -233,8 +233,8 @@ public class FalconHookIT {
     private String assertProcessIsRegistered(String clusterName, String processName) throws Exception {
         String name = processName + "@" + clusterName;
         LOG.debug("Searching for process {}", name);
-        String query = String.format("%s as t where name = '%s' select t",
-                FalconDataTypes.FALCON_PROCESS_ENTITY.getName(), name);
+        String query = String.format("%s as t where %s = '%s' select t",
+                FalconDataTypes.FALCON_PROCESS_ENTITY.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         return assertEntityIsRegistered(query);
     }
 
