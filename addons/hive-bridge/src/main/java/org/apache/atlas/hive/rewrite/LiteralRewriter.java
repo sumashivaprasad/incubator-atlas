@@ -48,7 +48,7 @@ public class LiteralRewriter implements ASTRewriter {
         try {
             processLiterals(ctx, node);
         } catch(Exception e) {
-            throw new RewriteException("Could not normalize quuery", e);
+            throw new RewriteException("Could not normalize query", e);
         }
     }
 

@@ -53,7 +53,7 @@ public class HiveASTRewriter {
         rewriters.add(rewriter);
     }
 
-    public String rewrite(String sourceQry) {
+    public String rewrite(String sourceQry) throws RewriteException {
         String result = sourceQry;
         ASTNode tree = null;
         try {
@@ -65,8 +65,7 @@ public class HiveASTRewriter {
             result = toSQL();
         } catch (ParseException e) {
            LOG.error("Could not parse the query {} ", sourceQry, e);
-        } catch (RewriteException e) {
-            LOG.error("Could not rewrite the query {} ", sourceQry, e);
+            throw new RewriteException("Could not parse query : " , e);
         }
         return result;
     }
@@ -91,7 +90,6 @@ public class HiveASTRewriter {
 
     public String printAST() {
         return rwCtx.getOriginNode().dump();
-//            System.out.println("ast : " + astString);
     }
 
 }

@@ -80,7 +80,6 @@ public class HiveDataModelGenerator {
     public static final String OWNER = "owner";
 
     public static final String TABLE_TYPE_ATTR = "tableType";
-    public static final String HIVE_TABLE_TYPE = "hive_table";
 
     public static final String CREATE_TIME = "createTime";
     public static final String LAST_ACCESS_TIME = "lastAccessTime";
@@ -289,6 +288,7 @@ public class HiveDataModelGenerator {
                         null),
                 new AttributeDefinition("queryId", DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false, null),
                 new AttributeDefinition("recentQueries", String.format("array<%s>", DataTypes.STRING_TYPE.getName()), Multiplicity.OPTIONAL, false, null),
+                new AttributeDefinition(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null),
                 new AttributeDefinition("queryGraph", DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false,
                         null),};
 

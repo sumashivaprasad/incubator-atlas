@@ -40,7 +40,7 @@ public class HiveLiteralRewriterTest {
     }
 
     @Test
-    public void testLiteralRewrite() {
+    public void testLiteralRewrite() throws RewriteException {
         HiveHook.HiveEventContext ctx = new HiveHook.HiveEventContext();
         ctx.setQueryStr("insert into table testTable partition(dt='2014-01-01') select * from test1 where dt = '2014-01-01'" +
             " and intColumn = 10" +
@@ -50,7 +50,6 @@ public class HiveLiteralRewriterTest {
             " and expColumn = cast('-1.5e2' as int)" +
             " and boolCol = true");
 
-        try {
             HiveASTRewriter queryRewriter  = new HiveASTRewriter(conf);
             String result = queryRewriter.rewrite(ctx.getQueryStr());
             System.out.println("normlized sql : " + result);
@@ -64,8 +63,5 @@ public class HiveLiteralRewriterTest {
                 "expColumn = cast('STRING_LITERAL' as int) and " +
                 "boolCol = BOOLEAN_LITERAL";
             Assert.assertEquals(result, normalizedSQL);
-        } catch (RewriteException e) {
-            e.printStackTrace();
-        }
     }
 }
