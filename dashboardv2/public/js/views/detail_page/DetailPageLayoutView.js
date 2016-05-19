@@ -37,10 +37,15 @@ define(['require',
                 RLineageLayoutView: "#r_lineageLayoutView",
             },
             /** ui selector cache */
-            ui: {},
+            ui: {
+                backButton: "[data-id='backButton']"
+            },
             /** ui events hash */
             events: function() {
                 var events = {};
+                events['click ' + this.ui.backButton] = function() {
+                    Backbone.history.history.back();
+                };
                 return events;
             },
             /**
@@ -92,7 +97,7 @@ define(['require',
                     this.renderEntityDetailTableLayoutView();
                     this.renderTagTableLayoutView(tagGuid);
                     this.renderLineageLayoutView(tagGuid);
-                    this.renderSchemaLayoutView();
+                    this.renderSchemaLayoutView(tagGuid);
                 }, this);
             },
             onRender: function() {},
@@ -120,17 +125,17 @@ define(['require',
                 require(['views/graph/LineageLayoutView'], function(LineageLayoutView) {
                     that.RLineageLayoutView.show(new LineageLayoutView({
                         globalVent: that.globalVent,
-                        assetName: that.name,
+                        assetName: tagGuid,
                         guid: tagGuid
                     }));
                 });
             },
-            renderSchemaLayoutView: function() {
+            renderSchemaLayoutView: function(tagGuid) {
                 var that = this;
                 require(['views/schema/SchemaLayoutView'], function(SchemaLayoutView) {
                     that.RSchemaTableLayoutView.show(new SchemaLayoutView({
                         globalVent: that.globalVent,
-                        name: that.name,
+                        name: tagGuid,
                         vent: that.vent
                     }));
                 });
