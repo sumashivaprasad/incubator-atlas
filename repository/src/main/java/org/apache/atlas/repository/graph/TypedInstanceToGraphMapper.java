@@ -766,7 +766,7 @@ public final class TypedInstanceToGraphMapper {
         Vertex vertex = graphHelper.searchByGremlin(gremlinQuery.toString());
         if (vertex != null) {
             //Check for array of classes property matches
-            if (ctx.hasArrayInPrimaryKey()) {
+            if (ctx.hasArrayRefInPrimaryKey()) {
                 return checkArrayReferences(ctx, vertex, ref);
             } else {
                 return vertex;
@@ -864,7 +864,7 @@ public final class TypedInstanceToGraphMapper {
                     arrType.getElemType().getTypeCategory() == DataTypes.TypeCategory.ENUM ) {
                     List elements = (List) ref.get(property);
                     if ( elements != null && elements.size() > 0) {
-                        gremlinCtx.has(property, "T.eq", "['" + Joiner.on("','").join(elements) + "']");
+                        gremlinCtx.has(property, "T.eq", getFormattedString(elements));
                     }
                 }
                 break;
@@ -877,18 +877,20 @@ public final class TypedInstanceToGraphMapper {
         //Should be an active entity
         gremlinCtx.has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
         //Add clause for typeName
-        gremlinCtx.addTypeName(ref).addAlias();
+        gremlinCtx.addTypeName(ref).alias(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
 
         return gremlinCtx;
     }
 
     private class PrimaryKeyQueryContext {
 
-        public static final String GREMLIN_EDGE_LABEL_FMT = "out('%s')";
-        public static final String GREMLIN_SELECT_FMT = "select([\"%s\"])";
+        public static final String GREMLIN_EDGE_LABEL_FMT = ".out('%s')";
+        public static final String GREMLIN_SELECT_FMT = ".select([\"%s\"])";
         public static final String GREMLIN_STEP_RESULT = "'result'";
-        public static final String GREMLIN_PROPERTY_SEARCH_FMT = "has('%s', %s)";
-        public static final String GREMLIN_PROPERTY_PRED_SEARCH_FMT = "has('%s', '%s',  %s)";
+        public static final String GREMLIN_PROPERTY_SEARCH_FMT = ".has('%s', %s)";
+        public static final String GREMLIN_PROPERTY_PRED_SEARCH_FMT = ".has('%s', '%s',  %s)";
+        public static final String GREMLIN_ALIAS_FMT = ".as(%s)";
+        public static final String GREMLIN_REFER_STEP_FMT = ".back(%s)";
 
         public final StringBuilder gremlinQuery = new StringBuilder("g.V");
         private List<AttributeInfo> classReferences;
@@ -914,7 +916,7 @@ public final class TypedInstanceToGraphMapper {
             this.arrReferences = arrReferences;
         }
 
-        public boolean hasArrayInPrimaryKey() {
+        public boolean hasArrayRefInPrimaryKey() {
             return arrReferences != null;
         }
 
@@ -923,8 +925,8 @@ public final class TypedInstanceToGraphMapper {
             return this;
         }
 
-        public PrimaryKeyQueryContext addAlias() {
-            gremlinQuery.append("as(").append(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT).append(")");
+        public PrimaryKeyQueryContext alias(String alias) {
+            gremlinQuery.append(String.format(GREMLIN_ALIAS_FMT, alias));
             return this;
         }
 
@@ -934,12 +936,12 @@ public final class TypedInstanceToGraphMapper {
         }
 
         public PrimaryKeyQueryContext has(String property, String predicate, Object value) {
-            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_SEARCH_FMT, property, predicate, value));
+            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_PRED_SEARCH_FMT, property, predicate, value));
             return this;
         }
 
         public PrimaryKeyQueryContext back(String step) {
-            gremlinQuery.append(".back(" + step + ")");
+            gremlinQuery.append(String.format(GREMLIN_REFER_STEP_FMT, step));
             return this;
         }
 
@@ -951,6 +953,10 @@ public final class TypedInstanceToGraphMapper {
 
     String getFormattedString(Object attrVal) {
         return "'" + String.valueOf(attrVal) + "'";
+    }
+
+    String getFormattedString(List elements) {
+        return "['" + Joiner.on("','").join(elements) + "']";
     }
 
 }
