@@ -953,6 +953,12 @@
             </dependency>
 
             <dependency>
+                <groupId>javax.persistence</groupId>
+                <artifactId>persistence-api</artifactId>
+                <version>1.0</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.solr</groupId>
                 <artifactId>solr-core</artifactId>
                 <version>${solr.version}</version>
@@ -1048,7 +1054,6 @@
                 <version>${project.version}</version>
                 <type>war</type>
             </dependency> -->
-
             <dependency>
                 <groupId>org.apache.atlas</groupId>
                 <artifactId>atlas-dashboardv2</artifactId>

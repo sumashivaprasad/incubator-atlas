@@ -152,7 +152,7 @@ object TypesSerialization {
 
         val aDefs: Iterable[AttributeDefinition] =
             tt.immediateAttrs.map(convertAttributeInfoToAttributeDef(_))
-        new HierarchicalTypeDefinition[ClassType](classOf[ClassType], tt.name, tt.description, tt.superTypes, aDefs.toArray)
+        new HierarchicalTypeDefinition[ClassType](classOf[ClassType], tt.name, tt.description, tt.superTypes, aDefs.toArray, tt.uniqueConstraints)
     }
 
     def convertToTypesDef(ts: TypeSystem, export: IDataType[_] => Boolean): TypesDef = {
@@ -233,8 +233,7 @@ trait TypeHelpers {
     def createTraitTypeDef(name: String, description: Option[String], superTypes: Seq[String], attrDefs: AttributeDefinition*):
     HierarchicalTypeDefinition[TraitType] = {
         val sts = ImmutableSet.copyOf(superTypes.toArray)
-        return new HierarchicalTypeDefinition[TraitType](classOf[TraitType], name, description.getOrElse(null),
-            sts, attrDefs.toArray)
+        return new HierarchicalTypeDefinition[TraitType](classOf[TraitType], name, description.getOrElse(null), sts, attrDefs.toArray)
     }
 
     def createClassTypeDef(name: String, superTypes: Seq[String], attrDefs: AttributeDefinition*):
@@ -245,8 +244,7 @@ trait TypeHelpers {
     def createClassTypeDef(name: String, description: Option[String], superTypes: Seq[String], attrDefs: AttributeDefinition*):
     HierarchicalTypeDefinition[ClassType] = {
         val sts = ImmutableSet.copyOf(superTypes.toArray)
-        return new HierarchicalTypeDefinition[ClassType](classOf[ClassType], name, description.getOrElse(null),
-            sts, attrDefs.toArray)
+        return new HierarchicalTypeDefinition[ClassType](classOf[ClassType], name, description.getOrElse(null), sts, attrDefs.toArray)
     }
 
     @throws(classOf[AtlasException])

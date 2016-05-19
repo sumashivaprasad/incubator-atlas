@@ -17,19 +17,23 @@
  */
 package org.apache.atlas.repository.graph;
 
+import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import com.thinkaurelius.titan.core.SchemaViolationException;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.RequestContext;
+import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedInstance;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
+import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.exception.EntityExistsException;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.persistence.Id;
@@ -41,10 +45,12 @@ import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.ObjectGraphWalker;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeUtils;
 import org.apache.atlas.utils.MD5Utils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +61,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,14 +77,18 @@ public final class TypedInstanceToGraphMapper {
 
     private DeleteHandler deleteHandler;
     private GraphToTypedInstanceMapper graphToTypedInstanceMapper;
+    private DiscoveryService searchService;
 
     @Inject
-    public TypedInstanceToGraphMapper(GraphToTypedInstanceMapper graphToTypedInstanceMapper, DeleteHandler deleteHandler) {
+    public TypedInstanceToGraphMapper(GraphToTypedInstanceMapper graphToTypedInstanceMapper, DiscoveryService searchService, DeleteHandler deleteHandler) {
         this.graphToTypedInstanceMapper = graphToTypedInstanceMapper;
         this.deleteHandler = deleteHandler;
+        this.searchService = searchService;
     }
 
     private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "signature";
+
+    private final String GREMLIN_STEP_RESULT = "'result'";
 
     public enum Operation {
         CREATE,
@@ -316,32 +327,59 @@ public final class TypedInstanceToGraphMapper {
         LOG.debug("Mapping instance {} for array attribute {} vertex {}", typedInstance.toShortString(),
                 attributeInfo.name, string(instanceVertex));
 
-        List newElements = (List) typedInstance.get(attributeInfo.name);
-        boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
-
-        if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
-            return;
-        }
-
         String propertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
-        List<String> currentElements = instanceVertex.getProperty(propertyName);
-        IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
-        List<String> newElementsCreated = new ArrayList<>();
 
-        if (!newAttributeEmpty) {
-            if (newElements != null && !newElements.isEmpty()) {
-                int index = 0;
-                for (; index < newElements.size(); index++) {
-                    String currentElement = (currentElements != null && index < currentElements.size()) ?
+        IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
+        Collection<String> newElementsCreated = null;
+
+        if ( attributeInfo.multiplicity.isUnique) {
+            newElementsCreated = new ArrayList<>();
+            List<String> currentElements = instanceVertex.getProperty(propertyName);
+            List newElements = (List) typedInstance.get(attributeInfo.name);
+            boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
+            if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
+                return;
+            }
+
+            if (!newAttributeEmpty) {
+                if (newElements != null && !newElements.isEmpty()) {
+                    int index = 0;
+                    for (; index < newElements.size(); index++) {
+                        String currentElement = (currentElements != null && index < currentElements.size()) ?
                             currentElements.get(index) : null;
-                    LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
+                        LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
                             currentElement, newElements.get(index));
-                    String newEntry = addOrUpdateCollectionEntry(instanceVertex, attributeInfo, elementType,
+                        String newEntry = addOrUpdateCollectionEntry(instanceVertex, attributeInfo, elementType,
                             newElements.get(index), currentElement, propertyName, operation);
-                    newElementsCreated.add(newEntry);
+                        newElementsCreated.add(newEntry);
+                    }
+                }
+            }
+        } else {
+            newElementsCreated = new LinkedHashSet<>();
+            Set<String> currentElements = instanceVertex.getProperty(propertyName);
+            Set newElements = (Set) typedInstance.get(attributeInfo.name);
+            boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
+            if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
+                return;
+            }
+            if (!newAttributeEmpty) {
+                if (newElements != null && !newElements.isEmpty()) {
+                    int index = 0;
+                    for (Object newElement : newElements) {
+                        String currentElement = (currentElements != null && index < currentElements.size()) ?
+                            currentElements.get(index) : null;
+                        LOG.debug("Adding/updating element current element {}, new element {}", index,
+                            currentElement, newElements.get(index));
+                        String newEntry = addOrUpdateCollectionEntry(instanceVertex, attributeInfo, elementType,
+                            newElements.get(index), currentElement, propertyName, operation);
+                        newElementsCreated.add(newEntry);
+                    }
                 }
             }
         }
+
+
 
         // for dereference on way out
         GraphHelper.setProperty(instanceVertex, propertyName, newElementsCreated);
@@ -557,7 +595,7 @@ public final class TypedInstanceToGraphMapper {
                                           ITypedReferenceableInstance newAttributeValue, AttributeInfo attributeInfo,
                                           String edgeLabel) throws AtlasException {
         Vertex newReferenceVertex = getClassVertex(newAttributeValue);
-        if(newReferenceVertex == null && newAttributeValue != null) {
+        if (newReferenceVertex == null && newAttributeValue != null) {
             LOG.error("Could not find vertex for Class Reference " + newAttributeValue);
             throw new EntityNotFoundException("Could not find vertex for Class Reference " + newAttributeValue);
         }
@@ -690,4 +728,155 @@ public final class TypedInstanceToGraphMapper {
 
         GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
     }
+
+    //Utility methods
+
+    private Vertex getVertexByPrimaryKey(final ClassType classType, final ITypedReferenceableInstance instance) throws AtlasException {
+        Vertex result = null;
+        if (classType.getPrimaryKey() != null) {
+            try {
+                PrimaryKeyConstraint uniqueConstraint = classType.getPrimaryKey();
+                String[] uniqueAttrs = uniqueConstraint.columnNames();
+                result = getVertexByProperties(classType, uniqueAttrs, instance);
+                LOG.debug("Found vertex by primary key {} ", Joiner.on(":").join(uniqueAttrs));
+            } catch (EntityNotFoundException e) {
+                //Its ok if there is no entity with the primary key
+            }
+        }
+        return result;
+    }
+
+    public Vertex getVertexByProperties(final ClassType classType, final String[] propertyKeys, final IReferenceableInstance ref) throws AtlasException {
+        StringBuilder gremlinQuery = new StringBuilder("g.V");
+        final String GREMLIN_PROPERTY_SEARCH_FMT = "has('%s', %s)";
+        final String GREMLIN_EDGE_LABEL_FMT = "out('%s')";
+        final String GREMLIN_SELECT_FMT = "select([\"%s\"])";
+        Object attrValue = null;
+        List<AttributeInfo> classReferences = null;
+        List<AttributeInfo> arrReferences = null;
+
+        for (final String property : propertyKeys) {
+            AttributeInfo attrInfo = classType.fieldMapping().fields.get(property);
+            final IDataType dataType = attrInfo.dataType();
+            switch (dataType.getTypeCategory()) {
+            case ENUM:
+                attrValue = getFormattedString(ref.get(property));
+                break;
+            case PRIMITIVE:
+                if (attrInfo.dataType().getName() == DataTypes.STRING_TYPE.getName()) {
+                    attrValue = getFormattedString(ref.get(property));
+                } else {
+                    attrValue = ref.get(property);
+                }
+                break;
+            case CLASS:
+                if (classReferences == null) {
+                    classReferences = new ArrayList<>();
+                }
+                classReferences.add(attrInfo);
+                break;
+            case ARRAY:
+                //Only process if array of classes
+                DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
+                if ( arrType.getElemType().getTypeCategory() == DataTypes.TypeCategory.CLASS) {
+                    if (arrReferences == null) {
+                        arrReferences = new ArrayList<>();
+                    }
+                    arrReferences.add(attrInfo);
+                }
+                break;
+            }
+            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, property, attrValue));
+            gremlinQuery.append("as(").append(GREMLIN_STEP_RESULT).append(")");
+        }
+
+        //Add all class reference searches to gremlin
+        boolean addBackRef = false;
+        for (AttributeInfo aInfo : classReferences) {
+            Vertex classVertex = idToVertexMap.get(new Id(ref.getId()._getId(), 0, aInfo.dataType().getName(), Id.EntityState.ACTIVE.name()));
+            String typeName = classVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
+            String guid = classVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+            if (addBackRef) {
+                gremlinQuery.append(".back(" + GREMLIN_STEP_RESULT + ")");
+            }
+            gremlinQuery.append(String.format(GREMLIN_EDGE_LABEL_FMT, GraphHelper.getEdgeLabel(aInfo.dataType(), aInfo)));
+            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, Constants.GUID_PROPERTY_KEY, guid));
+            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, Constants.ENTITY_TYPE_PROPERTY_KEY, typeName));
+            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name()));
+            addBackRef = true;
+        }
+
+        gremlinQuery.append(String.format(GREMLIN_SELECT_FMT, GREMLIN_STEP_RESULT));
+
+        Vertex vertex = graphHelper.searchByGremlin(gremlinQuery.toString());
+        if (vertex != null) {
+            //Check for array of classes property matches
+            if (arrReferences != null) {
+                for (AttributeInfo arrInfo : arrReferences) {
+                    String arrEdgeLabel = GraphHelper.getEdgeLabel(arrInfo.dataType(), arrInfo);
+                    final Iterable<Edge> edges = vertex.getEdges(Direction.OUT, arrEdgeLabel);
+                    Collection<Id> existingIds;
+                    Collection<Id> currElements;
+                    if (( arrInfo.multiplicity.isUnique)) {
+                        currElements = (List<Id>) ref.get(arrInfo.name);
+                        //Dont care about order currently. Compare sets
+                        existingIds = new ArrayList<>();
+                    } else {
+                        currElements = (Set<Id>) ref.get(arrInfo.name);
+                        //Dont care about order currently. Compare sets
+                        existingIds = new HashSet<>();
+                    }
+                    for (Edge edge : edges) {
+                        Vertex inVertex = edge.getVertex(Direction.IN);
+                        String guid = inVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+                        Id existingId = new Id(guid, 0, (String) inVertex.getProperty(Constants.TYPENAME_PROPERTY_KEY),
+                            (String) inVertex.getProperty(Constants.STATE_PROPERTY_KEY));
+                        existingIds.add(existingId);
+                    }
+                     if (existingIds.size() != currElements.size() ) {
+                         return null;
+                     } else if (!currElements.equals(existingIds)) {
+                         return null;
+                     } else {
+                        return vertex;
+                    }
+                }
+            } else {
+                return vertex;
+            }
+        }
+        return null;
+    }
+
+    String getFormattedString(Object attrVal) {
+        return "'" + String.valueOf(attrVal) + "'";
+    }
+
+//        case ARRAY:
+//            IDataType elemType = ((DataTypes.ArrayType) dataType).getElemType();
+//            List elements = (List) typedInstance.get(property);
+//            for (Object element : elements) {
+//                attrValue += getArrayElementValue(elemType, element);
+//            }
+//            break;
+
+
+
+//    String getArrayElementValue(IDataType elemType, Object val) {
+//        String arrVal = null;
+//        switch (elemType.getTypeCategory()) {
+//        case CLASS:
+//            Referenceable ref = (Referenceable) val;
+//            Id tempId = ref.getId();
+//            Vertex instanceVertex = idToVertexMap.get(tempId);
+//            arrVal = GraphHelper.getIdFromVertex(instanceVertex);
+//            break;
+//        case PRIMITIVE:
+//        case ENUM:
+//            arrVal = String.valueOf(val);
+//            break;
+//        }
+//        return arrVal;
+//    }
+
 }

@@ -49,16 +49,26 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     public static final String TRAIT_NAME_SEP = "::";
 
     public final Map<AttributeInfo, List<String>> infoToNameMap;
+    public final PrimaryKeyConstraint primaryKeyConstraint;
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, int numFields) {
         super(typeSystem, ClassType.class, name, description, superTypes, numFields);
         infoToNameMap = null;
+        primaryKeyConstraint = null;
     }
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo... fields)
     throws AtlasException {
         super(typeSystem, ClassType.class, name, description, superTypes, fields);
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
+        primaryKeyConstraint = null;
+    }
+
+    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo[] fields, PrimaryKeyConstraint primaryKeyConstraint)
+        throws AtlasException {
+        super(typeSystem, ClassType.class, name, description, superTypes, fields);
+        infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
+        this.primaryKeyConstraint = primaryKeyConstraint;
     }
 
     @Override
@@ -83,9 +93,9 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
         throw new AtlasException(String.format("Cannot get id from class %s", val.getClass()));
     }
 
+
     @Override
     public ITypedReferenceableInstance convert(Object val, Multiplicity m) throws AtlasException {
-
         if (val != null) {
             if (val instanceof ITypedReferenceableInstance) {
                 ITypedReferenceableInstance tr = (ITypedReferenceableInstance) val;
@@ -235,5 +245,9 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
                 }
             }
         }
+    }
+
+    public PrimaryKeyConstraint getPrimaryKey() {
+        return primaryKeyConstraint;
     }
 }

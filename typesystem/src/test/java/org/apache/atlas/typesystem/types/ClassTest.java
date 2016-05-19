@@ -100,13 +100,13 @@ public class ClassTest extends HierarchicalTypeTest<ClassType> {
     }
     @Override
     protected HierarchicalTypeDefinition<ClassType> getTypeDefinition(String name, AttributeDefinition... attributes) {
-        return new HierarchicalTypeDefinition(ClassType.class, name, null, null, attributes);
+        return new HierarchicalTypeDefinition(ClassType.class, name, null, null, attributes, uniqueConstraints);
     }
 
     @Override
     protected HierarchicalTypeDefinition<ClassType> getTypeDefinition(String name, ImmutableSet<String> superTypes,
                                                                       AttributeDefinition... attributes) {
-        return new HierarchicalTypeDefinition(ClassType.class, name, null, superTypes, attributes);
+        return new HierarchicalTypeDefinition(ClassType.class, name, null, superTypes, attributes, uniqueConstraints);
     }
 
     @Override

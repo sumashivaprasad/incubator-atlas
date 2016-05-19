@@ -18,6 +18,7 @@
 
 package org.apache.atlas.repository.graph;
 
+import com.google.common.base.Joiner;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanProperty;
 import com.thinkaurelius.titan.core.TitanVertex;
@@ -29,6 +30,7 @@ import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.RequestContext;
+import org.apache.atlas.discovery.DiscoveryException;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedInstance;
@@ -40,14 +42,21 @@ import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.HierarchicalType;
 import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.script.Bindings;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -140,12 +149,13 @@ public final class GraphHelper {
      * @return vertex with the given property keys
      * @throws EntityNotFoundException
      */
-    private Vertex findVertex(Object... args) throws EntityNotFoundException {
+    private Vertex findVertex(Map<String, Object> args) throws EntityNotFoundException {
         StringBuilder condition = new StringBuilder();
         GraphQuery query = titanGraph.query();
-        for (int i = 0 ; i < args.length; i+=2) {
-            query = query.has((String) args[i], args[i+1]);
-            condition.append(args[i]).append(" = ").append(args[i+1]).append(", ");
+
+        for (String property : args.keySet()) {
+            query = query.has((String) property, args.get(property));
+            condition.append(property).append(" = ").append(args.get(property)).append(", ");
         }
         String conditionStr = condition.toString();
         LOG.debug("Finding vertex with {}", conditionStr);
@@ -285,13 +295,18 @@ public final class GraphHelper {
         LOG.info("Removed {}", vertexString);
     }
 
-    public Vertex getVertexForGUID(String guid) throws EntityNotFoundException {
-        return findVertex(Constants.GUID_PROPERTY_KEY, guid);
+    public Vertex getVertexForGUID(final String guid) throws EntityNotFoundException {
+        return findVertex(new HashMap<String, Object>() {{ put(Constants.GUID_PROPERTY_KEY, guid); }} );
     }
 
-    public Vertex getVertexForProperty(String propertyKey, Object value) throws EntityNotFoundException {
-        return findVertex(propertyKey, value, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+    public Vertex getVertexForProperty(final String propertyKey, final Object value) throws EntityNotFoundException {
+        return findVertex(new HashMap<String, Object>() {{
+            put(propertyKey, value);
+            put(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+        }});
     }
+
+
 
     public static String getQualifiedNameForMapKey(String prefix, String key) {
         return prefix + "." + key;
@@ -356,17 +371,17 @@ public final class GraphHelper {
         throws AtlasException {
         LOG.debug("Checking if there is an instance with the same unique attributes for instance {}", instance.toShortString());
         Vertex result = null;
-        for (AttributeInfo attributeInfo : classType.fieldMapping().fields.values()) {
-            if (attributeInfo.isUnique) {
-                String propertyKey = getQualifiedFieldName(classType, attributeInfo.name);
-                try {
-                    result = getVertexForProperty(propertyKey, instance.get(attributeInfo.name));
-                    LOG.debug("Found vertex by unique attribute : " + propertyKey + "=" + instance.get(attributeInfo.name));
-                } catch (EntityNotFoundException e) {
-                    //Its ok if there is no entity with the same unique value
+            for (AttributeInfo attributeInfo : classType.fieldMapping().fields.values()) {
+                if (attributeInfo.isUnique) {
+                    String propertyKey = getQualifiedFieldName(classType, attributeInfo.name);
+                    try {
+                        result = getVertexForProperty(propertyKey, instance.get(attributeInfo.name));
+                        LOG.debug("Found vertex by unique attribute : " + propertyKey + "=" + instance.get(attributeInfo.name));
+                    } catch (EntityNotFoundException e) {
+                        //Its ok if there is no entity with the same unique value
+                    }
                 }
             }
-        }
 
         return result;
     }
@@ -404,6 +419,41 @@ public final class GraphHelper {
                     string(edge.getVertex(Direction.OUT)), string(edge.getVertex(Direction.IN)));
         } else {
             return String.format("edge[id=%s]", edge.getId().toString());
+        }
+    }
+
+    public Vertex extractVertexFromGremlinResult(Object o) throws DiscoveryException {
+        if (!(o instanceof List)) {
+            throw new DiscoveryException(String.format("Cannot process result %s", o.toString()));
+        }
+
+        List l = (List) o;
+        Vertex result = null;
+        for (Object r : l) {
+            if (r instanceof TitanVertex) {
+                result = (TitanVertex) r;
+            } else {
+                throw new DiscoveryException(String.format("Cannot process result %s", o.toString()));
+            }
+        }
+        return result;
+    }
+
+    public Vertex searchByGremlin(String gremlinQuery) throws DiscoveryException {
+        Object o = executeGremlin(gremlinQuery);
+        return extractVertexFromGremlinResult(o);
+    }
+
+    public Object executeGremlin(String gremlinQuery) throws DiscoveryException {
+        ScriptEngineManager manager = new ScriptEngineManager();
+        ScriptEngine engine = manager.getEngineByName("gremlin-groovy");
+        Bindings bindings = engine.createBindings();
+        bindings.put("g", titanGraph);
+
+        try {
+            return engine.eval(gremlinQuery, bindings);
+        } catch (ScriptException se) {
+            throw new DiscoveryException(se);
         }
     }
 }

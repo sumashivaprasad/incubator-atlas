@@ -23,10 +23,14 @@ import com.google.common.collect.ImmutableSet;
 
 import org.apache.atlas.classification.InterfaceAudience;
 
+import java.util.List;
+
 public class HierarchicalTypeDefinition<T extends HierarchicalType> extends StructTypeDefinition {
 
     public final ImmutableSet<String> superTypes;
     public final String hierarchicalMetaTypeName;
+
+    public final PrimaryKeyConstraint primaryKey;
 
     /**
      * Used for json deserialization only.
@@ -40,16 +44,24 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
      */
     @InterfaceAudience.Private
     public HierarchicalTypeDefinition(String hierarchicalMetaTypeName, String typeName, String typeDescription, String[] superTypes,
-            AttributeDefinition[] attributeDefinitions) throws ClassNotFoundException {
+            AttributeDefinition[] attributeDefinitions, PrimaryKeyConstraint primaryKey) throws ClassNotFoundException {
         this((Class<T>) Class.forName(hierarchicalMetaTypeName), typeName, typeDescription, ImmutableSet.copyOf(superTypes),
-                attributeDefinitions);
+                attributeDefinitions, primaryKey);
+
+    }
+
+    public HierarchicalTypeDefinition(Class<T> hierarchicalMetaType, String typeName, String typeDescription, ImmutableSet<String> superTypes,
+        AttributeDefinition[] attributeDefinitions, PrimaryKeyConstraint primaryKey) {
+        super(typeName, typeDescription, false, attributeDefinitions);
+        hierarchicalMetaTypeName = hierarchicalMetaType.getName();
+        this.superTypes = superTypes == null ? ImmutableSet.<String>of() : superTypes;
+        this.primaryKey = primaryKey;
     }
 
     public HierarchicalTypeDefinition(Class<T> hierarchicalMetaType, String typeName, String typeDescription, ImmutableSet<String> superTypes,
         AttributeDefinition[] attributeDefinitions) {
-        super(typeName, typeDescription, false, attributeDefinitions);
-        hierarchicalMetaTypeName = hierarchicalMetaType.getName();
-        this.superTypes = superTypes == null ? ImmutableSet.<String>of() : superTypes;
+        this(hierarchicalMetaType, typeName, typeDescription, ImmutableSet.copyOf(superTypes),
+            attributeDefinitions, null);
     }
 
     @Override
@@ -83,4 +95,5 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
         result = 31 * result + hierarchicalMetaTypeName.hashCode();
         return result;
     }
+
 }

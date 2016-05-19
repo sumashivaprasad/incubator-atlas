@@ -76,7 +76,7 @@ public class TypesUtil {
 
     public static HierarchicalTypeDefinition<TraitType> createTraitTypeDef(String name, String description,
         ImmutableSet<String> superTypes, AttributeDefinition... attrDefs) {
-        return new HierarchicalTypeDefinition<>(TraitType.class, name, description, superTypes, attrDefs);
+        return new HierarchicalTypeDefinition<>(TraitType.class, name, description, superTypes, attrDefs, uniqueConstraints);
     }
 
     public static StructTypeDefinition createStructTypeDef(String name, AttributeDefinition... attrDefs) {
@@ -94,7 +94,7 @@ public class TypesUtil {
 
     public static HierarchicalTypeDefinition<ClassType> createClassTypeDef(String name, String description,
         ImmutableSet<String> superTypes, AttributeDefinition... attrDefs) {
-        return new HierarchicalTypeDefinition<>(ClassType.class, name, description, superTypes, attrDefs);
+        return new HierarchicalTypeDefinition<>(ClassType.class, name, description, superTypes, attrDefs, uniqueConstraints);
     }
 
     public static TypesDef getTypesDef(ImmutableList<EnumTypeDefinition> enums,

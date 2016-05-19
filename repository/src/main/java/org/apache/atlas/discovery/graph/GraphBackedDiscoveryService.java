@@ -36,6 +36,7 @@ import org.apache.atlas.query.QueryParser;
 import org.apache.atlas.query.QueryProcessor;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.MetadataRepository;
+import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graph.GraphProvider;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -66,6 +67,7 @@ public class GraphBackedDiscoveryService implements DiscoveryService {
     private static final Logger LOG = LoggerFactory.getLogger(GraphBackedDiscoveryService.class);
 
     private final TitanGraph titanGraph;
+    private final GraphHelper graphHelper = GraphHelper.getInstance();;
     private final DefaultGraphPersistenceStrategy graphPersistenceStrategy;
 
     public final static String SCORE = "score";
@@ -162,17 +164,8 @@ public class GraphBackedDiscoveryService implements DiscoveryService {
     @GraphTransaction
     public List<Map<String, String>> searchByGremlin(String gremlinQuery) throws DiscoveryException {
         LOG.info("Executing gremlin query={}", gremlinQuery);
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("gremlin-groovy");
-        Bindings bindings = engine.createBindings();
-        bindings.put("g", titanGraph);
-
-        try {
-            Object o = engine.eval(gremlinQuery, bindings);
-            return extractResult(o);
-        } catch (ScriptException se) {
-            throw new DiscoveryException(se);
-        }
+        Object o = graphHelper.executeGremlin(gremlinQuery);
+        return extractResult(o);
     }
 
     private List<Map<String, String>> extractResult(Object o) throws DiscoveryException {
