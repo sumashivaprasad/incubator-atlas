@@ -77,13 +77,11 @@ public final class TypedInstanceToGraphMapper {
 
     private DeleteHandler deleteHandler;
     private GraphToTypedInstanceMapper graphToTypedInstanceMapper;
-    private DiscoveryService searchService;
 
     @Inject
-    public TypedInstanceToGraphMapper(GraphToTypedInstanceMapper graphToTypedInstanceMapper, DiscoveryService searchService, DeleteHandler deleteHandler) {
+    public TypedInstanceToGraphMapper(GraphToTypedInstanceMapper graphToTypedInstanceMapper, DeleteHandler deleteHandler) {
         this.graphToTypedInstanceMapper = graphToTypedInstanceMapper;
         this.deleteHandler = deleteHandler;
-        this.searchService = searchService;
     }
 
     private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "signature";
@@ -323,69 +321,43 @@ public final class TypedInstanceToGraphMapper {
     /******************************************** ARRAY **************************************************/
 
     private void mapArrayCollectionToVertex(ITypedInstance typedInstance, Vertex instanceVertex,
-                                            AttributeInfo attributeInfo, Operation operation) throws AtlasException {
+        AttributeInfo attributeInfo, Operation operation) throws AtlasException {
         LOG.debug("Mapping instance {} for array attribute {} vertex {}", typedInstance.toShortString(),
-                attributeInfo.name, string(instanceVertex));
+            attributeInfo.name, string(instanceVertex));
+
+        List newElements = (List) typedInstance.get(attributeInfo.name);
+        boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
+
+        if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
+            return;
+        }
 
         String propertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
-
+        List<String> currentElements = instanceVertex.getProperty(propertyName);
         IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
-        Collection<String> newElementsCreated = null;
+        List<String> newElementsCreated = new ArrayList<>();
 
-        if ( attributeInfo.multiplicity.isUnique) {
-            newElementsCreated = new ArrayList<>();
-            List<String> currentElements = instanceVertex.getProperty(propertyName);
-            List newElements = (List) typedInstance.get(attributeInfo.name);
-            boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
-            if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
-                return;
-            }
-
-            if (!newAttributeEmpty) {
-                if (newElements != null && !newElements.isEmpty()) {
-                    int index = 0;
-                    for (; index < newElements.size(); index++) {
-                        String currentElement = (currentElements != null && index < currentElements.size()) ?
-                            currentElements.get(index) : null;
-                        LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
-                            currentElement, newElements.get(index));
-                        String newEntry = addOrUpdateCollectionEntry(instanceVertex, attributeInfo, elementType,
-                            newElements.get(index), currentElement, propertyName, operation);
-                        newElementsCreated.add(newEntry);
-                    }
-                }
-            }
-        } else {
-            newElementsCreated = new LinkedHashSet<>();
-            Set<String> currentElements = instanceVertex.getProperty(propertyName);
-            Set newElements = (Set) typedInstance.get(attributeInfo.name);
-            boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
-            if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
-                return;
-            }
-            if (!newAttributeEmpty) {
-                if (newElements != null && !newElements.isEmpty()) {
-                    int index = 0;
-                    for (Object newElement : newElements) {
-                        String currentElement = (currentElements != null && index < currentElements.size()) ?
-                            currentElements.get(index) : null;
-                        LOG.debug("Adding/updating element current element {}, new element {}", index,
-                            currentElement, newElements.get(index));
-                        String newEntry = addOrUpdateCollectionEntry(instanceVertex, attributeInfo, elementType,
-                            newElements.get(index), currentElement, propertyName, operation);
-                        newElementsCreated.add(newEntry);
-                    }
+        if (!newAttributeEmpty) {
+            if (newElements != null && !newElements.isEmpty()) {
+                int index = 0;
+                for (; index < newElements.size(); index++) {
+                    String currentElement = (currentElements != null && index < currentElements.size()) ?
+                        currentElements.get(index) : null;
+                    LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
+                        currentElement, newElements.get(index));
+                    String newEntry = addOrUpdateCollectionEntry(instanceVertex, attributeInfo, elementType,
+                        newElements.get(index), currentElement, propertyName, operation);
+                    newElementsCreated.add(newEntry);
                 }
             }
         }
-
-
 
         // for dereference on way out
         GraphHelper.setProperty(instanceVertex, propertyName, newElementsCreated);
 
         removeUnusedEntries(currentElements, newElementsCreated, elementType, attributeInfo);
     }
+
 
     private void removeUnusedEntries(List<String> currentEntries, List<String> newEntries, IDataType entryType,
                                      AttributeInfo attributeInfo) throws AtlasException {
