@@ -270,7 +270,7 @@ public final class TestUtils {
                 new HierarchicalTypeDefinition<>(ClassType.class, PROCESS_TYPE, PROCESS_TYPE + _description,
                         ImmutableSet.<String>of(), new AttributeDefinition[]{
                         new AttributeDefinition("outputs", "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null)
-                }, uniqueConstraints);
+                });
 
         HierarchicalTypeDefinition<ClassType> tableTypeDefinition =
                 createClassTypeDef(TABLE_TYPE, TABLE_TYPE + _description, ImmutableSet.of(SUPER_TYPE_NAME),

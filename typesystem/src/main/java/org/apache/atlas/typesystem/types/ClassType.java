@@ -250,4 +250,8 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     public PrimaryKeyConstraint getPrimaryKey() {
         return primaryKeyConstraint;
     }
+
+    public boolean hasPrimaryKey() {
+        return primaryKeyConstraint != null;
+    }
 }

@@ -54,6 +54,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.rowset.Predicate;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -85,8 +86,6 @@ public final class TypedInstanceToGraphMapper {
     }
 
     private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "signature";
-
-    private final String GREMLIN_STEP_RESULT = "'result'";
 
     public enum Operation {
         CREATE,
@@ -268,7 +267,7 @@ public final class TypedInstanceToGraphMapper {
                 } else {
                     //Check if there is already an instance with the same unique attribute value
                     ClassType classType = typeSystem.getDataType(ClassType.class, instance.getTypeName());
-                    instanceVertex = graphHelper.getVertexForInstanceByUniqueAttribute(classType, instance);
+                    instanceVertex = getVertexByPrimaryKeyOrUniqueAttribute(classType, instance);
 
                     //no entity with the given unique attribute, create new
                     if (instanceVertex == null) {
@@ -701,11 +700,50 @@ public final class TypedInstanceToGraphMapper {
         GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
     }
 
+
     //Utility methods
 
-    private Vertex getVertexByPrimaryKey(final ClassType classType, final ITypedReferenceableInstance instance) throws AtlasException {
+    /**
+     * For the given type, finds an unique attribute and checks if there is an existing instance with the same
+     * unique value
+     *
+     * @param classType
+     * @param instance
+     * @return
+     * @throws AtlasException
+     */
+    public Vertex getVertexForInstanceByUniqueAttribute(ClassType classType, IReferenceableInstance instance)
+        throws AtlasException {
+        LOG.debug("Checking if there is an instance with the same unique attributes for instance {}", instance.toShortString());
         Vertex result = null;
-        if (classType.getPrimaryKey() != null) {
+        for (AttributeInfo attributeInfo : classType.fieldMapping().fields.values()) {
+            if (attributeInfo.isUnique) {
+                String propertyKey = graphHelper.getQualifiedFieldName(classType, attributeInfo.name);
+                try {
+                    result = graphHelper.getVertexForProperty(propertyKey, instance.get(attributeInfo.name));
+                    LOG.debug("Found vertex by unique attribute : " + propertyKey + "=" + instance.get(attributeInfo.name));
+                } catch (EntityNotFoundException e) {
+                    //Its ok if there is no entity with the same unique value
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private Vertex getVertexByPrimaryKeyOrUniqueAttribute(ClassType classType, IReferenceableInstance instance) throws AtlasException {
+        Vertex vertex = getVertexByPrimaryKey(classType, instance);
+
+        if (vertex == null) {
+            return getVertexForInstanceByUniqueAttribute(classType, instance);
+        }
+
+        return vertex;
+    }
+
+    private Vertex getVertexByPrimaryKey(final ClassType classType, final IReferenceableInstance instance) throws AtlasException {
+        Vertex result = null;
+        if (classType.hasPrimaryKey()) {
             try {
                 PrimaryKeyConstraint uniqueConstraint = classType.getPrimaryKey();
                 String[] uniqueAttrs = uniqueConstraint.columnNames();
@@ -718,21 +756,85 @@ public final class TypedInstanceToGraphMapper {
         return result;
     }
 
-    public Vertex getVertexByProperties(final ClassType classType, final String[] propertyKeys, final IReferenceableInstance ref) throws AtlasException {
-        StringBuilder gremlinQuery = new StringBuilder("g.V");
-        final String GREMLIN_PROPERTY_SEARCH_FMT = "has('%s', %s)";
-        final String GREMLIN_EDGE_LABEL_FMT = "out('%s')";
-        final String GREMLIN_SELECT_FMT = "select([\"%s\"])";
-        Object attrValue = null;
+    private Vertex getVertexByProperties(final ClassType classType, final String[] propertyKeys, final IReferenceableInstance ref) throws AtlasException {
+
+        PrimaryKeyQueryContext ctx = addPrimitiveSearchClauses(propertyKeys, classType, ref);
+        addClassReferenceSearchClauses(ctx, ref);
+
+        StringBuilder gremlinQuery = ctx.getGremlinQuery();
+        gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_SELECT_FMT, PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
+        Vertex vertex = graphHelper.searchByGremlin(gremlinQuery.toString());
+        if (vertex != null) {
+            //Check for array of classes property matches
+            if (ctx.hasArrayInPrimaryKey()) {
+                return checkArrayReferences(ctx, vertex, ref);
+            } else {
+                return vertex;
+            }
+        }
+        return vertex;
+    }
+
+    Vertex checkArrayReferences(PrimaryKeyQueryContext ctx, Vertex vertex, IReferenceableInstance ref) throws AtlasException {
+        for (AttributeInfo arrInfo : ctx.getArrReferences()) {
+            String arrEdgeLabel = GraphHelper.getEdgeLabel(arrInfo.dataType(), arrInfo);
+            final Iterable<Edge> edges = vertex.getEdges(Direction.OUT, arrEdgeLabel);
+            Collection<Id> existingIds = new ArrayList<>();
+            Collection<Id> currElements = (List<Id>) ref.get(arrInfo.name);
+
+            for (Edge edge : edges) {
+                Vertex inVertex = edge.getVertex(Direction.IN);
+                String guid = inVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+                Id existingId = new Id(guid, 0, (String) inVertex.getProperty(Constants.TYPENAME_PROPERTY_KEY),
+                    (String) inVertex.getProperty(Constants.STATE_PROPERTY_KEY));
+                existingIds.add(existingId);
+            }
+            if (existingIds.size() != currElements.size()) {
+                return null;
+            } else if (!currElements.equals(existingIds)) {
+                return null;
+            }
+        }
+        return vertex;
+    }
+
+    void addClassReferenceSearchClauses(PrimaryKeyQueryContext ctx, IReferenceableInstance ref) throws AtlasException {
+        //Add all class reference searches to gremlin
+        boolean addBackRef = false;
+        List<AttributeInfo> classReferences = ctx.getClassReferences();
+        StringBuilder gremlinQuery = ctx.getGremlinQuery();
+        for (AttributeInfo aInfo : classReferences) {
+            Vertex classVertex = idToVertexMap.get(new Id(ref.getId()._getId(), 0, aInfo.dataType().getName(), Id.EntityState.ACTIVE.name()));
+            String typeName = classVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
+            String guid = classVertex.getProperty(Constants.GUID_PROPERTY_KEY);
+            if (addBackRef) {
+                ctx.back(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
+            }
+
+            //Take the out edge label and check if the referred class has the following attributes
+            ctx.out(aInfo)
+                .has(Constants.GUID_PROPERTY_KEY, guid)
+                .has(Constants.ENTITY_TYPE_PROPERTY_KEY, typeName)
+                .has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+
+            addBackRef = true;
+        }
+    }
+
+    PrimaryKeyQueryContext addPrimitiveSearchClauses(String[] propertyKeys, ClassType classType, IReferenceableInstance ref) throws AtlasException {
+        PrimaryKeyQueryContext gremlinCtx = new PrimaryKeyQueryContext();
         List<AttributeInfo> classReferences = null;
         List<AttributeInfo> arrReferences = null;
+        StringBuilder gremlinQuery = gremlinCtx.getGremlinQuery();
 
+        Object attrValue = null;
         for (final String property : propertyKeys) {
             AttributeInfo attrInfo = classType.fieldMapping().fields.get(property);
             final IDataType dataType = attrInfo.dataType();
             switch (dataType.getTypeCategory()) {
             case ENUM:
                 attrValue = getFormattedString(ref.get(property));
+                gremlinCtx.has(property, attrValue);
                 break;
             case PRIMITIVE:
                 if (attrInfo.dataType().getName() == DataTypes.STRING_TYPE.getName()) {
@@ -740,115 +842,115 @@ public final class TypedInstanceToGraphMapper {
                 } else {
                     attrValue = ref.get(property);
                 }
+                gremlinCtx.has(property, attrValue);
                 break;
             case CLASS:
                 if (classReferences == null) {
                     classReferences = new ArrayList<>();
+                    gremlinCtx.setClassReferences(classReferences);
                 }
                 classReferences.add(attrInfo);
                 break;
             case ARRAY:
-                //Only process if array of classes
+                //Only process if array of classes.
                 DataTypes.ArrayType arrType = (DataTypes.ArrayType) dataType;
                 if ( arrType.getElemType().getTypeCategory() == DataTypes.TypeCategory.CLASS) {
                     if (arrReferences == null) {
                         arrReferences = new ArrayList<>();
+                        gremlinCtx.setArrReferences(arrReferences);
                     }
                     arrReferences.add(attrInfo);
+                } else if ( arrType.getElemType().getTypeCategory() == DataTypes.TypeCategory.PRIMITIVE ||
+                    arrType.getElemType().getTypeCategory() == DataTypes.TypeCategory.ENUM ) {
+                    List elements = (List) ref.get(property);
+                    if ( elements != null && elements.size() > 0) {
+                        gremlinCtx.has(property, "T.eq", "['" + Joiner.on("','").join(elements) + "']");
+                    }
                 }
                 break;
-            }
-            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, property, attrValue));
-            gremlinQuery.append("as(").append(GREMLIN_STEP_RESULT).append(")");
-        }
-
-        //Add all class reference searches to gremlin
-        boolean addBackRef = false;
-        for (AttributeInfo aInfo : classReferences) {
-            Vertex classVertex = idToVertexMap.get(new Id(ref.getId()._getId(), 0, aInfo.dataType().getName(), Id.EntityState.ACTIVE.name()));
-            String typeName = classVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
-            String guid = classVertex.getProperty(Constants.GUID_PROPERTY_KEY);
-            if (addBackRef) {
-                gremlinQuery.append(".back(" + GREMLIN_STEP_RESULT + ")");
-            }
-            gremlinQuery.append(String.format(GREMLIN_EDGE_LABEL_FMT, GraphHelper.getEdgeLabel(aInfo.dataType(), aInfo)));
-            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, Constants.GUID_PROPERTY_KEY, guid));
-            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, Constants.ENTITY_TYPE_PROPERTY_KEY, typeName));
-            gremlinQuery.append(String.format(GREMLIN_PROPERTY_SEARCH_FMT, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name()));
-            addBackRef = true;
-        }
-
-        gremlinQuery.append(String.format(GREMLIN_SELECT_FMT, GREMLIN_STEP_RESULT));
-
-        Vertex vertex = graphHelper.searchByGremlin(gremlinQuery.toString());
-        if (vertex != null) {
-            //Check for array of classes property matches
-            if (arrReferences != null) {
-                for (AttributeInfo arrInfo : arrReferences) {
-                    String arrEdgeLabel = GraphHelper.getEdgeLabel(arrInfo.dataType(), arrInfo);
-                    final Iterable<Edge> edges = vertex.getEdges(Direction.OUT, arrEdgeLabel);
-                    Collection<Id> existingIds;
-                    Collection<Id> currElements;
-                    if (( arrInfo.multiplicity.isUnique)) {
-                        currElements = (List<Id>) ref.get(arrInfo.name);
-                        //Dont care about order currently. Compare sets
-                        existingIds = new ArrayList<>();
-                    } else {
-                        currElements = (Set<Id>) ref.get(arrInfo.name);
-                        //Dont care about order currently. Compare sets
-                        existingIds = new HashSet<>();
-                    }
-                    for (Edge edge : edges) {
-                        Vertex inVertex = edge.getVertex(Direction.IN);
-                        String guid = inVertex.getProperty(Constants.GUID_PROPERTY_KEY);
-                        Id existingId = new Id(guid, 0, (String) inVertex.getProperty(Constants.TYPENAME_PROPERTY_KEY),
-                            (String) inVertex.getProperty(Constants.STATE_PROPERTY_KEY));
-                        existingIds.add(existingId);
-                    }
-                     if (existingIds.size() != currElements.size() ) {
-                         return null;
-                     } else if (!currElements.equals(existingIds)) {
-                         return null;
-                     } else {
-                        return vertex;
-                    }
-                }
-            } else {
-                return vertex;
+            //Maps, struct, trait are not supported
+            default:
+                throw new UnsupportedOperationException("Primary key having attribute of type " + dataType.getTypeCategory().name() + " is not supported");
             }
         }
-        return null;
+
+        //Should be an active entity
+        gremlinCtx.has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+        //Add clause for typeName
+        gremlinCtx.addTypeName(ref).addAlias();
+
+        return gremlinCtx;
+    }
+
+    private class PrimaryKeyQueryContext {
+
+        public static final String GREMLIN_EDGE_LABEL_FMT = "out('%s')";
+        public static final String GREMLIN_SELECT_FMT = "select([\"%s\"])";
+        public static final String GREMLIN_STEP_RESULT = "'result'";
+        public static final String GREMLIN_PROPERTY_SEARCH_FMT = "has('%s', %s)";
+        public static final String GREMLIN_PROPERTY_PRED_SEARCH_FMT = "has('%s', '%s',  %s)";
+
+        public final StringBuilder gremlinQuery = new StringBuilder("g.V");
+        private List<AttributeInfo> classReferences;
+        private List<AttributeInfo> arrReferences;
+
+        public StringBuilder getGremlinQuery() {
+            return gremlinQuery;
+        }
+
+        public List<AttributeInfo> getClassReferences() {
+            return classReferences;
+        }
+
+        public void setClassReferences(final List<AttributeInfo> classReferences) {
+            this.classReferences = classReferences;
+        }
+
+        public List<AttributeInfo> getArrReferences() {
+            return arrReferences;
+        }
+
+        public void setArrReferences(final List<AttributeInfo> arrReferences) {
+            this.arrReferences = arrReferences;
+        }
+
+        public boolean hasArrayInPrimaryKey() {
+            return arrReferences != null;
+        }
+
+        public PrimaryKeyQueryContext addTypeName(IReferenceableInstance  instance) {
+            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_SEARCH_FMT, Constants.ENTITY_TYPE_PROPERTY_KEY, instance.getTypeName()));
+            return this;
+        }
+
+        public PrimaryKeyQueryContext addAlias() {
+            gremlinQuery.append("as(").append(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT).append(")");
+            return this;
+        }
+
+        public PrimaryKeyQueryContext has(String property, Object value) {
+            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_SEARCH_FMT, property, value));
+            return this;
+        }
+
+        public PrimaryKeyQueryContext has(String property, String predicate, Object value) {
+            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_SEARCH_FMT, property, predicate, value));
+            return this;
+        }
+
+        public PrimaryKeyQueryContext back(String step) {
+            gremlinQuery.append(".back(" + step + ")");
+            return this;
+        }
+
+        public PrimaryKeyQueryContext out(AttributeInfo aInfo) throws AtlasException {
+            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_EDGE_LABEL_FMT, GraphHelper.getEdgeLabel(aInfo.dataType(), aInfo)));
+            return this;
+        }
     }
 
     String getFormattedString(Object attrVal) {
         return "'" + String.valueOf(attrVal) + "'";
     }
-
-//        case ARRAY:
-//            IDataType elemType = ((DataTypes.ArrayType) dataType).getElemType();
-//            List elements = (List) typedInstance.get(property);
-//            for (Object element : elements) {
-//                attrValue += getArrayElementValue(elemType, element);
-//            }
-//            break;
-
-
-
-//    String getArrayElementValue(IDataType elemType, Object val) {
-//        String arrVal = null;
-//        switch (elemType.getTypeCategory()) {
-//        case CLASS:
-//            Referenceable ref = (Referenceable) val;
-//            Id tempId = ref.getId();
-//            Vertex instanceVertex = idToVertexMap.get(tempId);
-//            arrVal = GraphHelper.getIdFromVertex(instanceVertex);
-//            break;
-//        case PRIMITIVE:
-//        case ENUM:
-//            arrVal = String.valueOf(val);
-//            break;
-//        }
-//        return arrVal;
-//    }
 
 }
