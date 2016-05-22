@@ -38,7 +38,7 @@ class InstanceSerializationTest {
 
   @BeforeClass def setup {
     typeName = "Random_" + Math.abs(Random.nextInt())
-    val clsType = TypesUtil.createClassTypeDef(typeName, "Random-description", ImmutableSet.of[String](),
+    val clsType = TypesUtil.createClassTypeDef(typeName, "Random-description", ImmutableSet.of[String](), null,
       TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE))
     TypeSystem.getInstance().defineClassType(clsType)
   }

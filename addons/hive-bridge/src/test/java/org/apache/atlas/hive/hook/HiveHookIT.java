@@ -163,7 +163,10 @@ public class HiveHookIT {
 
     private String createTable(boolean isExternal, boolean isPartitioned, boolean isTemporary) throws Exception {
         String tableName = tableName();
+        return createTable(tableName, isExternal, isPartitioned, isTemporary);
+    }
 
+    private String createTable(String tableName, boolean isExternal, boolean isPartitioned, boolean isTemporary) throws Exception {
         String location = "";
         if (isExternal) {
             location = " location '" +  createTestDFSPath("someTestPath") + "'";
@@ -292,7 +295,7 @@ public class HiveHookIT {
     public void testCTAS() throws Exception {
         String tableName = createTable();
         String ctasTableName = "table" + random();
-        String query = "create table " + ctasTableName + " as select * from " + tableName;
+        String query = ctas(tableName, ctasTableName, false);
         runCommand(query);
 
         assertProcessIsRegistered(query);
@@ -303,7 +306,7 @@ public class HiveHookIT {
     public void testCreateView() throws Exception {
         String tableName = createTable();
         String viewName = tableName();
-        String query = "create view " + viewName + " as select * from " + tableName;
+        String query = ctas(tableName, viewName, true);
         runCommand(query);
 
         assertProcessIsRegistered(query);
@@ -316,7 +319,7 @@ public class HiveHookIT {
         //Create the view from table1
         String table1Name = createTable();
         String viewName = tableName();
-        String query = "create view " + viewName + " as select * from " + table1Name;
+        String query = ctas(table1Name, viewName, true);
         runCommand(query);
 
         String table1Id = assertTableIsRegistered(DEFAULT_DB, table1Name);
@@ -913,7 +916,7 @@ public class HiveHookIT {
         String tableName = createTable();
         String viewName = tableName();
         String newName = tableName();
-        String query = "create view " + viewName + " as select * from " + tableName;
+        String query = ctas(tableName, viewName, true);
         runCommand(query);
 
         query = "alter view " + viewName + " rename to " + newName;
@@ -1170,7 +1173,7 @@ public class HiveHookIT {
         //Test Deletion of tables and its corrresponding columns
         String tableName = createTable(true, true, false);
         String viewName = tableName();
-        String query = "create view " + viewName + " as select * from " + tableName;
+        String query = ctas(tableName, viewName, true);
         runCommand(query);
 
         assertTableIsRegistered(DEFAULT_DB, viewName);
@@ -1280,11 +1283,45 @@ public class HiveHookIT {
     public void testAlterViewProperties() throws Exception {
         String tableName = createTable();
         String viewName = tableName();
-        String query = "create view " + viewName + " as select * from " + tableName;
+        String query = ctas(tableName, viewName, true);
         runCommand(query);
 
         final String fmtQuery = "alter view %s %s TBLPROPERTIES (%s)";
         testAlterProperties(Entity.Type.TABLE, viewName, fmtQuery);
+    }
+
+    @Test
+    public void testReCreateAfterDrop() throws Exception {
+        String tableName = createTable(true, true, false);
+
+        String ctasTableName = "table" + random();
+        String query = ctas(tableName, ctasTableName, false);
+        runCommand(query);
+
+        String processId = assertProcessIsRegistered(query, tableName, ctasTableName);
+
+        String dropQuery = getDropQuery(tableName);
+        runCommand(dropQuery);
+
+        dropQuery = getDropQuery(ctasTableName);
+        runCommand(dropQuery);
+
+        createTable(tableName, true, true, false);
+        query = ctas(tableName, ctasTableName, false);
+        runCommand(query);
+
+        String process2Id = assertProcessIsRegistered(query, tableName, ctasTableName);
+        Assert.assertNotEquals(processId, process2Id);
+
+    }
+
+    String getDropQuery(String tableName) {
+        return String.format("drop table %s ", tableName);
+    }
+
+    String ctas(String inputTable, String outputTable, boolean isView) {
+        String tableType = isView ? "view" : "table";
+        return String.format("create %s %s as select * from %s", tableType, outputTable, inputTable);
     }
 
     private void verifyEntityProperties(Entity.Type type, String entityName, final Map<String, String> expectedProps,

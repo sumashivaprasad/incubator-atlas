@@ -42,6 +42,7 @@ import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructType;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
@@ -135,6 +136,8 @@ public class GraphBackedTypeStoreTest {
         for (HierarchicalTypeDefinition<ClassType> classType : classTypes) {
             if (classType.typeName.equals("Manager")) {
                 ClassType expectedType = ts.getDataType(ClassType.class, classType.typeName);
+                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames().length, classType.primaryKeyColumns.columnNames().length);
+                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames(), classType.primaryKeyColumns.columnNames());
                 Assert.assertEquals(expectedType.immediateAttrs.size(), classType.attributeDefinitions.length);
                 Assert.assertEquals(expectedType.superTypes.size(), classType.superTypes.size());
                 Assert.assertEquals(classType.typeDescription, classType.typeName+description);
@@ -177,7 +180,8 @@ public class GraphBackedTypeStoreTest {
                 createOptionalAttrDef("dname", DataTypes.STRING_TYPE));
 
         HierarchicalTypeDefinition<ClassType> deptTypeDef = createClassTypeDef("Department", "Department"+_description,
-            ImmutableSet.of(superTypeDef.typeName), createRequiredAttrDef("name", DataTypes.STRING_TYPE),
+            ImmutableSet.of(superTypeDef.typeName), PrimaryKeyConstraint.of("name"),
+                createRequiredAttrDef("name", DataTypes.STRING_TYPE),
                 new AttributeDefinition("employees", String.format("array<%s>", "Person"), Multiplicity.OPTIONAL,
                         true, "department"));
         TypesDef typesDef = TypesUtil.getTypesDef(ImmutableList.of(orgLevelEnum), ImmutableList.of(addressDetails),

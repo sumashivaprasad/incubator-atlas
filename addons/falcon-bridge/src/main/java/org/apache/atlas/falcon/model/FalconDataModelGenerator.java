@@ -33,6 +33,7 @@ import org.apache.atlas.typesystem.types.EnumType;
 import org.apache.atlas.typesystem.types.EnumTypeDefinition;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructType;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
@@ -116,7 +117,7 @@ public class FalconDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, FalconDataTypes.FALCON_PROCESS_ENTITY.getName(), null,
-                    ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions);
+                    ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions, PrimaryKeyConstraint.of(NAME, AtlasClient.PROCESS_ATTRIBUTE_INPUTS, AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS));
         classTypeDefinitions.put(FalconDataTypes.FALCON_PROCESS_ENTITY.getName(), definition);
         LOG.debug("Created definition for {}", FalconDataTypes.FALCON_PROCESS_ENTITY.getName());
     }

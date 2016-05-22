@@ -77,6 +77,7 @@ import static org.apache.atlas.TestUtils.TABLE_TYPE;
 import static org.apache.atlas.TestUtils.createColumnEntity;
 import static org.apache.atlas.TestUtils.createDBEntity;
 import static org.apache.atlas.TestUtils.createTableEntity;
+import static org.apache.atlas.TestUtils.createProcessEntity;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -184,9 +185,23 @@ public class DefaultMetadataServiceTest {
     }
 
     @Test
-    public void testCreateEntityWithUniqueAttribute() throws Exception {
+    public void testCreateEntityWithPrimaryKey() throws Exception {
         //name is the unique attribute
         Referenceable entity = createDBEntity();
+        String dbId = createInstance(entity);
+        assertAuditEvents(dbId, EntityAuditEvent.EntityAuditAction.ENTITY_CREATE);
+
+        //using the same name should succeed, but not create another entity
+        String newDBId = createInstance(entity);
+        assertNull(newDBId);
+
+        //Same entity, but different qualified name should succeed
+        entity.set(NAME, TestUtils.randomString());
+        newDBId = createInstance(entity);
+        Assert.assertNotEquals(newDBId, dbId);
+
+        //Check Table with class reference
+        entity = createTableEntity(dbId);
         String id = createInstance(entity);
         assertAuditEvents(id, EntityAuditEvent.EntityAuditAction.ENTITY_CREATE);
 
@@ -194,10 +209,16 @@ public class DefaultMetadataServiceTest {
         String newId = createInstance(entity);
         assertNull(newId);
 
-        //Same entity, but different qualified name should succeed
-        entity.set(NAME, TestUtils.randomString());
-        newId = createInstance(entity);
-        Assert.assertNotEquals(newId, id);
+        //Check process with array
+        String inputEntityId = id;
+        Referenceable outputEntity = createTableEntity(dbId);
+        String outputEntityId = createInstance(outputEntity);
+        Referenceable processEntity = createProcessEntity(inputEntityId, outputEntityId);
+        String processId = createInstance(processEntity);
+
+        //using the same name should succeed, but not create another entity
+        newId = createInstance(processEntity);
+        assertNull(newId);
     }
 
     @Test

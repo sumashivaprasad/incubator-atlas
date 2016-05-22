@@ -154,12 +154,19 @@ class TypesBuilder {
       context.value.classes.toSeq)
   }
 
-  def _class(name : String, superTypes : List[String] = List())(f : => Unit): Unit = {
+  def _class(name: String, superTypes: List[String] = List())(f: => Unit): Unit = {
+
+//    val pkc = primaryKeyCols match {
+//      case Some(x) => PrimaryKeyConstraint.of(x: _*);
+//      case None => null
+//    }
     val attrs = new ArrayBuffer[Attr]()
-    context.withValue(context.value.copy(currentTypeAttrs = attrs)){f}
+    context.withValue(context.value.copy(currentTypeAttrs = attrs)) {
+      f
+    }
     context.value.classes +=
-      TypesUtil.createClassTypeDef(name, ImmutableSet.copyOf[String](superTypes.toArray), attrs.map(_.getDef):_*)
-  }
+      TypesUtil.createClassTypeDef(name, ImmutableSet.copyOf[String](superTypes.toArray), attrs.map(_.getDef): _*)
+}
 
   def _trait(name : String, superTypes : List[String] = List())(f : => Unit): Unit = {
     val attrs = new ArrayBuffer[Attr]()

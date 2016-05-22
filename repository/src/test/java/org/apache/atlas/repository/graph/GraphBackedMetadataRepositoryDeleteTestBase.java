@@ -189,6 +189,7 @@ public abstract class GraphBackedMetadataRepositoryDeleteTestBase {
 
         //Deleting table should update process
         Referenceable process = new Referenceable(PROCESS_TYPE);
+        process.set(AtlasClient.NAME, "testProcess");
         process.set(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS, Arrays.asList(new Id(tableId, 0, TABLE_TYPE)));
         String processId = createInstance(process);
         ITypedReferenceableInstance processInstance = repositoryService.getEntityDefinition(processId);

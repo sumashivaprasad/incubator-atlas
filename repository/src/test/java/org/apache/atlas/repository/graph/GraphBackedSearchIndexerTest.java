@@ -124,7 +124,7 @@ public class GraphBackedSearchIndexerTest {
         EnumType managedType = typeSystem.defineEnumType(enumName, new EnumValue("randomEnumValue", 0));
 
         HierarchicalTypeDefinition<ClassType> databaseTypeDefinition =
-                createClassTypeDef("Database", "Database type description", null,
+                createClassTypeDef("Database", "Database type description", null, null,
                         TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
                         TypesUtil.createUniqueRequiredAttrDef("managedType", managedType));
 

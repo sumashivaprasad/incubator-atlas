@@ -154,7 +154,7 @@ public class BaseRepositoryTest {
             };
         HierarchicalTypeDefinition<ClassType> partClsDef =
             new HierarchicalTypeDefinition<>(ClassType.class, PARTITION_TYPE, null, null,
-                attributeDefinitions);
+                attributeDefinitions, null);
 
         HierarchicalTypeDefinition<TraitType> dimTraitDef = TypesUtil.createTraitTypeDef("Dimension", null);
 

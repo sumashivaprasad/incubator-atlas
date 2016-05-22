@@ -424,6 +424,7 @@ public class TypeSystem {
                 }
 
                 ClassType cT = new ClassType(this, classDef.typeName, classDef.typeDescription, classDef.superTypes,
+                        classDef.primaryKeyColumns,
                         classDef.attributeDefinitions.length);
                 classNameToDefMap.put(classDef.typeName, classDef);
                 transientTypes.put(classDef.typeName, cT);
@@ -518,9 +519,13 @@ public class TypeSystem {
             }
 
             try {
-                Constructor<U> cons = cls.getDeclaredConstructor(TypeSystem.class, String.class, String.class, ImmutableSet.class,
-                        AttributeInfo[].class);
-                U type = cons.newInstance(this, def.typeName, def.typeDescription, def.superTypes, infos);
+                Constructor<U> cons = def.primaryKeyColumns == null ?
+                        cls.getDeclaredConstructor(TypeSystem.class, String.class, String.class, ImmutableSet.class, AttributeInfo[].class):
+                        cls.getDeclaredConstructor(TypeSystem.class, String.class, String.class, ImmutableSet.class, AttributeInfo[].class, PrimaryKeyConstraint.class);
+
+                U type = def.primaryKeyColumns == null ?
+                            cons.newInstance(this, def.typeName, def.typeDescription, def.superTypes, infos):
+                            cons.newInstance(this, def.typeName, def.typeDescription, def.superTypes, infos, def.primaryKeyColumns);
                 transientTypes.put(def.typeName, type);
                 return type;
             } catch (Exception e) {

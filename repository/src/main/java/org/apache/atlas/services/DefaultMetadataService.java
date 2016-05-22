@@ -355,9 +355,9 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         // then replace with original id
         Id origId = entityInstance.getId();
         entityInstance.replaceWithNewId(new Id(entityInstance.getTypeName()));
-        ITypedReferenceableInstance typedInstrance = entityType.convert(entityInstance, Multiplicity.REQUIRED);
-        ((ReferenceableInstance)typedInstrance).replaceWithNewId(origId);
-        return typedInstrance;
+        ITypedReferenceableInstance typedInstance = entityType.convert(entityInstance, Multiplicity.REQUIRED);
+        ((ReferenceableInstance)typedInstance).replaceWithNewId(origId);
+        return typedInstance;
     }
 
     /**

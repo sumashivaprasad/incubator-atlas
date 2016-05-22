@@ -91,7 +91,7 @@ public class ClassTest extends HierarchicalTypeTest<ClassType> {
     @Test
     public void testSerDeWithDescription() throws Exception {
         HierarchicalTypeDefinition<ClassType> clsType = TypesUtil
-                .createClassTypeDef("Random", "Random-description", ImmutableSet.<String>of(),
+                .createClassTypeDef("Random", "Random-description", ImmutableSet.<String>of(), null,
                         TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE));
         TypesDef typesDef = getTypesDef(clsType);
         String json = TypesSerialization.toJson(typesDef);
@@ -100,13 +100,13 @@ public class ClassTest extends HierarchicalTypeTest<ClassType> {
     }
     @Override
     protected HierarchicalTypeDefinition<ClassType> getTypeDefinition(String name, AttributeDefinition... attributes) {
-        return new HierarchicalTypeDefinition(ClassType.class, name, null, null, attributes, uniqueConstraints);
+        return new HierarchicalTypeDefinition(ClassType.class, name, null, null, attributes, null);
     }
 
     @Override
     protected HierarchicalTypeDefinition<ClassType> getTypeDefinition(String name, ImmutableSet<String> superTypes,
                                                                       AttributeDefinition... attributes) {
-        return new HierarchicalTypeDefinition(ClassType.class, name, null, superTypes, attributes, uniqueConstraints);
+        return new HierarchicalTypeDefinition(ClassType.class, name, null, superTypes, attributes, null);
     }
 
     @Override

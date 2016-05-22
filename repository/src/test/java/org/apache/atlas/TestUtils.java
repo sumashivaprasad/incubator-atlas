@@ -35,6 +35,7 @@ import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
@@ -43,6 +44,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.testng.Assert;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 
@@ -97,20 +99,23 @@ public final class TestUtils {
                 createStructTypeDef("Address", "Address"+_description, createRequiredAttrDef("street", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("city", DataTypes.STRING_TYPE));
 
-        HierarchicalTypeDefinition<ClassType> deptTypeDef = createClassTypeDef(DEPARTMENT_TYPE, "Department"+_description, ImmutableSet.<String>of(),
-                createRequiredAttrDef("name", DataTypes.STRING_TYPE),
-                new AttributeDefinition("employees", String.format("array<%s>", "Person"), Multiplicity.OPTIONAL,
-                        true, "department"));
+        HierarchicalTypeDefinition<ClassType> deptTypeDef = createClassTypeDef(DEPARTMENT_TYPE, "Department" + _description, ImmutableSet.<String>of(),
+            PrimaryKeyConstraint.of("name"),
+            createRequiredAttrDef("name", DataTypes.STRING_TYPE),
+            new AttributeDefinition("employees", String.format("array<%s>", "Person"), Multiplicity.OPTIONAL,
+                true, "department"));
 
-        HierarchicalTypeDefinition<ClassType> personTypeDef = createClassTypeDef("Person", "Person"+_description, ImmutableSet.<String>of(),
-                createRequiredAttrDef("name", DataTypes.STRING_TYPE),
-                createOptionalAttrDef("orgLevel", "OrgLevel"),
-                createOptionalAttrDef("address", "Address"),
-                new AttributeDefinition("department", "Department", Multiplicity.REQUIRED, false, "employees"),
-                new AttributeDefinition("manager", "Manager", Multiplicity.OPTIONAL, false, "subordinates"),
-                new AttributeDefinition("mentor", "Person", Multiplicity.OPTIONAL, false, null));
+        HierarchicalTypeDefinition<ClassType> personTypeDef = createClassTypeDef("Person", "Person" + _description, ImmutableSet.<String>of(),
+            PrimaryKeyConstraint.of("name"),
+            createRequiredAttrDef("name", DataTypes.STRING_TYPE),
+            createOptionalAttrDef("orgLevel", "OrgLevel"),
+            createOptionalAttrDef("address", "Address"),
+            new AttributeDefinition("department", "Department", Multiplicity.REQUIRED, false, "employees"),
+            new AttributeDefinition("manager", "Manager", Multiplicity.OPTIONAL, false, "subordinates"),
+            new AttributeDefinition("mentor", "Person", Multiplicity.OPTIONAL, false, null));
 
         HierarchicalTypeDefinition<ClassType> managerTypeDef = createClassTypeDef("Manager", "Manager"+_description, ImmutableSet.of("Person"),
+                PrimaryKeyConstraint.of("name"),
                 new AttributeDefinition("subordinates", String.format("array<%s>", "Person"), Multiplicity.COLLECTION,
                         false, "manager"));
 
@@ -209,8 +214,10 @@ public final class TestUtils {
 
         HierarchicalTypeDefinition<ClassType> databaseTypeDefinition =
                 createClassTypeDef(DATABASE_TYPE, DATABASE_TYPE + _description,ImmutableSet.of(SUPER_TYPE_NAME),
+                        PrimaryKeyConstraint.of(NAME, "clusterName"),
                         TypesUtil.createUniqueRequiredAttrDef(NAME, DataTypes.STRING_TYPE),
                         createOptionalAttrDef("created", DataTypes.DATE_TYPE),
+                        createOptionalAttrDef("clusterName", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE));
 
 
@@ -246,7 +253,7 @@ public final class TestUtils {
 
         HierarchicalTypeDefinition<ClassType> storageDescClsDef =
             new HierarchicalTypeDefinition<>(ClassType.class, STORAGE_DESC_TYPE, STORAGE_DESC_TYPE + _description,
-                ImmutableSet.of(SUPER_TYPE_NAME), attributeDefinitions);
+                ImmutableSet.of(SUPER_TYPE_NAME), attributeDefinitions, null);
 
         AttributeDefinition[] partClsAttributes = new AttributeDefinition[]{
             new AttributeDefinition("values", DataTypes.arrayTypeName(DataTypes.STRING_TYPE.getName()),
@@ -264,16 +271,19 @@ public final class TestUtils {
 
         HierarchicalTypeDefinition<ClassType> partClsDef =
             new HierarchicalTypeDefinition<>(ClassType.class, "partition_class_type", "partition_class_type" + _description,
-                ImmutableSet.of(SUPER_TYPE_NAME), partClsAttributes);
+                ImmutableSet.of(SUPER_TYPE_NAME), partClsAttributes, null);
 
         HierarchicalTypeDefinition<ClassType> processClsType =
                 new HierarchicalTypeDefinition<>(ClassType.class, PROCESS_TYPE, PROCESS_TYPE + _description,
                         ImmutableSet.<String>of(), new AttributeDefinition[]{
-                        new AttributeDefinition("outputs", "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null)
-                });
+                        createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
+                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_INPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null),
+                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null)
+                }, PrimaryKeyConstraint.of(AtlasClient.NAME, AtlasClient.PROCESS_ATTRIBUTE_INPUTS, AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS));
 
         HierarchicalTypeDefinition<ClassType> tableTypeDefinition =
                 createClassTypeDef(TABLE_TYPE, TABLE_TYPE + _description, ImmutableSet.of(SUPER_TYPE_NAME),
+                        PrimaryKeyConstraint.of(NAME, "database"),
                         TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("type", DataTypes.STRING_TYPE),
@@ -346,6 +356,7 @@ public final class TestUtils {
         Referenceable entity = new Referenceable(DATABASE_TYPE);
         String dbName = RandomStringUtils.randomAlphanumeric(10);
         entity.set(NAME, dbName);
+        entity.set("clusterName", "default");
         entity.set("description", "us db");
         return entity;
     }
@@ -366,6 +377,14 @@ public final class TestUtils {
         Referenceable entity = new Referenceable(COLUMN_TYPE);
         entity.set(NAME, RandomStringUtils.randomAlphanumeric(10));
         entity.set("type", "VARCHAR(32)");
+        return entity;
+    }
+
+    public static Referenceable createProcessEntity(final String inputId, final String outputId) {
+        Referenceable entity = new Referenceable(PROCESS_TYPE);
+        entity.set(NAME, RandomStringUtils.randomAlphanumeric(10));
+        entity.set(AtlasClient.PROCESS_ATTRIBUTE_INPUTS, new ArrayList<Id>() {{ add(new Id(inputId, 0, TABLE_TYPE, Id.EntityState.ACTIVE.name())); }});
+        entity.set(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS,  new ArrayList<Id>() {{ add(new Id(outputId, 0, TABLE_TYPE, Id.EntityState.ACTIVE.name())); }});
         return entity;
     }
 }

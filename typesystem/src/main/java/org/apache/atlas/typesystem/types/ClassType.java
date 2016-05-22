@@ -49,26 +49,26 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     public static final String TRAIT_NAME_SEP = "::";
 
     public final Map<AttributeInfo, List<String>> infoToNameMap;
-    public final PrimaryKeyConstraint primaryKeyConstraint;
+    public final PrimaryKeyConstraint primaryKeyColumns;
 
-    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, int numFields) {
+    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, PrimaryKeyConstraint pkc, int numFields) {
         super(typeSystem, ClassType.class, name, description, superTypes, numFields);
         infoToNameMap = null;
-        primaryKeyConstraint = null;
+        primaryKeyColumns = pkc;
     }
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo... fields)
     throws AtlasException {
         super(typeSystem, ClassType.class, name, description, superTypes, fields);
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
-        primaryKeyConstraint = null;
+        primaryKeyColumns = null;
     }
 
-    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo[] fields, PrimaryKeyConstraint primaryKeyConstraint)
+    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo[] fields, PrimaryKeyConstraint primaryKeyColumns)
         throws AtlasException {
         super(typeSystem, ClassType.class, name, description, superTypes, fields);
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
-        this.primaryKeyConstraint = primaryKeyConstraint;
+        this.primaryKeyColumns = primaryKeyColumns;
     }
 
     @Override
@@ -248,10 +248,10 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     }
 
     public PrimaryKeyConstraint getPrimaryKey() {
-        return primaryKeyConstraint;
+        return primaryKeyColumns;
     }
 
     public boolean hasPrimaryKey() {
-        return primaryKeyConstraint != null;
+        return primaryKeyColumns != null;
     }
 }

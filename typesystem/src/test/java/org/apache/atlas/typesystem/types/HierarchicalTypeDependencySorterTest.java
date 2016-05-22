@@ -40,9 +40,9 @@ public class HierarchicalTypeDependencySorterTest {
     @Test
     public void testSimpleModel() throws AtlasException {
         TypeSystem ts = TypeSystem.getInstance();
-        HierarchicalType a = new ClassType(ts, "a", null, ImmutableSet.<String>of(), 0);
-        HierarchicalType b = new ClassType(ts, "B", null, ImmutableSet.of("a"), 0);
-        HierarchicalType c = new ClassType(ts, "C", null, ImmutableSet.of("B"), 0);
+        HierarchicalType a = new ClassType(ts, "a", null, ImmutableSet.<String>of(), null, 0);
+        HierarchicalType b = new ClassType(ts, "B", null, ImmutableSet.of("a"), null, 0);
+        HierarchicalType c = new ClassType(ts, "C", null, ImmutableSet.of("B"), null, 0);
 
         List<HierarchicalType> unsortedTypes = Arrays.asList(c, a, b);
         List<HierarchicalType> sortedTypes = HierarchicalTypeDependencySorter.sortTypes(unsortedTypes);
@@ -56,15 +56,15 @@ public class HierarchicalTypeDependencySorterTest {
     @Test
     public void testLargerModel() throws Exception {
         TypeSystem ts = TypeSystem.getInstance();
-        HierarchicalType testObjectType = new ClassType(ts, "TestObject", null, ImmutableSet.<String>of(), 0);
-        HierarchicalType testDataSetType = new ClassType(ts, "TestDataSet", null, ImmutableSet.of("TestObject"), 0);
-        HierarchicalType testColumnType = new ClassType(ts, "TestColumn", null, ImmutableSet.of("TestObject"), 0);
-        HierarchicalType testRelationalDataSetType = new ClassType(ts, "TestRelationalDataSet", null, ImmutableSet.of("TestDataSet"), 0);
-        HierarchicalType testTableType = new ClassType(ts, "Table", null, ImmutableSet.of("TestDataSet"), 0);
-        HierarchicalType testDataFileType = new ClassType(ts, "TestDataFile", null, ImmutableSet.of("TestRelationalDataSet"), 0);
-        HierarchicalType testDocumentType = new ClassType(ts, "TestDocument", null, ImmutableSet.of("TestDataSet"), 0);
-        HierarchicalType testAnnotationType = new ClassType(ts, "TestAnnotation", null, ImmutableSet.<String>of(), 0);
-        HierarchicalType myNewAnnotationType = new ClassType(ts, "MyNewAnnotation", null, ImmutableSet.of("TestAnnotation"), 0);
+        HierarchicalType testObjectType = new ClassType(ts, "TestObject", null, ImmutableSet.<String>of(), null, 0);
+        HierarchicalType testDataSetType = new ClassType(ts, "TestDataSet", null, ImmutableSet.of("TestObject"), null, 0);
+        HierarchicalType testColumnType = new ClassType(ts, "TestColumn", null, ImmutableSet.of("TestObject"), null, 0);
+        HierarchicalType testRelationalDataSetType = new ClassType(ts, "TestRelationalDataSet", null, ImmutableSet.of("TestDataSet"), null, 0);
+        HierarchicalType testTableType = new ClassType(ts, "Table", null, ImmutableSet.of("TestDataSet"), null, 0);
+        HierarchicalType testDataFileType = new ClassType(ts, "TestDataFile", null, ImmutableSet.of("TestRelationalDataSet"), null, 0);
+        HierarchicalType testDocumentType = new ClassType(ts, "TestDocument", null, ImmutableSet.of("TestDataSet"), null, 0);
+        HierarchicalType testAnnotationType = new ClassType(ts, "TestAnnotation", null, ImmutableSet.<String>of(), null, 0);
+        HierarchicalType myNewAnnotationType = new ClassType(ts, "MyNewAnnotation", null, ImmutableSet.of("TestAnnotation"), null, 0);
 
         List<HierarchicalType> unsortedTypes = Arrays.asList(testTableType, testColumnType, myNewAnnotationType, testDataSetType,
             testDataFileType, testAnnotationType, testRelationalDataSetType, testObjectType, testDocumentType);

@@ -87,7 +87,7 @@ public class TypeSystemTest extends BaseTest {
         typeName = "class_type";
         typeDescription = typeName + description;
         HierarchicalTypeDefinition<ClassType> classType = TypesUtil
-            .createClassTypeDef(typeName, typeDescription, ImmutableSet.<String>of(),
+            .createClassTypeDef(typeName, typeDescription, ImmutableSet.<String>of(), null,
                 TypesUtil.createRequiredAttrDef("type", DataTypes.STRING_TYPE));
         getTypeSystem().defineClassType(classType);
         assertTrue(getTypeSystem().getTypeNames().contains(typeName));

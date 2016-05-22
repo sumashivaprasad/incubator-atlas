@@ -31,6 +31,7 @@ import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 
@@ -76,7 +77,7 @@ public class TypesUtil {
 
     public static HierarchicalTypeDefinition<TraitType> createTraitTypeDef(String name, String description,
         ImmutableSet<String> superTypes, AttributeDefinition... attrDefs) {
-        return new HierarchicalTypeDefinition<>(TraitType.class, name, description, superTypes, attrDefs, uniqueConstraints);
+        return new HierarchicalTypeDefinition<>(TraitType.class, name, description, superTypes, attrDefs, null);
     }
 
     public static StructTypeDefinition createStructTypeDef(String name, AttributeDefinition... attrDefs) {
@@ -89,12 +90,12 @@ public class TypesUtil {
 
     public static HierarchicalTypeDefinition<ClassType> createClassTypeDef(String name,
             ImmutableSet<String> superTypes, AttributeDefinition... attrDefs) {
-        return createClassTypeDef(name, null, superTypes, attrDefs);
+        return createClassTypeDef(name, null, superTypes, null, attrDefs);
     }
 
     public static HierarchicalTypeDefinition<ClassType> createClassTypeDef(String name, String description,
-        ImmutableSet<String> superTypes, AttributeDefinition... attrDefs) {
-        return new HierarchicalTypeDefinition<>(ClassType.class, name, description, superTypes, attrDefs, uniqueConstraints);
+        ImmutableSet<String> superTypes, PrimaryKeyConstraint pkc, AttributeDefinition... attrDefs) {
+        return new HierarchicalTypeDefinition<>(ClassType.class, name, description, superTypes, attrDefs, pkc);
     }
 
     public static TypesDef getTypesDef(ImmutableList<EnumTypeDefinition> enums,

@@ -37,6 +37,7 @@ import org.apache.atlas.typesystem.types.EnumTypeDefinition;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
@@ -153,21 +154,23 @@ public class QuickStart {
     TypesDef createTypeDefinitions() throws Exception {
         HierarchicalTypeDefinition<ClassType> dbClsDef = TypesUtil
                 .createClassTypeDef(DATABASE_TYPE, DATABASE_TYPE, null,
-                        TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
-                        attrDef("description", DataTypes.STRING_TYPE), attrDef("locationUri", DataTypes.STRING_TYPE),
-                        attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.LONG_TYPE));
+                    PrimaryKeyConstraint.of("name"),
+                    TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
+                    attrDef("description", DataTypes.STRING_TYPE), attrDef("locationUri", DataTypes.STRING_TYPE),
+                    attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.LONG_TYPE));
 
         HierarchicalTypeDefinition<ClassType> storageDescClsDef = TypesUtil
-                .createClassTypeDef(STORAGE_DESC_TYPE, STORAGE_DESC_TYPE, null, attrDef("location", DataTypes.STRING_TYPE),
+                .createClassTypeDef(STORAGE_DESC_TYPE, STORAGE_DESC_TYPE, null, null, attrDef("location", DataTypes.STRING_TYPE),
                         attrDef("inputFormat", DataTypes.STRING_TYPE), attrDef("outputFormat", DataTypes.STRING_TYPE),
                         attrDef("compressed", DataTypes.STRING_TYPE, Multiplicity.REQUIRED, false, null));
 
         HierarchicalTypeDefinition<ClassType> columnClsDef = TypesUtil
-                .createClassTypeDef(COLUMN_TYPE, COLUMN_TYPE, null, attrDef("name", DataTypes.STRING_TYPE),
+                .createClassTypeDef(COLUMN_TYPE, COLUMN_TYPE, null, null, attrDef("name", DataTypes.STRING_TYPE),
                         attrDef("dataType", DataTypes.STRING_TYPE), attrDef("comment", DataTypes.STRING_TYPE));
 
         HierarchicalTypeDefinition<ClassType> tblClsDef = TypesUtil
                 .createClassTypeDef(TABLE_TYPE, TABLE_TYPE, ImmutableSet.of("DataSet"),
+                        PrimaryKeyConstraint.of("name", DB_ATTRIBUTE),
                         new AttributeDefinition(DB_ATTRIBUTE, DATABASE_TYPE, Multiplicity.REQUIRED, false, null),
                         new AttributeDefinition("sd", STORAGE_DESC_TYPE, Multiplicity.REQUIRED, true, null),
                         attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.LONG_TYPE),
@@ -180,6 +183,7 @@ public class QuickStart {
 
         HierarchicalTypeDefinition<ClassType> loadProcessClsDef = TypesUtil
                 .createClassTypeDef(LOAD_PROCESS_TYPE, LOAD_PROCESS_TYPE, ImmutableSet.of("Process"),
+                        PrimaryKeyConstraint.of("name", "inputs", "outputs"),
                         attrDef("userName", DataTypes.STRING_TYPE), attrDef("startTime", DataTypes.LONG_TYPE),
                         attrDef("endTime", DataTypes.LONG_TYPE),
                         attrDef("queryText", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
@@ -189,6 +193,7 @@ public class QuickStart {
 
         HierarchicalTypeDefinition<ClassType> viewClsDef = TypesUtil
                 .createClassTypeDef(VIEW_TYPE, VIEW_TYPE, null,
+                        PrimaryKeyConstraint.of("name", "db"),
                         TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
                         new AttributeDefinition("db", DATABASE_TYPE, Multiplicity.REQUIRED, false, null),
                         new AttributeDefinition("inputTables", DataTypes.arrayTypeName(TABLE_TYPE),

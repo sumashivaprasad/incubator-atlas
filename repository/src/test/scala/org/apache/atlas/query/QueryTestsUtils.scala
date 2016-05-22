@@ -84,7 +84,7 @@ object QueryTestsUtils extends GraphUtils {
                 attrDef("owner", DataTypes.STRING_TYPE),
                 attrDef("createTime", DataTypes.INT_TYPE),
                 attrDef("clusterName", DataTypes.STRING_TYPE)
-            ))
+            ), null)
 
         def hiveOrderDef = new StructTypeDefinition("HiveOrder",
             Array(
@@ -97,14 +97,14 @@ object QueryTestsUtils extends GraphUtils {
                 attrDef("inputFormat", DataTypes.STRING_TYPE),
                 attrDef("outputFormat", DataTypes.STRING_TYPE),
                 new AttributeDefinition("sortCols", DataTypes.arrayTypeName("HiveOrder"), Multiplicity.REQUIRED, false, null)
-            ))
+            ), null)
 
         def columnClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Column", null, null,
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 attrDef("dataType", DataTypes.STRING_TYPE),
                 new AttributeDefinition("sd", "StorageDescriptor", Multiplicity.REQUIRED, false, null)
-            ))
+            ), null)
 
         def tblClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Table", null, null,
             Array(
@@ -112,37 +112,37 @@ object QueryTestsUtils extends GraphUtils {
                 new AttributeDefinition("db", "DB", Multiplicity.REQUIRED, false, null),
                 new AttributeDefinition("sd", "StorageDescriptor", Multiplicity.REQUIRED, false, null),
                 attrDef("created", DataTypes.DATE_TYPE)
-            ))
+            ), null)
 
         def partitionClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "Partition", null, null,
             Array(
                 new AttributeDefinition("values", DataTypes.arrayTypeName(DataTypes.STRING_TYPE.getName), Multiplicity.REQUIRED, false, null),
                 new AttributeDefinition("table", "Table", Multiplicity.REQUIRED, false, null)
-            ))
+            ), null)
 
         def loadProcessClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "LoadProcess", null, null,
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 new AttributeDefinition("inputTables", DataTypes.arrayTypeName("Table"), Multiplicity.COLLECTION, false, null),
                 new AttributeDefinition("outputTable", "Table", Multiplicity.REQUIRED, false, null)
-            ))
+            ), null)
 
         def viewClsDef = new HierarchicalTypeDefinition[ClassType](classOf[ClassType], "View", null, null,
             Array(
                 attrDef("name", DataTypes.STRING_TYPE),
                 new AttributeDefinition("inputTables", DataTypes.arrayTypeName("Table"), Multiplicity.COLLECTION, false, null)
-            ))
+            ), null)
 
         def dimTraitDef = new HierarchicalTypeDefinition[TraitType](classOf[TraitType], "Dimension", null, null,
-            Array[AttributeDefinition]())
+            Array[AttributeDefinition](), null)
         def piiTraitDef = new HierarchicalTypeDefinition[TraitType](classOf[TraitType], "PII", null, null,
-            Array[AttributeDefinition]())
+            Array[AttributeDefinition](), null)
         def metricTraitDef = new HierarchicalTypeDefinition[TraitType](classOf[TraitType], "Metric", null, null,
-            Array[AttributeDefinition]())
+            Array[AttributeDefinition](), null)
         def etlTraitDef = new HierarchicalTypeDefinition[TraitType](classOf[TraitType], "ETL", null, null,
-            Array[AttributeDefinition]())
+            Array[AttributeDefinition](), null)
         def jdbcTraitDef = new HierarchicalTypeDefinition[TraitType](classOf[TraitType], "JdbcAccess", null, null,
-            Array[AttributeDefinition]())
+            Array[AttributeDefinition](), null)
 
         TypeSystem.getInstance().defineTypes(ImmutableList.of[EnumTypeDefinition],
             ImmutableList.of[StructTypeDefinition](hiveOrderDef),

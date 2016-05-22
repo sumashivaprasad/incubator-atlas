@@ -28,6 +28,7 @@ import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.pipes.util.structures.Row;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.discovery.DiscoveryException;
@@ -422,7 +423,7 @@ public final class GraphHelper {
         }
     }
 
-    public Vertex extractVertexFromGremlinResult(Object o) throws DiscoveryException {
+    public Vertex extractVertexFromGremlinResult(Object o, String step) throws DiscoveryException {
         if (!(o instanceof List)) {
             throw new DiscoveryException(String.format("Cannot process result %s", o.toString()));
         }
@@ -432,6 +433,10 @@ public final class GraphHelper {
         for (Object r : l) {
             if (r instanceof TitanVertex) {
                 result = (TitanVertex) r;
+            } else if (r instanceof Map) {
+                result = ((Map<String, Vertex>) r).get(step);
+            } else if (r instanceof Row) {
+                result = (Vertex) ((Row) r).get(0);
             } else {
                 throw new DiscoveryException(String.format("Cannot process result %s", o.toString()));
             }
@@ -439,9 +444,9 @@ public final class GraphHelper {
         return result;
     }
 
-    public Vertex searchByGremlin(String gremlinQuery) throws DiscoveryException {
+    public Vertex searchByGremlin(String gremlinQuery, String resultStep) throws DiscoveryException {
         Object o = executeGremlin(gremlinQuery);
-        return extractVertexFromGremlinResult(o);
+        return extractVertexFromGremlinResult(o, resultStep);
     }
 
     public Object executeGremlin(String gremlinQuery) throws DiscoveryException {

@@ -93,21 +93,19 @@ object TypesSerialization {
     }
 
     def toJson(ts: TypeSystem, export: IDataType[_] => Boolean): String = {
-        implicit val formats = _formats + new MultiplicitySerializer
-
+        implicit val formats = _formats + new MultiplicitySerializer + new PrimaryKeyConstraintSerializer
         val typsDef = convertToTypesDef(ts, export)
-
         writePretty(typsDef)
     }
 
     def fromJson(jsonStr: String): TypesDef = {
-        implicit val formats = _formats + new MultiplicitySerializer
+        implicit val formats = _formats + new MultiplicitySerializer + new PrimaryKeyConstraintSerializer
 
         read[TypesDef](jsonStr)
     }
 
     def toJson(typesDef : TypesDef) : String = {
-      implicit val formats = _formats + new MultiplicitySerializer
+      implicit val formats = _formats + new MultiplicitySerializer + new PrimaryKeyConstraintSerializer
       writePretty(typesDef)
 
     }
@@ -124,7 +122,7 @@ object TypesSerialization {
       toJson(new TypesDef(typDef, isTrait))
     }
 
-  private def convertAttributeInfoToAttributeDef(aInfo: AttributeInfo) = {
+    private def convertAttributeInfoToAttributeDef(aInfo: AttributeInfo) = {
         new AttributeDefinition(aInfo.name, aInfo.dataType().getName, aInfo.multiplicity,
             aInfo.isComposite, aInfo.isUnique, aInfo.isIndexable, aInfo.reverseAttributeName)
     }
@@ -145,14 +143,14 @@ object TypesSerialization {
 
         val aDefs: Iterable[AttributeDefinition] =
             tt.immediateAttrs.map(convertAttributeInfoToAttributeDef(_))
-        new HierarchicalTypeDefinition[TraitType](classOf[TraitType], tt.name, tt.description, tt.superTypes, aDefs.toArray)
+        new HierarchicalTypeDefinition[TraitType](classOf[TraitType], tt.name, tt.description, tt.superTypes, aDefs.toArray, null)
     }
 
     private def convertClassTypeToHierarchicalTypeDefinition(tt: ClassType): HierarchicalTypeDefinition[ClassType] = {
 
         val aDefs: Iterable[AttributeDefinition] =
             tt.immediateAttrs.map(convertAttributeInfoToAttributeDef(_))
-        new HierarchicalTypeDefinition[ClassType](classOf[ClassType], tt.name, tt.description, tt.superTypes, aDefs.toArray, tt.uniqueConstraints)
+        new HierarchicalTypeDefinition[ClassType](classOf[ClassType], tt.name, tt.description, tt.superTypes, aDefs.toArray, tt.primaryKeyColumns)
     }
 
     def convertToTypesDef(ts: TypeSystem, export: IDataType[_] => Boolean): TypesDef = {
@@ -182,24 +180,39 @@ object TypesSerialization {
 
 }
 
-class MultiplicitySerializer extends CustomSerializer[Multiplicity](format => ( {
-    case JString(m) => m match {
-        case "optional" => Multiplicity.OPTIONAL
-        case "required" => Multiplicity.REQUIRED
-        case "collection" => Multiplicity.COLLECTION
-        case "set" => Multiplicity.SET
-    }
+class PrimaryKeyConstraintSerializer extends CustomSerializer[PrimaryKeyConstraint](format => ( {
+  case JArray(m) => m match {
+    case x: List[JString] =>
+      val z = new Array[String](x.length)
+      x.map(_.values).copyToArray(z)
+      PrimaryKeyConstraint.of(z: _*)
+  }
+  case JNull => null
 }, {
-    case m: Multiplicity => JString(m match {
-        case Multiplicity.OPTIONAL => "optional"
-        case Multiplicity.REQUIRED => "required"
-        case Multiplicity.COLLECTION => "collection"
-        case Multiplicity.SET => "set"
-    }
-
-    )
+  case p: PrimaryKeyConstraint => JArray(p.columnNames().toList.map(new JString(_)))
 }
-    ))
+  ))
+
+
+class MultiplicitySerializer extends CustomSerializer[Multiplicity](format => ( {
+  case JString(m) => m match {
+    case "optional" => Multiplicity.OPTIONAL
+    case "required" => Multiplicity.REQUIRED
+    case "collection" => Multiplicity.COLLECTION
+    case "set" => Multiplicity.SET
+  }
+}, {
+  case m: Multiplicity => JString(m match {
+    case Multiplicity.OPTIONAL => "optional"
+    case Multiplicity.REQUIRED => "required"
+    case Multiplicity.COLLECTION => "collection"
+    case Multiplicity.SET => "set"
+  }
+
+  )
+}
+  ))
+
 
 trait TypeHelpers {
     def requiredAttr(name: String, dataType: IDataType[_]) =
@@ -233,18 +246,18 @@ trait TypeHelpers {
     def createTraitTypeDef(name: String, description: Option[String], superTypes: Seq[String], attrDefs: AttributeDefinition*):
     HierarchicalTypeDefinition[TraitType] = {
         val sts = ImmutableSet.copyOf(superTypes.toArray)
-        return new HierarchicalTypeDefinition[TraitType](classOf[TraitType], name, description.getOrElse(null), sts, attrDefs.toArray)
+        return new HierarchicalTypeDefinition[TraitType](classOf[TraitType], name, description.getOrElse(null), sts, attrDefs.toArray, null)
     }
 
     def createClassTypeDef(name: String, superTypes: Seq[String], attrDefs: AttributeDefinition*):
     HierarchicalTypeDefinition[ClassType] = {
-         createClassTypeDef( name, None, superTypes, attrDefs:_*)
+         createClassTypeDef( name, None, superTypes, null, attrDefs:_*)
     }
     
-    def createClassTypeDef(name: String, description: Option[String], superTypes: Seq[String], attrDefs: AttributeDefinition*):
+    def createClassTypeDef(name: String, description: Option[String], superTypes: Seq[String], primaryKeyConstraint: PrimaryKeyConstraint, attrDefs: AttributeDefinition*):
     HierarchicalTypeDefinition[ClassType] = {
         val sts = ImmutableSet.copyOf(superTypes.toArray)
-        return new HierarchicalTypeDefinition[ClassType](classOf[ClassType], name, description.getOrElse(null), sts, attrDefs.toArray)
+        return new HierarchicalTypeDefinition[ClassType](classOf[ClassType], name, description.getOrElse(null), sts, attrDefs.toArray, primaryKeyConstraint)
     }
 
     @throws(classOf[AtlasException])

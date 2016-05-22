@@ -222,13 +222,13 @@ public class TraitTest extends HierarchicalTypeTest<TraitType> {
 
     @Override
     protected HierarchicalTypeDefinition<TraitType> getTypeDefinition(String name, AttributeDefinition... attributes) {
-        return new HierarchicalTypeDefinition(TraitType.class, name, null, null, attributes, uniqueConstraints);
+        return new HierarchicalTypeDefinition(TraitType.class, name, null, null, attributes, null);
     }
 
     @Override
     protected HierarchicalTypeDefinition<TraitType> getTypeDefinition(String name, ImmutableSet<String> superTypes,
                                                                       AttributeDefinition... attributes) {
-        return new HierarchicalTypeDefinition(TraitType.class, name, null, superTypes, attributes, uniqueConstraints);
+        return new HierarchicalTypeDefinition(TraitType.class, name, null, superTypes, attributes, null);
     }
 
     @Override

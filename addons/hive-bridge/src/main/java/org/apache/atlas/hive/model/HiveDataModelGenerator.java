@@ -199,7 +199,8 @@ public class HiveDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_STORAGEDESC.getName(), null,
-                        ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions);
+                        ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions,
+                    PrimaryKeyConstraint.of(TABLE));
         classTypeDefinitions.put(HiveDataTypes.HIVE_STORAGEDESC.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_STORAGEDESC.getName());
     }
@@ -240,7 +241,8 @@ public class HiveDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_COLUMN.getName(), null,
-                    ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions);
+                    ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions,
+                    PrimaryKeyConstraint.of(NAME, TABLE));
         classTypeDefinitions.put(HiveDataTypes.HIVE_COLUMN.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_COLUMN.getName());
     }
@@ -255,7 +257,7 @@ public class HiveDataModelGenerator {
                         null),
                 new AttributeDefinition(LAST_ACCESS_TIME, DataTypes.DATE_TYPE.getName(), Multiplicity.OPTIONAL, false,
                         null),
-                new AttributeDefinition(COMMENT, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null),
+                new AttributeDefinition(COMMENT, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false,     null),
                 new AttributeDefinition("retention", DataTypes.INT_TYPE.getName(), Multiplicity.OPTIONAL, false, null),
                 new AttributeDefinition(STORAGE_DESC, HiveDataTypes.HIVE_STORAGEDESC.getName(), Multiplicity.OPTIONAL, true,
                         null),
@@ -274,7 +276,7 @@ public class HiveDataModelGenerator {
                         null),};
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_TABLE.getName(), null,
-                    ImmutableSet.of("DataSet"), attributeDefinitions);
+                    ImmutableSet.of("DataSet"), attributeDefinitions, PrimaryKeyConstraint.of(NAME, DB));
         classTypeDefinitions.put(HiveDataTypes.HIVE_TABLE.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_TABLE.getName());
     }
@@ -297,9 +299,15 @@ public class HiveDataModelGenerator {
                 new AttributeDefinition("queryGraph", DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false,
                         null),};
 
+        //TODO - Setup primary key attributes to be inherited from super types
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_PROCESS.getName(), null,
-                    ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions);
+                    ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions,
+                    PrimaryKeyConstraint.of(
+                        AtlasClient.NAME,
+                        AtlasClient.PROCESS_ATTRIBUTE_INPUTS,
+                        AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS
+                    ));
         classTypeDefinitions.put(HiveDataTypes.HIVE_PROCESS.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_PROCESS.getName());
     }

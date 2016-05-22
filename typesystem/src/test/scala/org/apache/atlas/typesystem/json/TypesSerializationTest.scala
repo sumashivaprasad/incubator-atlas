@@ -315,7 +315,8 @@ class TypesSerializationTest extends BaseTest with TypeHelpers {
       requiredAttr("name", DataTypes.STRING_TYPE),
       new AttributeDefinition("employees", String.format("array<%s>", "Person"),
         Multiplicity.COLLECTION, true, "department"))
-    val personTypeDef: HierarchicalTypeDefinition[ClassType] = createClassTypeDef("Person", List(),
+    val personTypeDef: HierarchicalTypeDefinition[ClassType] = createClassTypeDef("Person", None, List(),
+      PrimaryKeyConstraint.of("name"),
       requiredAttr("name", DataTypes.STRING_TYPE),
       new AttributeDefinition("department", "Department", Multiplicity.REQUIRED, false, "employees"),
       new AttributeDefinition("manager", "Manager", Multiplicity.OPTIONAL, false, "subordinates")
@@ -326,7 +327,7 @@ class TypesSerializationTest extends BaseTest with TypeHelpers {
     )
 
     val managerTypeDefWithDesc: HierarchicalTypeDefinition[ClassType] = createClassTypeDef("Manager", Some("Manager-description"), List("Person"),
-      new AttributeDefinition("subordinates", String.format("array<%s>", "Person"),
+      null, new AttributeDefinition("subordinates", String.format("array<%s>", "Person"),
         Multiplicity.COLLECTION, false, "manager")
     )
 

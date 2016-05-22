@@ -117,7 +117,7 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
 
         try {
             HierarchicalTypeDefinition<T> definition = new HierarchicalTypeDefinition<>(type, name, description, null,
-                    attributes.toArray(new AttributeDefinition[attributes.size()]));
+                    attributes.toArray(new AttributeDefinition[attributes.size()]), null);
 
             metadataService.createType(TypesSerialization.toJson(definition, isTrait));
         } catch (TypeExistsException e) {

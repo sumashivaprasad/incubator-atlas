@@ -18,6 +18,8 @@
 
 package org.apache.atlas.repository.typestore;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -43,6 +45,7 @@ import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.HierarchicalType;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructType;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
@@ -63,6 +66,7 @@ import java.util.Set;
 public class GraphBackedTypeStore implements ITypeStore {
     public static final String VERTEX_TYPE = "typeSystem";
     private static final String PROPERTY_PREFIX = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "type.";
+    public static final String PROPERTY_PRIMARY_KEY = "primaryKey";
     public static final String SUPERTYPE_EDGE_LABEL = PROPERTY_PREFIX + ".supertype";
 
     private static Logger LOG = LoggerFactory.getLogger(GraphBackedTypeStore.class);
@@ -88,14 +92,18 @@ public class GraphBackedTypeStore implements ITypeStore {
             case STRUCT:
                 StructType structType = (StructType) dataType;
                 storeInGraph(typeSystem, dataType.getTypeCategory(), dataType.getName(), dataType.getDescription(),
-                        ImmutableList.copyOf(structType.infoToNameMap.keySet()), ImmutableSet.<String>of());
+                        ImmutableList.copyOf(structType.infoToNameMap.keySet()), ImmutableSet.<String>of(), null);
                 break;
 
             case TRAIT:
-            case CLASS:
                 HierarchicalType type = (HierarchicalType) dataType;
                 storeInGraph(typeSystem, dataType.getTypeCategory(), dataType.getName(), type.getDescription(), type.immediateAttrs,
-                        type.superTypes);
+                    type.superTypes, null);
+                break;
+            case CLASS:
+                ClassType classType = (ClassType) dataType;
+                storeInGraph(typeSystem, dataType.getTypeCategory(), dataType.getName(), classType.getDescription(), classType.immediateAttrs,
+                        classType.superTypes, classType.getPrimaryKey());
                 break;
 
             default:    //Ignore primitive/collection types as they are covered under references
@@ -133,7 +141,7 @@ public class GraphBackedTypeStore implements ITypeStore {
     }
 
     private void storeInGraph(TypeSystem typeSystem, DataTypes.TypeCategory category, String typeName, String typeDescription,
-            ImmutableList<AttributeInfo> attributes, ImmutableSet<String> superTypes) throws AtlasException {
+            ImmutableList<AttributeInfo> attributes, ImmutableSet<String> superTypes, PrimaryKeyConstraint primaryKeyConstraint) throws AtlasException {
         Vertex vertex = createVertex(category, typeName, typeDescription);
         List<String> attrNames = new ArrayList<>();
         if (attributes != null) {
@@ -157,6 +165,11 @@ public class GraphBackedTypeStore implements ITypeStore {
                 Vertex superVertex = createVertex(superType.getTypeCategory(), superTypeName, superType.getDescription());
                 addEdge(vertex, superVertex, SUPERTYPE_EDGE_LABEL);
             }
+        }
+
+        if (primaryKeyConstraint != null) {
+           String propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY);
+           addProperty(vertex, propertyKey, Joiner.on(":").join(primaryKeyConstraint.columnNames()));
         }
     }
 
@@ -237,6 +250,7 @@ public class GraphBackedTypeStore implements ITypeStore {
             DataTypes.TypeCategory typeCategory = vertex.getProperty(Constants.TYPE_CATEGORY_PROPERTY_KEY);
             String typeName = vertex.getProperty(Constants.TYPENAME_PROPERTY_KEY);
             String typeDescription = vertex.getProperty(Constants.TYPEDESCRIPTION_PROPERTY_KEY);
+            String primaryKeyProperty = vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY));
             LOG.info("Restoring type {}.{}.{}", typeCategory, typeName, typeDescription);
             switch (typeCategory) {
             case ENUM:
@@ -251,13 +265,14 @@ public class GraphBackedTypeStore implements ITypeStore {
             case CLASS:
                 ImmutableSet<String> superTypes = getSuperTypes(vertex);
                 attributes = getAttributes(vertex, typeName);
-                classTypes.add(new HierarchicalTypeDefinition(ClassType.class, typeName, typeDescription, superTypes, attributes));
+                classTypes.add(new HierarchicalTypeDefinition(ClassType.class, typeName, typeDescription, superTypes, attributes,
+                    primaryKeyProperty != null ? PrimaryKeyConstraint.of(Splitter.on(":").split(primaryKeyProperty)) : null));
                 break;
 
             case TRAIT:
                 superTypes = getSuperTypes(vertex);
                 attributes = getAttributes(vertex, typeName);
-                traits.add(new HierarchicalTypeDefinition(TraitType.class, typeName, typeDescription, superTypes, attributes));
+                traits.add(new HierarchicalTypeDefinition(TraitType.class, typeName, typeDescription, superTypes, attributes, null));
                 break;
 
             default:

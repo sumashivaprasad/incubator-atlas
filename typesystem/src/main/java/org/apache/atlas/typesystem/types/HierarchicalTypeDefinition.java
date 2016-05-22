@@ -30,7 +30,7 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
     public final ImmutableSet<String> superTypes;
     public final String hierarchicalMetaTypeName;
 
-    public final PrimaryKeyConstraint primaryKey;
+    public final PrimaryKeyConstraint primaryKeyColumns;
 
     /**
      * Used for json deserialization only.
@@ -44,24 +44,18 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
      */
     @InterfaceAudience.Private
     public HierarchicalTypeDefinition(String hierarchicalMetaTypeName, String typeName, String typeDescription, String[] superTypes,
-            AttributeDefinition[] attributeDefinitions, PrimaryKeyConstraint primaryKey) throws ClassNotFoundException {
+            AttributeDefinition[] attributeDefinitions, PrimaryKeyConstraint primaryKeyColumns) throws ClassNotFoundException {
         this((Class<T>) Class.forName(hierarchicalMetaTypeName), typeName, typeDescription, ImmutableSet.copyOf(superTypes),
-                attributeDefinitions, primaryKey);
+                attributeDefinitions, primaryKeyColumns);
 
     }
 
     public HierarchicalTypeDefinition(Class<T> hierarchicalMetaType, String typeName, String typeDescription, ImmutableSet<String> superTypes,
-        AttributeDefinition[] attributeDefinitions, PrimaryKeyConstraint primaryKey) {
+        AttributeDefinition[] attributeDefinitions, PrimaryKeyConstraint primaryKeyColumns) {
         super(typeName, typeDescription, false, attributeDefinitions);
         hierarchicalMetaTypeName = hierarchicalMetaType.getName();
         this.superTypes = superTypes == null ? ImmutableSet.<String>of() : superTypes;
-        this.primaryKey = primaryKey;
-    }
-
-    public HierarchicalTypeDefinition(Class<T> hierarchicalMetaType, String typeName, String typeDescription, ImmutableSet<String> superTypes,
-        AttributeDefinition[] attributeDefinitions) {
-        this(hierarchicalMetaType, typeName, typeDescription, ImmutableSet.copyOf(superTypes),
-            attributeDefinitions, null);
+        this.primaryKeyColumns = primaryKeyColumns;
     }
 
     @Override
@@ -84,7 +78,15 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
         if (!superTypes.equals(that.superTypes)) {
             return false;
         }
-
+        //TODO
+//        if (primaryKeyColumns == null && that.primaryKeyColumns != null) {
+//            return false;
+//        } else if(primaryKeyColumns == null && that.primaryKeyColumns == null) {
+//            return true;
+//        }
+//        if (!primaryKeyColumns.equals(that.primaryKeyColumns)) {
+//            return false;
+//        }
         return true;
     }
 
@@ -93,7 +95,12 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
         int result = super.hashCode();
         result = 31 * result + superTypes.hashCode();
         result = 31 * result + hierarchicalMetaTypeName.hashCode();
+        result = 31 * result + primaryKeyColumns.hashCode();
         return result;
+    }
+
+    boolean hasPrimaryKey() {
+        return primaryKeyColumns != null;
     }
 
 }
