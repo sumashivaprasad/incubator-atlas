@@ -17,22 +17,27 @@
  */
 package org.apache.atlas.repository.graph;
 
+import com.google.common.base.Joiner;
 import com.google.inject.Singleton;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.typesystem.ITypedInstance;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
+import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.IConstructableType;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructType;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
@@ -44,9 +49,11 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.atlas.repository.graph.GraphHelper.getQualifiedFieldName;
 import static org.apache.atlas.repository.graph.GraphHelper.string;
 
 @Singleton
@@ -77,10 +84,37 @@ public final class GraphToTypedInstanceMapper {
         ITypedReferenceableInstance typedInstance =
             classType.createInstance(id, traits.toArray(new String[traits.size()]));
 
-        mapVertexToInstance(instanceVertex, typedInstance, classType.fieldMapping().fields);
+        mapVertexToInstance(instanceVertex, typedInstance, classType);
         mapVertexToInstanceTraits(instanceVertex, typedInstance, traits);
 
+        if ( classType.hasPrimaryKey() && classType.getPrimaryKey().isVisible()) {
+            Map<String, Object> pkValues = primaryKeyValue(classType, typedInstance);
+            Map<String, String> flattenedPkValues = new LinkedHashMap<>();
+            Map<String, String> varsToValueMap = flattenMap(pkValues, flattenedPkValues);
+            PrimaryKeyConstraint pkc = classType.getPrimaryKey();
+            if ( pkc.displayFormat() == null) {
+                typedInstance.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, Joiner.on(":").join(varsToValueMap.keySet()));
+            } else {
+                typedInstance.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, pkc.getDisplayString(flattenedPkValues));
+            }
+        }
+
         return typedInstance;
+    }
+
+    private Map<String, String> flattenMap(Map<String, Object> pkValues,  Map<String, String> flattenedMap) {
+        for (String key : pkValues.keySet()) {
+            Object value = pkValues.get(key);
+            if ( value instanceof Map) {
+                Map<String, String> flattendKVPairs = flattenMap(pkValues, flattenedMap);
+                for (String innerKey : flattendKVPairs.keySet()) {
+                    flattenedMap.put(key + "." + innerKey , flattendKVPairs.get(innerKey));
+                }
+            } else {
+                flattenedMap.put(key, (String) value);
+            }
+        }
+        return flattenedMap;
     }
 
     private void mapVertexToInstanceTraits(Vertex instanceVertex, ITypedReferenceableInstance typedInstance,
@@ -93,13 +127,60 @@ public final class GraphToTypedInstanceMapper {
     }
 
     public void mapVertexToInstance(Vertex instanceVertex, ITypedInstance typedInstance,
-        Map<String, AttributeInfo> fields) throws AtlasException {
+        IConstructableType constructableType) throws AtlasException {
 
         LOG.debug("Mapping vertex {} to instance {} for fields", instanceVertex, typedInstance.getTypeName(),
-            fields);
-        for (AttributeInfo attributeInfo : fields.values()) {
+            constructableType.fieldMapping());
+        for (AttributeInfo attributeInfo : constructableType.fieldMapping().fields.values()) {
             mapVertexToAttribute(instanceVertex, typedInstance, attributeInfo);
         }
+    }
+
+    private Map<String, Object> primaryKeyValue(ClassType classType, ITypedInstance typedInstance) throws AtlasException {
+        //Map the primary key
+        PrimaryKeyConstraint pkc = classType.getPrimaryKey();
+        Map<String, Object> pkValues = null;
+        if ( pkc != null) {
+            pkValues = new HashMap<>();
+            for (String pkColumn : pkc.columnNames()) {
+                AttributeInfo attrInfo = classType.fieldMapping().fields.get(pkColumn);
+                String propertyQFName = getQualifiedFieldName(classType, attrInfo.name);
+                if (attrInfo == null) {
+                    throw new IllegalArgumentException("Could not find property " + propertyQFName + " in type " + classType.name);
+                }
+                final IDataType dataType = attrInfo.dataType();
+                String result = null;
+                switch (dataType.getTypeCategory()) {
+                case ENUM:
+                case PRIMITIVE:
+                    pkValues.put(attrInfo.name, String.valueOf(typedInstance.get(propertyQFName)));
+                    break;
+                case CLASS:
+                    ClassType clsType = (ClassType) dataType;
+                    if (!attrInfo.isComposite) {
+                        Id id = (Id) typedInstance.get(propertyQFName);
+                        Vertex classVertex = graphHelper.getVertexForGUID(id._getId());
+                        ITypedReferenceableInstance clsTypedInstance =
+                            classType.createInstance(id);
+
+                        //TODO - Optimize to load only required fields
+                        mapVertexToInstance(classVertex, clsTypedInstance, clsType);
+                        Map<String, Object> classPkValues = primaryKeyValue(clsType, clsTypedInstance);
+                        pkValues.put(attrInfo.name, classPkValues);
+                    } else {
+                        ITypedReferenceableInstance ref = (ITypedReferenceableInstance) typedInstance.get(propertyQFName);
+                        Map<String, Object> classPkValues = primaryKeyValue(clsType, ref);
+                        pkValues.put(attrInfo.name, classPkValues);
+                    }
+
+                    break;
+                case ARRAY:
+                    //TODO
+                    break;
+                }
+            }
+        }
+        return pkValues;
     }
 
     private void mapVertexToAttribute(Vertex instanceVertex, ITypedInstance typedInstance,
@@ -118,7 +199,6 @@ public final class GraphToTypedInstanceMapper {
             if (instanceVertex.getProperty(vertexPropertyName) == null) {
                 return;
             }
-
             typedInstance.set(attributeInfo.name,
                 dataType.convert(instanceVertex.<String>getProperty(vertexPropertyName),
                     Multiplicity.REQUIRED));
@@ -279,7 +359,7 @@ public final class GraphToTypedInstanceMapper {
             Vertex structInstanceVertex = edge.getVertex(Direction.IN);
             LOG.debug("Found struct instance {}, mapping to instance {} ", string(structInstanceVertex),
                     structInstance.getTypeName());
-            mapVertexToInstance(structInstanceVertex, structInstance, structType.fieldMapping().fields);
+            mapVertexToInstance(structInstanceVertex, structInstance, structType);
 
         }
         return structInstance;
@@ -301,7 +381,7 @@ public final class GraphToTypedInstanceMapper {
             if (traitInstanceVertex != null) {
                 LOG.debug("Found trait instance vertex {}, mapping to instance {} ", traitInstanceVertex,
                     traitInstance.getTypeName());
-                mapVertexToInstance(traitInstanceVertex, traitInstance, traitType.fieldMapping().fields);
+                mapVertexToInstance(traitInstanceVertex, traitInstance, traitType);
                 break;
             }
         }
@@ -353,8 +433,7 @@ public final class GraphToTypedInstanceMapper {
                         referredType.getName());
                     StructType structType = (StructType) referredType;
                     ITypedStruct instance = structType.createInstance();
-                    Map<String, AttributeInfo> fields = structType.fieldMapping().fields;
-                    mapVertexToInstance(referredVertex, instance, fields);
+                    mapVertexToInstance(referredVertex, instance, structType);
                     return instance;
                 case CLASS:
                     //TODO isComposite handling for class loads

@@ -81,6 +81,7 @@ public class GraphBackedTypeStoreTest {
         ts = TypeSystem.getInstance();
         ts.reset();
         TestUtils.defineDeptEmployeeTypes(ts);
+        TestUtils.createHiveTypes(ts);
     }
 
     @AfterClass
@@ -118,8 +119,8 @@ public class GraphBackedTypeStoreTest {
 
         //validate enum
         List<EnumTypeDefinition> enumTypes = types.enumTypesAsJavaList();
-        Assert.assertEquals(1, enumTypes.size());
-        EnumTypeDefinition orgLevel = enumTypes.get(0);
+        Assert.assertEquals(2, enumTypes.size());
+        EnumTypeDefinition orgLevel = enumTypes.get(0).name.equals("OrgLevel") ? enumTypes.get(0) : enumTypes.get(1);
         Assert.assertEquals(orgLevel.name, "OrgLevel");
         Assert.assertEquals(orgLevel.description, "OrgLevel"+description);
         Assert.assertEquals(orgLevel.enumValues.length, 2);
@@ -129,27 +130,31 @@ public class GraphBackedTypeStoreTest {
 
         //validate class
         List<StructTypeDefinition> structTypes = types.structTypesAsJavaList();
-        Assert.assertEquals(1, structTypes.size());
+        Assert.assertEquals(3, structTypes.size());
 
         boolean clsTypeFound = false;
         List<HierarchicalTypeDefinition<ClassType>> classTypes = types.classTypesAsJavaList();
         for (HierarchicalTypeDefinition<ClassType> classType : classTypes) {
             if (classType.typeName.equals("Manager")) {
                 ClassType expectedType = ts.getDataType(ClassType.class, classType.typeName);
-                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames().length, classType.primaryKeyColumns.columnNames().length);
-                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames(), classType.primaryKeyColumns.columnNames());
                 Assert.assertEquals(expectedType.immediateAttrs.size(), classType.attributeDefinitions.length);
                 Assert.assertEquals(expectedType.superTypes.size(), classType.superTypes.size());
                 Assert.assertEquals(classType.typeDescription, classType.typeName+description);
                 clsTypeFound = true;
+            }
+
+            if (classType.typeName.equals(TestUtils.DATABASE_TYPE)) {
+                ClassType expectedType = ts.getDataType(ClassType.class, classType.typeName);
+                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames().length, classType.primaryKeyColumns.columnNames().length);
+                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames(), classType.primaryKeyColumns.columnNames());
             }
         }
         Assert.assertTrue(clsTypeFound, "Manager type not restored");
 
         //validate trait
         List<HierarchicalTypeDefinition<TraitType>> traitTypes = types.traitTypesAsJavaList();
-        Assert.assertEquals(1, traitTypes.size());
-        HierarchicalTypeDefinition<TraitType> trait = traitTypes.get(0);
+        Assert.assertEquals(4, traitTypes.size());
+        HierarchicalTypeDefinition<TraitType> trait = getTrait(traitTypes, "SecurityClearance");
         Assert.assertEquals("SecurityClearance", trait.typeName);
         Assert.assertEquals(trait.typeName+description, trait.typeDescription);
         Assert.assertEquals(1, trait.attributeDefinitions.length);
@@ -160,6 +165,15 @@ public class GraphBackedTypeStoreTest {
         //validate the new types
         ts.reset();
         ts.defineTypes(types);
+    }
+
+    private HierarchicalTypeDefinition<TraitType> getTrait(List<HierarchicalTypeDefinition<TraitType>> traitTypes, String traitName) {
+        for(HierarchicalTypeDefinition<TraitType> type : traitTypes) {
+            if(type.typeName.equals(traitName)) {
+                return type;
+            }
+        }
+        return null;
     }
 
     @Test(dependsOnMethods = "testStore")

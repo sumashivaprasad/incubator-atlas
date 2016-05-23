@@ -18,77 +18,119 @@
 package org.apache.atlas.typesystem.types;
 
 
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.utils.ParamChecker;
+import org.apache.commons.jexl3.JexlBuilder;
+import org.apache.commons.jexl3.JexlEngine;
+import org.apache.commons.jexl3.JxltEngine;
+import org.apache.commons.jexl3.MapContext;
+import scala.actors.threadpool.Arrays;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import org.apache.commons.jexl3.JexlContext;
 
-public class PrimaryKeyConstraint  {
-//    implements javax.persistence.UniqueConstraint {
+/**
+ * A primary key constraint tat can be defined on class types.
+ * Supports a set of unique columns i.e a composite primary key.
+ * The specified primary key columns should already be part of the attribute definition of the class
+ * and should be required attributes
+ */
+//TODO :Extending this from an interface is causing issues during deserialization from json using json4s.
+public class PrimaryKeyConstraint {
 
     private final String[] uniqueColumns;
+    private final String displayFormat;
+    private final boolean isVisible;
 
-    PrimaryKeyConstraint(String[] uniqueColumns) {
-        this.uniqueColumns  = uniqueColumns;
-    }
-
-    PrimaryKeyConstraint(Collection<String> uniqueColumns) {
+    PrimaryKeyConstraint(Collection<String> uniqueColumns, boolean isVisible, String displayFormat) {
         String[] uniqueArr = new String[uniqueColumns.size()];
         this.uniqueColumns  = uniqueColumns.toArray(uniqueArr);
+        this.displayFormat = displayFormat;
+        this.isVisible = isVisible;
     }
 
-    public static PrimaryKeyConstraint of(Iterable<String> uniqueColumns) {
+    public static PrimaryKeyConstraint of(Iterable<String> uniqueColumns, boolean isVisible, String displayFormat) {
         List<String> temp = new ArrayList<>();
         final Iterator<String> iter = uniqueColumns.iterator();
         while (iter.hasNext()) {
             temp.add(iter.next());
         }
-        String[] uniqueArr = new String[temp.size()];
-        return new PrimaryKeyConstraint(temp.toArray(uniqueArr));
+        return new PrimaryKeyConstraint(temp, isVisible, displayFormat);
     }
 
-    public static PrimaryKeyConstraint of(String... uniqueColumns) {
-        ParamChecker.notNull(uniqueColumns, "Primary key columns");
-        return new PrimaryKeyConstraint(uniqueColumns);
+    public static PrimaryKeyConstraint of(Collection<String> uniqueColumns, boolean isVisible, String displayFormat) {
+        return new PrimaryKeyConstraint(uniqueColumns, isVisible, displayFormat);
     }
-//
-//    @Override
+
+    public static PrimaryKeyConstraint of(final String... uniqueColumns) {
+        ParamChecker.notNull(uniqueColumns, "Primary key columns");
+        return new PrimaryKeyConstraint(Arrays.asList(uniqueColumns), true, null);
+    }
+
     public String[] columnNames() {
         return uniqueColumns;
     }
 
-//    @Override
-//    public boolean equals(Object o) {
-//        if (this == o) {
-//            return true;
-//        }
-//        if (o == null || getClass() != o.getClass()) {
-//            return false;
-//        }
-//        if (!super.equals(o)) {
-//            return false;
-//        }
+    public boolean isVisible() {
+        return isVisible;
+    }
+
+    public String displayFormat() {
+        return displayFormat;
+    }
+
+//    public void getDefaultDisplayFmt(ClassType classType, StringBuffer buffer) {
+//        for (String pkColumn : classType.getPrimaryKey().columnNames()) {
+//            AttributeInfo attrInfo = classType.fieldMapping().fields.get(pkColumn);
+//            if (attrInfo == null) {
+//                throw new IllegalArgumentException("Could not find property " + pkColumn + " in type " + classType.name);
+//            }
+//            final IDataType dataType = attrInfo.dataType();
+//            String result = null;
 //
-//        PrimaryKeyConstraint that = (PrimaryKeyConstraint) o;
+//            switch (dataType.getTypeCategory()) {
+//            case ENUM:
+//            case PRIMITIVE:
+//                if ( buffer.length() > 0) {
+//                    buffer.append(".");
+//                }
+//                buffer.append("${" + attrInfo.name + "}");
+//                break;
 //
-//        if (!uniqueColumns.equals(that.uniqueColumns)) {
-//            return false;
+//            case CLASS:
+//                if ( buffer.length() > 0) {
+//                    buffer.append(".");
+//                }
+//
+//                buffer.append("${").append(attrInfo.name).append("}");
+//            }
 //        }
-//        return true;
 //    }
 //
-//    @Override
-//    public int hashCode() {
-//        int result = super.hashCode();
-//        result = 31 * result + uniqueColumns.hashCode();
-//        return result;
+//    public String getDefaultDisplayFormat() {
+//        return null;
 //    }
 
-//    @Override
-//    public Class<? extends Annotation> annotationType() {
-//        return PrimaryKeyConstraint.class;
-//    }
+    public String getDisplayString(Map<String, String> pkValues) {
+        String exprString = displayFormat();
+        JexlEngine jexl = new JexlBuilder().create();
+        // Create an expression
+        String jexlExp = displayFormat();
+        JxltEngine jxlt = jexl.createJxltEngine();
+        JxltEngine.Expression expr = jxlt.createExpression(exprString);
+
+        // Create a context and add data
+        JexlContext jc = new MapContext();
+        for (String key : pkValues.keySet()) {
+            jc.set(key, pkValues.get(key));
+        }
+
+        // Now evaluate the expression, getting the result
+        return (String) expr.evaluate(jc);
+    }
 }

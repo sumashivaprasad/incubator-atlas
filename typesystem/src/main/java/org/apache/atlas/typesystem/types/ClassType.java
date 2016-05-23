@@ -69,6 +69,7 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
         super(typeSystem, ClassType.class, name, description, superTypes, fields);
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
         this.primaryKeyColumns = primaryKeyColumns;
+        //TODO - Add validation while accepting primary keys that they should be only required attributes
     }
 
     @Override

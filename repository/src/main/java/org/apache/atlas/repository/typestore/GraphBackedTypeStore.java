@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
@@ -66,7 +67,10 @@ import java.util.Set;
 public class GraphBackedTypeStore implements ITypeStore {
     public static final String VERTEX_TYPE = "typeSystem";
     private static final String PROPERTY_PREFIX = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "type.";
-    public static final String PROPERTY_PRIMARY_KEY = "primaryKey";
+    public static final String PROPERTY_PRIMARY_KEY_COLUMNS = "primaryKey.columns";
+    public static final String PROPERTY_PRIMARY_KEY_VISIBLITY = "primaryKey.isVisible";
+    public static final String PROPERTY_PRIMARY_KEY_DISPLAYFORMAT = "primaryKey.displayFormat";
+
     public static final String SUPERTYPE_EDGE_LABEL = PROPERTY_PREFIX + ".supertype";
 
     private static Logger LOG = LoggerFactory.getLogger(GraphBackedTypeStore.class);
@@ -168,8 +172,16 @@ public class GraphBackedTypeStore implements ITypeStore {
         }
 
         if (primaryKeyConstraint != null) {
-           String propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY);
+           String propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_COLUMNS);
            addProperty(vertex, propertyKey, Joiner.on(":").join(primaryKeyConstraint.columnNames()));
+
+           propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_VISIBLITY);
+           addProperty(vertex, propertyKey, String.valueOf(primaryKeyConstraint.isVisible()));
+
+           if (primaryKeyConstraint.displayFormat() != null) {
+               propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_DISPLAYFORMAT);
+               addProperty(vertex, propertyKey, primaryKeyConstraint.displayFormat());
+           }
         }
     }
 
@@ -250,7 +262,9 @@ public class GraphBackedTypeStore implements ITypeStore {
             DataTypes.TypeCategory typeCategory = vertex.getProperty(Constants.TYPE_CATEGORY_PROPERTY_KEY);
             String typeName = vertex.getProperty(Constants.TYPENAME_PROPERTY_KEY);
             String typeDescription = vertex.getProperty(Constants.TYPEDESCRIPTION_PROPERTY_KEY);
-            String primaryKeyProperty = vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY));
+            String primaryKeyColumns = vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_COLUMNS));
+            boolean isVisible = Boolean.valueOf((String)vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_VISIBLITY)));
+            String displayFormat = (String)vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_VISIBLITY));
             LOG.info("Restoring type {}.{}.{}", typeCategory, typeName, typeDescription);
             switch (typeCategory) {
             case ENUM:
@@ -266,7 +280,7 @@ public class GraphBackedTypeStore implements ITypeStore {
                 ImmutableSet<String> superTypes = getSuperTypes(vertex);
                 attributes = getAttributes(vertex, typeName);
                 classTypes.add(new HierarchicalTypeDefinition(ClassType.class, typeName, typeDescription, superTypes, attributes,
-                    primaryKeyProperty != null ? PrimaryKeyConstraint.of(Splitter.on(":").split(primaryKeyProperty)) : null));
+                    primaryKeyColumns != null ? PrimaryKeyConstraint.of(Splitter.on(":").split(primaryKeyColumns), isVisible, displayFormat) : null));
                 break;
 
             case TRAIT:

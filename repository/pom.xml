@@ -156,6 +156,8 @@
             <artifactId>hbase-server</artifactId>
             <scope>test</scope>
         </dependency>
+
+
     </dependencies>
 
     <build>

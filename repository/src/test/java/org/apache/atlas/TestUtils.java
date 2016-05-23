@@ -100,13 +100,13 @@ public final class TestUtils {
                         createRequiredAttrDef("city", DataTypes.STRING_TYPE));
 
         HierarchicalTypeDefinition<ClassType> deptTypeDef = createClassTypeDef(DEPARTMENT_TYPE, "Department" + _description, ImmutableSet.<String>of(),
-            PrimaryKeyConstraint.of("name"),
+            null,
             createRequiredAttrDef("name", DataTypes.STRING_TYPE),
             new AttributeDefinition("employees", String.format("array<%s>", "Person"), Multiplicity.OPTIONAL,
                 true, "department"));
 
         HierarchicalTypeDefinition<ClassType> personTypeDef = createClassTypeDef("Person", "Person" + _description, ImmutableSet.<String>of(),
-            PrimaryKeyConstraint.of("name"),
+            null,
             createRequiredAttrDef("name", DataTypes.STRING_TYPE),
             createOptionalAttrDef("orgLevel", "OrgLevel"),
             createOptionalAttrDef("address", "Address"),
@@ -115,7 +115,7 @@ public final class TestUtils {
             new AttributeDefinition("mentor", "Person", Multiplicity.OPTIONAL, false, null));
 
         HierarchicalTypeDefinition<ClassType> managerTypeDef = createClassTypeDef("Manager", "Manager"+_description, ImmutableSet.of("Person"),
-                PrimaryKeyConstraint.of("name"),
+                null,
                 new AttributeDefinition("subordinates", String.format("array<%s>", "Person"), Multiplicity.COLLECTION,
                         false, "manager"));
 
