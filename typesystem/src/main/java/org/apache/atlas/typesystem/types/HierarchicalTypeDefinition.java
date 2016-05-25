@@ -78,15 +78,18 @@ public class HierarchicalTypeDefinition<T extends HierarchicalType> extends Stru
         if (!superTypes.equals(that.superTypes)) {
             return false;
         }
-        //TODO
-//        if (primaryKeyColumns == null && that.primaryKeyColumns != null) {
-//            return false;
-//        } else if(primaryKeyColumns == null && that.primaryKeyColumns == null) {
-//            return true;
-//        }
-//        if (!primaryKeyColumns.equals(that.primaryKeyColumns)) {
-//            return false;
-//        }
+
+        if (primaryKeyColumns == null) {
+            if (that.primaryKeyColumns != null) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        if (!primaryKeyColumns.equals(that.primaryKeyColumns)) {
+            return false;
+        }
         return true;
     }
 

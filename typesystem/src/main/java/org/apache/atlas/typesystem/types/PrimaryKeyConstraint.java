@@ -43,6 +43,7 @@ import org.apache.commons.jexl3.JexlContext;
  */
 //TODO :Extending this from an interface is causing issues during deserialization from json using json4s.
 public class PrimaryKeyConstraint {
+//    implements javax.persistence.UniqueConstraint {
 
     private final List<String> uniqueColumns;
     private final String displayFormat;
@@ -51,7 +52,7 @@ public class PrimaryKeyConstraint {
     public static final String PK_ATTR_NAME = "qualifiedName";
 
     PrimaryKeyConstraint(List<String> uniqueColumns, boolean isVisible, String displayFormat) {
-        this.uniqueColumns  = uniqueColumns;
+        this.uniqueColumns = uniqueColumns;
         this.displayFormat = displayFormat;
         this.isVisible = isVisible;
     }
@@ -86,40 +87,8 @@ public class PrimaryKeyConstraint {
         return displayFormat;
     }
 
-//    public void getDefaultDisplayFmt(ClassType classType, StringBuffer buffer) {
-//        for (String pkColumn : classType.getPrimaryKey().columnNames()) {
-//            AttributeInfo attrInfo = classType.fieldMapping().fields.get(pkColumn);
-//            if (attrInfo == null) {
-//                throw new IllegalArgumentException("Could not find property " + pkColumn + " in type " + classType.name);
-//            }
-//            final IDataType dataType = attrInfo.dataType();
-//            String result = null;
-//
-//            switch (dataType.getTypeCategory()) {
-//            case ENUM:
-//            case PRIMITIVE:
-//                if ( buffer.length() > 0) {
-//                    buffer.append(".");
-//                }
-//                buffer.append("${" + attrInfo.name + "}");
-//                break;
-//
-//            case CLASS:
-//                if ( buffer.length() > 0) {
-//                    buffer.append(".");
-//                }
-//
-//                buffer.append("${").append(attrInfo.name).append("}");
-//            }
-//        }
-//    }
-//
-//    public String getDefaultDisplayFormat() {
-//        return null;
-//    }
-
     public String displayValue(Map<String, String> pkValues) {
-        if (displayFormat() == null ) {
+        if (displayFormat() == null) {
             return Joiner.on(":").join(pkValues.values());
         } else {
             String exprString = displayFormat();
@@ -141,5 +110,39 @@ public class PrimaryKeyConstraint {
 
     public String attributeName() {
         return PK_ATTR_NAME;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+
+        PrimaryKeyConstraint that = (PrimaryKeyConstraint) o;
+
+        if (!uniqueColumns.equals(that.columns())) {
+            return false;
+        }
+
+        if (displayFormat != null && !displayFormat.equals(that.displayFormat())) {
+            return false;
+        }
+
+        return isVisible == that.isVisible();
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + uniqueColumns.hashCode();
+        result = 31 * result + ((isVisible == true) ? 1 : 0);
+        result = 31 * result + ((displayFormat != null ) ? displayFormat.hashCode() : 0);
+        return result;
     }
 }
