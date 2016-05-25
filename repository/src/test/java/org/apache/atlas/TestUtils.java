@@ -114,10 +114,10 @@ public final class TestUtils {
             new AttributeDefinition("manager", "Manager", Multiplicity.OPTIONAL, false, "subordinates"),
             new AttributeDefinition("mentor", "Person", Multiplicity.OPTIONAL, false, null));
 
-        HierarchicalTypeDefinition<ClassType> managerTypeDef = createClassTypeDef("Manager", "Manager"+_description, ImmutableSet.of("Person"),
-                null,
-                new AttributeDefinition("subordinates", String.format("array<%s>", "Person"), Multiplicity.COLLECTION,
-                        false, "manager"));
+        HierarchicalTypeDefinition<ClassType> managerTypeDef = createClassTypeDef("Manager", "Manager" + _description, ImmutableSet.of("Person"),
+            null,
+            new AttributeDefinition("subordinates", String.format("array<%s>", "Person"), Multiplicity.COLLECTION,
+                false, "manager"));
 
         HierarchicalTypeDefinition<TraitType> securityClearanceTypeDef =
                 createTraitTypeDef("SecurityClearance", "SecurityClearance"+_description, ImmutableSet.<String>of(),
@@ -209,15 +209,15 @@ public final class TestUtils {
         HierarchicalTypeDefinition<ClassType> superTypeDefinition =
                 createClassTypeDef(SUPER_TYPE_NAME, ImmutableSet.<String>of(),
                         createOptionalAttrDef("namespace", DataTypes.STRING_TYPE),
-                        createOptionalAttrDef("cluster", DataTypes.STRING_TYPE),
+                        createRequiredAttrDef("cluster", DataTypes.STRING_TYPE),
                         createOptionalAttrDef("colo", DataTypes.STRING_TYPE));
 
         HierarchicalTypeDefinition<ClassType> databaseTypeDefinition =
                 createClassTypeDef(DATABASE_TYPE, DATABASE_TYPE + _description,ImmutableSet.of(SUPER_TYPE_NAME),
-                        PrimaryKeyConstraint.of(NAME, "clusterName"),
+                        PrimaryKeyConstraint.of (new ArrayList<String>() {{ add(NAME); add("cluster"); }},
+                            true, "${name}@${cluster}"),
                         TypesUtil.createUniqueRequiredAttrDef(NAME, DataTypes.STRING_TYPE),
                         createOptionalAttrDef("created", DataTypes.DATE_TYPE),
-                        createOptionalAttrDef("clusterName", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE));
 
 
@@ -277,13 +277,14 @@ public final class TestUtils {
                 new HierarchicalTypeDefinition<>(ClassType.class, PROCESS_TYPE, PROCESS_TYPE + _description,
                         ImmutableSet.<String>of(), new AttributeDefinition[]{
                         createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
-                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_INPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null),
-                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null)
-                }, PrimaryKeyConstraint.of(AtlasClient.NAME, AtlasClient.PROCESS_ATTRIBUTE_INPUTS, AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS));
+                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_INPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.REQUIRED, false, null),
+                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.REQUIRED, false, null)
+                }, PrimaryKeyConstraint.of(new String[] {AtlasClient.NAME, AtlasClient.PROCESS_ATTRIBUTE_INPUTS, AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS} ));
 
         HierarchicalTypeDefinition<ClassType> tableTypeDefinition =
                 createClassTypeDef(TABLE_TYPE, TABLE_TYPE + _description, ImmutableSet.of(SUPER_TYPE_NAME),
-                        PrimaryKeyConstraint.of(NAME, "database"),
+                        PrimaryKeyConstraint.of (new ArrayList<String>() {{ add(NAME); add("database"); }},
+                                                     true, "${name}.${database.name}@${database.cluster}"),
                         TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("type", DataTypes.STRING_TYPE),
@@ -356,7 +357,7 @@ public final class TestUtils {
         Referenceable entity = new Referenceable(DATABASE_TYPE);
         String dbName = RandomStringUtils.randomAlphanumeric(10);
         entity.set(NAME, dbName);
-        entity.set("clusterName", "default");
+        entity.set("cluster", "default");
         entity.set("description", "us db");
         return entity;
     }
@@ -365,6 +366,7 @@ public final class TestUtils {
         Referenceable entity = new Referenceable(TABLE_TYPE);
         String tableName = RandomStringUtils.randomAlphanumeric(10);
         entity.set(NAME, tableName);
+        entity.set("cluster", "default");
         entity.set("description", "random table");
         entity.set("type", "type");
         entity.set("tableType", "MANAGED");

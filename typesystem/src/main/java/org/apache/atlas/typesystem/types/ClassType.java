@@ -30,6 +30,7 @@ import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.exception.ConstraintViolationException;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.StructInstance;
@@ -38,6 +39,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -49,27 +51,64 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     public static final String TRAIT_NAME_SEP = "::";
 
     public final Map<AttributeInfo, List<String>> infoToNameMap;
-    public final PrimaryKeyConstraint primaryKeyColumns;
+    public final PrimaryKeyConstraint primaryKey;
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, PrimaryKeyConstraint pkc, int numFields) {
-        super(typeSystem, ClassType.class, name, description, superTypes, numFields);
+        super(typeSystem, ClassType.class, name, description, superTypes, pkc != null && pkc.isVisible() ? numFields + 1 : numFields);
         infoToNameMap = null;
-        primaryKeyColumns = pkc;
+        primaryKey = pkc;
     }
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo... fields)
     throws AtlasException {
         super(typeSystem, ClassType.class, name, description, superTypes, fields);
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
-        primaryKeyColumns = null;
+        primaryKey = null;
     }
 
-    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo[] fields, PrimaryKeyConstraint primaryKeyColumns)
+    ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo[] fields, PrimaryKeyConstraint pkc)
         throws AtlasException {
-        super(typeSystem, ClassType.class, name, description, superTypes, fields);
+        super(typeSystem, ClassType.class, name, description, superTypes, validateAndAddPKAttribute(typeSystem, pkc, fields));
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
-        this.primaryKeyColumns = primaryKeyColumns;
-        //TODO - Add validation while accepting primary keys that they should be only required attributes
+        this.primaryKey = pkc;
+    }
+
+    private static AttributeInfo[] validateAndAddPKAttribute(TypeSystem ts, PrimaryKeyConstraint pkc, AttributeInfo[] fields) throws AtlasException {
+
+        boolean containsPrimaryKey = false;
+        for (AttributeInfo field : fields) {
+
+            if (validateMultiplicity(pkc, field) ) {
+                throw new ConstraintViolationException("Primary key column '" + field.name + "' should have 'required(Multiplicity.REQUIRED) set");
+            }
+
+            if ( field.name.equalsIgnoreCase(PrimaryKeyConstraint.PK_ATTR_NAME)) {
+               containsPrimaryKey = true;
+               break;
+            }
+        }
+
+        if ( !containsPrimaryKey ) {
+            final boolean addPKAttr = pkc != null && pkc.isVisible();
+            AttributeInfo[] result = addPKAttr ?
+                Arrays.copyOf(fields, fields.length + 1) :
+                fields;
+
+            if (addPKAttr) {
+                AttributeInfo pkAttr = new AttributeInfo(ts, new AttributeDefinition(PrimaryKeyConstraint.PK_ATTR_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null), null);
+                result[result.length - 1] = pkAttr;
+            }
+            return result;
+        }
+
+        return fields;
+    }
+
+    private static boolean validateMultiplicity(final PrimaryKeyConstraint pkc, final AttributeInfo field) {
+        if ( pkc.columns().contains(field.name) ) {
+            return field.multiplicity.nullAllowed();
+        }
+        return false;
     }
 
     @Override
@@ -198,6 +237,11 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
             }
         }
 
+        int numStrings = fieldMapping.numStrings;
+        if ( hasPrimaryKey() && primaryKey.isVisible()) {
+            numStrings += 1;
+        }
+
         return new ReferenceableInstance(id == null ? new Id(getName()) : id, getName(), fieldMapping,
                 new boolean[fieldMapping.fields.size()],
                 fieldMapping.numBools == 0 ? null : new boolean[fieldMapping.numBools],
@@ -210,12 +254,13 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
                 fieldMapping.numBigDecimals == 0 ? null : new BigDecimal[fieldMapping.numBigDecimals],
                 fieldMapping.numBigInts == 0 ? null : new BigInteger[fieldMapping.numBigInts],
                 fieldMapping.numDates == 0 ? null : new Date[fieldMapping.numDates],
-                fieldMapping.numStrings == 0 ? null : new String[fieldMapping.numStrings],
+                numStrings == 0 ? null : new String[numStrings],
                 fieldMapping.numArrays == 0 ? null : new ImmutableList[fieldMapping.numArrays],
                 fieldMapping.numMaps == 0 ? null : new ImmutableMap[fieldMapping.numMaps],
                 fieldMapping.numStructs == 0 ? null : new StructInstance[fieldMapping.numStructs],
                 fieldMapping.numReferenceables == 0 ? null : new ReferenceableInstance[fieldMapping.numReferenceables],
-                fieldMapping.numReferenceables == 0 ? null : new Id[fieldMapping.numReferenceables], b.build());
+                fieldMapping.numReferenceables == 0 ? null : new Id[fieldMapping.numReferenceables],
+                b.build());
     }
 
     @Override
@@ -249,10 +294,10 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     }
 
     public PrimaryKeyConstraint getPrimaryKey() {
-        return primaryKeyColumns;
+        return primaryKey;
     }
 
     public boolean hasPrimaryKey() {
-        return primaryKeyColumns != null;
+        return primaryKey != null;
     }
 }

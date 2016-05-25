@@ -150,7 +150,7 @@ object TypesSerialization {
 
         val aDefs: Iterable[AttributeDefinition] =
             tt.immediateAttrs.map(convertAttributeInfoToAttributeDef(_))
-        new HierarchicalTypeDefinition[ClassType](classOf[ClassType], tt.name, tt.description, tt.superTypes, aDefs.toArray, tt.primaryKeyColumns)
+        new HierarchicalTypeDefinition[ClassType](classOf[ClassType], tt.name, tt.description, tt.superTypes, aDefs.toArray, tt.primaryKey)
     }
 
     def convertToTypesDef(ts: TypeSystem, export: IDataType[_] => Boolean): TypesDef = {
@@ -180,17 +180,43 @@ object TypesSerialization {
 
 }
 
+
+import scala.collection.JavaConversions._
 class PrimaryKeyConstraintSerializer extends CustomSerializer[PrimaryKeyConstraint](format => ( {
-  case JArray(m) => m match {
-    case x: List[JString] =>
-      val z = new Array[String](x.length)
-      x.map(_.values).copyToArray(z)
-      PrimaryKeyConstraint.of(z: _*)
+//  case JObject(m) => m match {
+//    case x: Array[JField] =>
+//      val z = new Array[String](x.length)
+//      x.map(_.values).copyToArray(z)
+//      PrimaryKeyConstraint.of(z: _*)
+//  }
+
+  case  JObject(JField("columns", JArray(cols))
+    :: JField("isVisible", JBool(isVisible))
+    :: JField("displayFormat", displayVal)
+    :: Nil) => {
+
+    val displayFmt:String = displayVal match {
+      case JNull => null
+      case x: JString => x.values
+    }
+    PrimaryKeyConstraint.of(cols.map(_.values.toString), isVisible, displayFmt)
   }
   case JNull => null
-}, {
-  case p: PrimaryKeyConstraint => JArray(p.columnNames().toList.map(new JString(_)))
-}
+  }, {
+  case p: PrimaryKeyConstraint => {
+    val displayVal: JValue = if (p.displayFormat() == null) {
+      JNull
+    } else {
+      JString(p.displayFormat())
+    }
+
+    JObject(
+      JField("columns", JArray(p.columns().toList.map(new JString(_))))
+        :: JField("isVisible", JBool(p.isVisible))
+        :: JField("displayFormat", displayVal)
+        :: Nil)
+    }
+  }
   ))
 
 

@@ -70,20 +70,22 @@ public final class TypedInstanceToGraphMapper {
 
     private DeleteHandler deleteHandler;
     private GraphToTypedInstanceMapper graphToTypedInstanceMapper;
-    private List<EntityDedupHandler> dedupHandlers = new ArrayList<>();
+    private List<DedupHandler<ClassType, IReferenceableInstance>> entityDedupHandlers = new ArrayList<>();
 
     @Inject
     public TypedInstanceToGraphMapper(GraphToTypedInstanceMapper graphToTypedInstanceMapper, DeleteHandler deleteHandler) {
         this.graphToTypedInstanceMapper = graphToTypedInstanceMapper;
         this.deleteHandler = deleteHandler;
+
+        registerEntityDedupHandlers();
     }
 
     private final String SIGNATURE_HASH_PROPERTY_KEY = Constants.INTERNAL_PROPERTY_KEY_PREFIX + "signature";
 
     private void registerEntityDedupHandlers() {
         //Register primary key and then unique key handler
-        dedupHandlers.add(new PrimaryKeyDedupHandler(this));
-        dedupHandlers.add(new UniqueKeyDedupHandler());
+        entityDedupHandlers.add(new PrimaryKeyDedupHandler(this));
+        entityDedupHandlers.add(new UniqueKeyDedupHandler());
     }
 
     public enum Operation {
@@ -266,7 +268,7 @@ public final class TypedInstanceToGraphMapper {
                 } else {
                     //no entity with the given unique attribute, create new
                     ClassType classType = typeSystem.getDataType(ClassType.class, instance.getTypeName());
-                    instanceVertex = getEntityGraphIfExists(instance);
+                    instanceVertex = getEntityVertexIfExists(instance);
                     if (instanceVertex == null) {
                         LOG.debug("Creating new vertex for instance {}", instance.toShortString());
                         newInstance = classType.convert(instance, Multiplicity.REQUIRED);
@@ -697,11 +699,10 @@ public final class TypedInstanceToGraphMapper {
         GraphHelper.setProperty(instanceVertex, vertexPropertyName, propertyValue);
     }
 
-    public Vertex getEntityGraphIfExists(IReferenceableInstance instance) throws AtlasException {
+    public Vertex getEntityVertexIfExists(IReferenceableInstance instance) throws AtlasException {
         //First Check if there is already an instance with the same primary key
         ClassType classType = typeSystem.getDataType(ClassType.class, instance.getTypeName());
-
-        for (EntityDedupHandler handler : dedupHandlers) {
+        for (DedupHandler handler : entityDedupHandlers) {
             Vertex instanceVertex = handler.vertex(classType, instance);
             if (instanceVertex != null) {
                 return instanceVertex;

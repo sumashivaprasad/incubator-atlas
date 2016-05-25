@@ -18,6 +18,8 @@
 
 package org.apache.atlas.typesystem.json
 
+import java.util
+
 import com.google.common.collect.ImmutableList
 import org.apache.atlas.typesystem.types._
 import org.testng.Assert
@@ -316,7 +318,7 @@ class TypesSerializationTest extends BaseTest with TypeHelpers {
       new AttributeDefinition("employees", String.format("array<%s>", "Person"),
         Multiplicity.COLLECTION, true, "department"))
     val personTypeDef: HierarchicalTypeDefinition[ClassType] = createClassTypeDef("Person", None, List(),
-      PrimaryKeyConstraint.of("name"),
+      PrimaryKeyConstraint.of (new util.ArrayList[String]() { add("name"); }, false, "\\${name}"),
       requiredAttr("name", DataTypes.STRING_TYPE),
       new AttributeDefinition("department", "Department", Multiplicity.REQUIRED, false, "employees"),
       new AttributeDefinition("manager", "Manager", Multiplicity.OPTIONAL, false, "subordinates")

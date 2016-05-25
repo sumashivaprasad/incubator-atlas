@@ -7,10 +7,11 @@ import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
+import org.apache.atlas.typesystem.types.IDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class UniqueKeyDedupHandler implements EntityDedupHandler {
+public class UniqueKeyDedupHandler implements DedupHandler<ClassType, IReferenceableInstance> {
 
     private static final GraphHelper graphHelper = GraphHelper.getInstance();
 

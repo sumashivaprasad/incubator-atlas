@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.RepositoryMetadataModule;
@@ -50,6 +51,7 @@ import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.ValueConversionException;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
@@ -219,7 +221,22 @@ public class DefaultMetadataServiceTest {
         //using the same name should succeed, but not create another entity
         newId = createInstance(processEntity);
         assertNull(newId);
+
+        Referenceable dbEntity = getEntity(dbId);
+        Assert.assertEquals(dbEntity.get(PrimaryKeyConstraint.PK_ATTR_NAME), String.format("%s@%s", (String) dbEntity.get(AtlasClient.NAME), (String) dbEntity.get("cluster")));
+
+        Referenceable tableEntity = getEntity(id);
+        Assert.assertEquals(tableEntity.get(PrimaryKeyConstraint.PK_ATTR_NAME), String.format("%s.%s@%s", (String) tableEntity.get(AtlasClient.NAME), (String) dbEntity.get(AtlasClient.NAME), (String) dbEntity.get("cluster")));
+
     }
+
+
+    private Referenceable getEntity(String guid) throws AtlasException {
+        String entityDefinition = metadataService.getEntityDefinition(guid);
+        System.out.println(entityDefinition);
+        return InstanceSerialization.fromJsonReferenceable(entityDefinition, true);
+    }
+
 
     @Test
     public void testEntityAudit() throws Exception {

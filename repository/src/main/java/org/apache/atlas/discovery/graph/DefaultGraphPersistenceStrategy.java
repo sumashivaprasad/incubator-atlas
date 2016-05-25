@@ -145,7 +145,7 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
 
                 } else {
                     metadataRepository.getGraphToInstanceMapper()
-                        .mapVertexToInstance(structVertex, structInstance, structType.fieldMapping().fields);
+                        .mapVertexToInstance(structVertex, structInstance, structType);
                 }
                 return dataType.convert(structInstance, Multiplicity.OPTIONAL);
 
@@ -158,7 +158,7 @@ public class DefaultGraphPersistenceStrategy implements GraphPersistenceStrategi
                 // metadataRepository.getGraphToInstanceMapper().mapVertexToTraitInstance(
                 //        traitVertex, dataType.getName(), , traitType, traitInstance);
                 metadataRepository.getGraphToInstanceMapper()
-                    .mapVertexToInstance(traitVertex, traitInstance, traitType.fieldMapping().fields);
+                    .mapVertexToInstance(traitVertex, traitInstance, traitType);
                 break;
 
             case CLASS:

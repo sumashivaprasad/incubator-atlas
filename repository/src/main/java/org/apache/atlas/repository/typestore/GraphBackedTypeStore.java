@@ -30,6 +30,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.repository.Constants;
@@ -46,6 +47,8 @@ import org.apache.atlas.typesystem.types.EnumValue;
 import org.apache.atlas.typesystem.types.HierarchicalType;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.typesystem.types.StructType;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
@@ -173,7 +176,7 @@ public class GraphBackedTypeStore implements ITypeStore {
 
         if (primaryKeyConstraint != null) {
            String propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_COLUMNS);
-           addProperty(vertex, propertyKey, Joiner.on(":").join(primaryKeyConstraint.columnNames()));
+           addProperty(vertex, propertyKey, Joiner.on(":").join(primaryKeyConstraint.columns()));
 
            propertyKey = getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_VISIBLITY);
            addProperty(vertex, propertyKey, String.valueOf(primaryKeyConstraint.isVisible()));
@@ -262,31 +265,33 @@ public class GraphBackedTypeStore implements ITypeStore {
             DataTypes.TypeCategory typeCategory = vertex.getProperty(Constants.TYPE_CATEGORY_PROPERTY_KEY);
             String typeName = vertex.getProperty(Constants.TYPENAME_PROPERTY_KEY);
             String typeDescription = vertex.getProperty(Constants.TYPEDESCRIPTION_PROPERTY_KEY);
-            String primaryKeyColumns = vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_COLUMNS));
+            final String primaryKeyColumns = vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_COLUMNS));
             boolean isVisible = Boolean.valueOf((String)vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_VISIBLITY)));
-            String displayFormat = (String)vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_VISIBLITY));
+            String displayFormat = (String)vertex.getProperty(getPropertyKey(typeName, PROPERTY_PRIMARY_KEY_DISPLAYFORMAT));
             LOG.info("Restoring type {}.{}.{}", typeCategory, typeName, typeDescription);
+
             switch (typeCategory) {
             case ENUM:
                 enums.add(getEnumType(vertex));
                 break;
 
             case STRUCT:
-                AttributeDefinition[] attributes = getAttributes(vertex, typeName);
-                structs.add(new StructTypeDefinition(typeName, typeDescription, attributes));
+                List<AttributeDefinition> attributes = getAttributes(vertex, typeName);
+                structs.add(new StructTypeDefinition(typeName, typeDescription, attributes.toArray(new AttributeDefinition[attributes.size()])));
                 break;
 
             case CLASS:
                 ImmutableSet<String> superTypes = getSuperTypes(vertex);
                 attributes = getAttributes(vertex, typeName);
-                classTypes.add(new HierarchicalTypeDefinition(ClassType.class, typeName, typeDescription, superTypes, attributes,
-                    primaryKeyColumns != null ? PrimaryKeyConstraint.of(Splitter.on(":").split(primaryKeyColumns), isVisible, displayFormat) : null));
+
+                PrimaryKeyConstraint pkc = primaryKeyColumns != null ? PrimaryKeyConstraint.of( Splitter.on(":").split(primaryKeyColumns), isVisible, displayFormat) : null;
+                classTypes.add(new HierarchicalTypeDefinition(ClassType.class, typeName, typeDescription, superTypes, attributes.toArray(new AttributeDefinition[attributes.size()]), pkc));
                 break;
 
             case TRAIT:
                 superTypes = getSuperTypes(vertex);
                 attributes = getAttributes(vertex, typeName);
-                traits.add(new HierarchicalTypeDefinition(TraitType.class, typeName, typeDescription, superTypes, attributes, null));
+                traits.add(new HierarchicalTypeDefinition(TraitType.class, typeName, typeDescription, superTypes, attributes.toArray(new AttributeDefinition[attributes.size()]), null));
                 break;
 
             default:
@@ -295,6 +300,13 @@ public class GraphBackedTypeStore implements ITypeStore {
         }
         return TypesUtil.getTypesDef(enums.build(), structs.build(), traits.build(), classTypes.build());
     }
+
+    private void addPrimaryKeyAttribute(final PrimaryKeyConstraint pkc, final List<AttributeDefinition> attributes) {
+        if (pkc != null && pkc.isVisible()) {
+            attributes.add(new AttributeDefinition(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null));
+        }
+    }
+
 
     private EnumTypeDefinition getEnumType(Vertex vertex) {
         String typeName = vertex.getProperty(Constants.TYPENAME_PROPERTY_KEY);
@@ -318,7 +330,7 @@ public class GraphBackedTypeStore implements ITypeStore {
         return ImmutableSet.copyOf(superTypes);
     }
 
-    private AttributeDefinition[] getAttributes(Vertex vertex, String typeName) throws AtlasException {
+    private List<AttributeDefinition> getAttributes(Vertex vertex, String typeName) throws AtlasException {
         List<AttributeDefinition> attributes = new ArrayList<>();
         List<String> attrNames = vertex.getProperty(getPropertyKey(typeName));
         if (attrNames != null) {
@@ -331,7 +343,7 @@ public class GraphBackedTypeStore implements ITypeStore {
                 }
             }
         }
-        return attributes.toArray(new AttributeDefinition[attributes.size()]);
+        return attributes;
     }
 
     private String toString(Vertex vertex) {

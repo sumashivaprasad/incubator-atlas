@@ -145,8 +145,12 @@ public class GraphBackedTypeStoreTest {
 
             if (classType.typeName.equals(TestUtils.DATABASE_TYPE)) {
                 ClassType expectedType = ts.getDataType(ClassType.class, classType.typeName);
-                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames().length, classType.primaryKeyColumns.columnNames().length);
-                Assert.assertEquals(expectedType.primaryKeyColumns.columnNames(), classType.primaryKeyColumns.columnNames());
+
+                Assert.assertEquals(expectedType.primaryKey.columns().size(), classType.primaryKeyColumns.columns().size());
+                Assert.assertEquals(expectedType.primaryKey.columns(), classType.primaryKeyColumns.columns());
+
+                Assert.assertEquals(expectedType.primaryKey.displayFormat(), classType.primaryKeyColumns.displayFormat());
+                Assert.assertEquals(expectedType.primaryKey.isVisible(), classType.primaryKeyColumns.isVisible());
             }
         }
         Assert.assertTrue(clsTypeFound, "Manager type not restored");
@@ -194,7 +198,7 @@ public class GraphBackedTypeStoreTest {
                 createOptionalAttrDef("dname", DataTypes.STRING_TYPE));
 
         HierarchicalTypeDefinition<ClassType> deptTypeDef = createClassTypeDef("Department", "Department"+_description,
-            ImmutableSet.of(superTypeDef.typeName), PrimaryKeyConstraint.of("name"),
+            ImmutableSet.of(superTypeDef.typeName), PrimaryKeyConstraint.of(new String[] {"name" }),
                 createRequiredAttrDef("name", DataTypes.STRING_TYPE),
                 new AttributeDefinition("employees", String.format("array<%s>", "Person"), Multiplicity.OPTIONAL,
                         true, "department"));

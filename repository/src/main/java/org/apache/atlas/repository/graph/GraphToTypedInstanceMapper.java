@@ -18,6 +18,7 @@
 package org.apache.atlas.repository.graph;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Maps;
 import com.google.inject.Singleton;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.tinkerpop.blueprints.Direction;
@@ -29,7 +30,6 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.typesystem.ITypedInstance;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
-import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -53,6 +53,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.atlas.repository.graph.GraphHelper.addProperty;
 import static org.apache.atlas.repository.graph.GraphHelper.getQualifiedFieldName;
 import static org.apache.atlas.repository.graph.GraphHelper.string;
 
@@ -69,7 +70,8 @@ public final class GraphToTypedInstanceMapper {
         this.titanGraph = titanGraph;
     }
 
-    public ITypedReferenceableInstance mapGraphToTypedInstance(String guid, Vertex instanceVertex)
+    public ITypedReferenceableInstance
+    mapGraphToTypedInstance(String guid, Vertex instanceVertex)
         throws AtlasException {
 
         LOG.debug("Mapping graph root vertex {} to typed instance for guid {}", instanceVertex, guid);
@@ -87,34 +89,34 @@ public final class GraphToTypedInstanceMapper {
         mapVertexToInstance(instanceVertex, typedInstance, classType);
         mapVertexToInstanceTraits(instanceVertex, typedInstance, traits);
 
-        if ( classType.hasPrimaryKey() && classType.getPrimaryKey().isVisible()) {
-            Map<String, Object> pkValues = primaryKeyValue(classType, typedInstance);
-            Map<String, String> flattenedPkValues = new LinkedHashMap<>();
-            Map<String, String> varsToValueMap = flattenMap(pkValues, flattenedPkValues);
-            PrimaryKeyConstraint pkc = classType.getPrimaryKey();
-            if ( pkc.displayFormat() == null) {
-                typedInstance.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, Joiner.on(":").join(varsToValueMap.keySet()));
-            } else {
-                typedInstance.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, pkc.getDisplayString(flattenedPkValues));
-            }
-        }
+        setPrimaryKeyValue(classType, typedInstance);
 
         return typedInstance;
     }
 
-    private Map<String, String> flattenMap(Map<String, Object> pkValues,  Map<String, String> flattenedMap) {
+    public void setPrimaryKeyValue(ClassType classType, ITypedReferenceableInstance typedInstance) throws AtlasException {
+        if ( classType.hasPrimaryKey() && classType.getPrimaryKey().isVisible() ) {
+            Map<String, Object> pkValues = primaryKeyValue(classType, typedInstance);
+            Map<String, String> varsToValueMap = flattenMap(pkValues);
+            PrimaryKeyConstraint pkc = classType.getPrimaryKey();
+            typedInstance.set(pkc.attributeName(), pkc.displayValue(varsToValueMap));
+        }
+    }
+
+    private Map<String, String> flattenMap(Map<String, Object> pkValues) {
+        LinkedHashMap<String, String> flatMap = new LinkedHashMap<>();
         for (String key : pkValues.keySet()) {
             Object value = pkValues.get(key);
             if ( value instanceof Map) {
-                Map<String, String> flattendKVPairs = flattenMap(pkValues, flattenedMap);
+                Map<String, String> flattendKVPairs = flattenMap((Map<String, Object>) value);
                 for (String innerKey : flattendKVPairs.keySet()) {
-                    flattenedMap.put(key + "." + innerKey , flattendKVPairs.get(innerKey));
+                    flatMap.put(key + "." + innerKey , flattendKVPairs.get(innerKey));
                 }
             } else {
-                flattenedMap.put(key, (String) value);
+                flatMap.put(key, (String) value);
             }
         }
-        return flattenedMap;
+        return flatMap;
     }
 
     private void mapVertexToInstanceTraits(Vertex instanceVertex, ITypedReferenceableInstance typedInstance,
@@ -141,15 +143,15 @@ public final class GraphToTypedInstanceMapper {
         PrimaryKeyConstraint pkc = classType.getPrimaryKey();
         Map<String, Object> pkValues = null;
         if ( pkc != null) {
-            pkValues = new HashMap<>();
-            for (String pkColumn : pkc.columnNames()) {
+            pkValues = new LinkedHashMap<>();
+            for (String pkColumn : pkc.columns()) {
                 AttributeInfo attrInfo = classType.fieldMapping().fields.get(pkColumn);
-                String propertyQFName = getQualifiedFieldName(classType, attrInfo.name);
+//                String propertyQFName = getQualifiedFieldName(classType, attrInfo.name);
+                String propertyQFName = attrInfo.name;
                 if (attrInfo == null) {
                     throw new IllegalArgumentException("Could not find property " + propertyQFName + " in type " + classType.name);
                 }
                 final IDataType dataType = attrInfo.dataType();
-                String result = null;
                 switch (dataType.getTypeCategory()) {
                 case ENUM:
                 case PRIMITIVE:
@@ -161,7 +163,7 @@ public final class GraphToTypedInstanceMapper {
                         Id id = (Id) typedInstance.get(propertyQFName);
                         Vertex classVertex = graphHelper.getVertexForGUID(id._getId());
                         ITypedReferenceableInstance clsTypedInstance =
-                            classType.createInstance(id);
+                            clsType.createInstance(id);
 
                         //TODO - Optimize to load only required fields
                         mapVertexToInstance(classVertex, clsTypedInstance, clsType);

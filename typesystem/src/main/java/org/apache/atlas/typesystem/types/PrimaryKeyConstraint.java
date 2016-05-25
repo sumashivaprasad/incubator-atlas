@@ -18,6 +18,7 @@
 package org.apache.atlas.typesystem.types;
 
 
+import com.google.common.base.Joiner;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.jexl3.JexlBuilder;
@@ -43,13 +44,14 @@ import org.apache.commons.jexl3.JexlContext;
 //TODO :Extending this from an interface is causing issues during deserialization from json using json4s.
 public class PrimaryKeyConstraint {
 
-    private final String[] uniqueColumns;
+    private final List<String> uniqueColumns;
     private final String displayFormat;
     private final boolean isVisible;
 
-    PrimaryKeyConstraint(Collection<String> uniqueColumns, boolean isVisible, String displayFormat) {
-        String[] uniqueArr = new String[uniqueColumns.size()];
-        this.uniqueColumns  = uniqueColumns.toArray(uniqueArr);
+    public static final String PK_ATTR_NAME = "qualifiedName";
+
+    PrimaryKeyConstraint(List<String> uniqueColumns, boolean isVisible, String displayFormat) {
+        this.uniqueColumns  = uniqueColumns;
         this.displayFormat = displayFormat;
         this.isVisible = isVisible;
     }
@@ -63,7 +65,7 @@ public class PrimaryKeyConstraint {
         return new PrimaryKeyConstraint(temp, isVisible, displayFormat);
     }
 
-    public static PrimaryKeyConstraint of(Collection<String> uniqueColumns, boolean isVisible, String displayFormat) {
+    public static PrimaryKeyConstraint of(List<String> uniqueColumns, boolean isVisible, String displayFormat) {
         return new PrimaryKeyConstraint(uniqueColumns, isVisible, displayFormat);
     }
 
@@ -72,7 +74,7 @@ public class PrimaryKeyConstraint {
         return new PrimaryKeyConstraint(Arrays.asList(uniqueColumns), true, null);
     }
 
-    public String[] columnNames() {
+    public List<String> columns() {
         return uniqueColumns;
     }
 
@@ -116,21 +118,28 @@ public class PrimaryKeyConstraint {
 //        return null;
 //    }
 
-    public String getDisplayString(Map<String, String> pkValues) {
-        String exprString = displayFormat();
-        JexlEngine jexl = new JexlBuilder().create();
-        // Create an expression
-        String jexlExp = displayFormat();
-        JxltEngine jxlt = jexl.createJxltEngine();
-        JxltEngine.Expression expr = jxlt.createExpression(exprString);
+    public String displayValue(Map<String, String> pkValues) {
+        if (displayFormat() == null ) {
+            return Joiner.on(":").join(pkValues.values());
+        } else {
+            String exprString = displayFormat();
+            JexlEngine jexl = new JexlBuilder().create();
+            // Create an expression
+            JxltEngine jxlt = jexl.createJxltEngine();
+            JxltEngine.Expression expr = jxlt.createExpression(exprString);
 
-        // Create a context and add data
-        JexlContext jc = new MapContext();
-        for (String key : pkValues.keySet()) {
-            jc.set(key, pkValues.get(key));
+            // Create a context and add data
+            JexlContext jc = new MapContext();
+            for (String key : pkValues.keySet()) {
+                jc.set(key, pkValues.get(key));
+            }
+
+            // Now evaluate the expression, getting the result
+            return (String) expr.evaluate(jc);
         }
+    }
 
-        // Now evaluate the expression, getting the result
-        return (String) expr.evaluate(jc);
+    public String attributeName() {
+        return PK_ATTR_NAME;
     }
 }

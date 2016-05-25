@@ -15,18 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.typesystem.exception;
 
+package org.apache.atlas.typesystem.types;
 
-import org.apache.atlas.AtlasException;
+import com.google.common.collect.ImmutableList;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-public class ConstraintViolationException extends AtlasException {
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-    public ConstraintViolationException(String message) {
-        super(message);
+public class PrimaryKeyConstraintTest {
+
+    @Test
+    public void testGetDisplayValue() {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("name", "test");
+        values.put("db.name", "testDB");
+        values.put("db.cluster.name", "default");
+
+        PrimaryKeyConstraint pkc = PrimaryKeyConstraint.of(ImmutableList.of("name", "db"), true, "${name}.${db.name}@${db.cluster.name}");
+        String displayStr = pkc.displayValue(values);
+        Assert.assertEquals(displayStr, "test.testDB@default");
     }
 
-    public ConstraintViolationException(String message, Throwable error) {
-        super(message, error);
-    }
 }

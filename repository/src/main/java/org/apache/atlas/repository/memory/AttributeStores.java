@@ -72,8 +72,6 @@ public class AttributeStores {
                 return new DateStore(i);
             } else if (i.dataType() == DataTypes.STRING_TYPE) {
                 return new StringStore(i);
-            } else if (i.dataType() == DataTypes.STRING_TYPE) {
-                return new StringStore(i);
             } else {
                 throw new RepositoryException(String.format("Unknown datatype %s", i.dataType()));
             }
