@@ -24,7 +24,6 @@ import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.Constants;
-import org.apache.atlas.typesystem.IInstance;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
@@ -82,7 +81,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         addClassReferenceSearchClauses(ctx, classType, ref);
         String gremlinQuery = ctx.buildQuery();
         LOG.debug("Searching for vertex by primary key with gremlin {} ", gremlinQuery);
-        Vertex vertex = graphHelper.searchByGremlin(gremlinQuery, PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
+        Vertex vertex = ctx.executeQuery(gremlinQuery);
         if (vertex != null) {
             //Check for array of classes property matches
             if (ctx.hasArrayRefInPrimaryKey()) {
@@ -127,7 +126,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
                 String typeName = classVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
                 String guid = classVertex.getProperty(Constants.GUID_PROPERTY_KEY);
                 if (addBackRef) {
-                    ctx.back(getFormattedString(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
+                    ctx.back(PrimaryKeyQueryContext.getFormattedString(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
                 }
 
                 //Take the out edge label and check if the referred class has the following attributes
@@ -155,7 +154,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
             final IDataType dataType = attrInfo.dataType();
             switch (dataType.getTypeCategory()) {
             case ENUM:
-                gremlinCtx.has(propertyQFName, getFormattedString(ref.get(property)));
+                gremlinCtx.has(propertyQFName, PrimaryKeyQueryContext.getFormattedString(ref.get(property)));
                 break;
             case PRIMITIVE:
                 gremlinCtx.has(propertyQFName, ref.get(property));
@@ -180,7 +179,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
                     arrType.getElemType().getTypeCategory() == DataTypes.TypeCategory.ENUM ) {
                     List elements = (List) ref.get(property);
                     if ( elements != null && elements.size() > 0) {
-                        gremlinCtx.has(propertyQFName, "T.eq", getFormattedString(elements));
+                        gremlinCtx.has(propertyQFName, "T.eq", PrimaryKeyQueryContext.getFormattedString(elements));
                     }
                 }
                 break;
@@ -193,99 +192,8 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         //Should be an active entity
         gremlinCtx.has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
         //Add clause for typeName
-        gremlinCtx.typeName(ref).alias(getFormattedString(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
+        gremlinCtx.typeName(ref.getTypeName()).alias(PrimaryKeyQueryContext.getFormattedString(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
 
         return gremlinCtx;
     }
-
-    private class PrimaryKeyQueryContext {
-
-        public static final String GREMLIN_EDGE_LABEL_FMT = ".out('%s')";
-        public static final String GREMLIN_SELECT_FMT = ".select([\"%s\"])";
-        public static final String GREMLIN_STEP_RESULT = "result";
-        public static final String GREMLIN_PROPERTY_SEARCH_FMT = ".has('%s', %s)";
-        public static final String GREMLIN_PROPERTY_PRED_SEARCH_FMT = ".has('%s', '%s',  %s)";
-        public static final String GREMLIN_ALIAS_FMT = ".as(%s)";
-        public static final String GREMLIN_REFER_STEP_FMT = ".back(%s)";
-
-        public final StringBuilder gremlinQuery = new StringBuilder();
-        private List<AttributeInfo> classReferences;
-        private List<AttributeInfo> arrReferences;
-
-        public StringBuilder getGremlinQuery() {
-            return gremlinQuery;
-        }
-
-        public List<AttributeInfo> getClassReferences() {
-            return classReferences;
-        }
-
-        public void setClassReferences(final List<AttributeInfo> classReferences) {
-            this.classReferences = classReferences;
-        }
-
-        public List<AttributeInfo> getArrReferences() {
-            return arrReferences;
-        }
-
-        public void setArrReferences(final List<AttributeInfo> arrReferences) {
-            this.arrReferences = arrReferences;
-        }
-
-        public boolean hasArrayRefInPrimaryKey() {
-            return arrReferences != null;
-        }
-
-        public PrimaryKeyQueryContext typeName(IReferenceableInstance  instance) {
-            has(Constants.ENTITY_TYPE_PROPERTY_KEY, instance.getTypeName());
-            return this;
-        }
-
-        public PrimaryKeyQueryContext alias(String alias) {
-            gremlinQuery.append(String.format(GREMLIN_ALIAS_FMT, alias));
-            return this;
-        }
-
-        public PrimaryKeyQueryContext has(String property, Object value) {
-            if (value instanceof String || value instanceof List) {
-                value = getFormattedString(value);
-            }
-            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_SEARCH_FMT, property, value));
-            return this;
-        }
-
-        public PrimaryKeyQueryContext has(String property, String predicate, Object value) {
-            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_PROPERTY_PRED_SEARCH_FMT, property, predicate, value));
-            return this;
-        }
-
-        public PrimaryKeyQueryContext back(String step) {
-            gremlinQuery.append(String.format(GREMLIN_REFER_STEP_FMT, step));
-            return this;
-        }
-
-        public PrimaryKeyQueryContext out(IDataType dataType, AttributeInfo aInfo) throws AtlasException {
-            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_EDGE_LABEL_FMT, GraphHelper.getEdgeLabel(dataType, aInfo)));
-            return this;
-        }
-
-        public String buildQuery() {
-            select(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
-            return "g.V" + gremlinQuery + ".toList()";
-        }
-
-        public PrimaryKeyQueryContext select(String step) {
-            gremlinQuery.append(String.format(PrimaryKeyQueryContext.GREMLIN_SELECT_FMT, step));
-            return this;
-        }
-    }
-
-    String getFormattedString(Object attrVal) {
-        return "'" + String.valueOf(attrVal) + "'";
-    }
-
-    String getFormattedString(List elements) {
-        return "['" + Joiner.on("','").join(elements) + "']";
-    }
-
 }

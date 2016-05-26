@@ -105,7 +105,7 @@ public class TypeUtils {
                     }
                 }
 
-            } else {
+            } else if ( !PrimaryKeyConstraint.PK_ATTR_NAME.equals(attribute.name)) {
                 //If old attribute is missing in new definition, return false as attributes can't be deleted
                 throw new TypeUpdateException("Old Attribute " + attribute.name + " is missing");
             }

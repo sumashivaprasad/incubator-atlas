@@ -26,10 +26,12 @@ import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.codehaus.jettison.json.JSONObject;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Metadata service.
@@ -248,4 +250,13 @@ public interface MetadataService {
      * @return
      */
     List<EntityAuditEvent> getAuditEvents(String guid, String startKey, short count) throws AtlasException;
+
+    /**
+     *
+     * @param entityType
+     * @param values
+     * @return
+     * @throws AtlasException
+     */
+    String getEntityByPrimaryKey(String entityType, List<String> values) throws AtlasException;
 }

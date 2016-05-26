@@ -288,13 +288,6 @@ public class GraphBackedTypeStore implements ITypeStore {
         return TypesUtil.getTypesDef(enums.build(), structs.build(), traits.build(), classTypes.build());
     }
 
-    private void addPrimaryKeyAttribute(final PrimaryKeyConstraint pkc, final List<AttributeDefinition> attributes) {
-        if (pkc != null && pkc.isVisible()) {
-            attributes.add(new AttributeDefinition(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null));
-        }
-    }
-
-
     private EnumTypeDefinition getEnumType(Vertex vertex) {
         String typeName = vertex.getProperty(Constants.TYPENAME_PROPERTY_KEY);
         String typeDescription = vertex.getProperty(Constants.TYPEDESCRIPTION_PROPERTY_KEY);
