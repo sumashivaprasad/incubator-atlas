@@ -97,9 +97,9 @@ public final class GraphToTypedInstanceMapper {
     public void setPrimaryKeyValue(ClassType classType, ITypedReferenceableInstance typedInstance) throws AtlasException {
         if ( classType.hasPrimaryKey() && classType.getPrimaryKey().isVisible() ) {
             Map<String, Object> pkValues = primaryKeyValue(classType, typedInstance);
-            Map<String, String> varsToValueMap = flattenMap(pkValues);
+            Map<String, String> flattenedMap = flattenMap(pkValues);
             PrimaryKeyConstraint pkc = classType.getPrimaryKey();
-            typedInstance.set(pkc.attributeName(), pkc.displayValue(varsToValueMap));
+            typedInstance.set(pkc.attributeName(), pkc.displayValue(flattenedMap));
         }
     }
 
@@ -146,7 +146,6 @@ public final class GraphToTypedInstanceMapper {
             pkValues = new LinkedHashMap<>();
             for (String pkColumn : pkc.columns()) {
                 AttributeInfo attrInfo = classType.fieldMapping().fields.get(pkColumn);
-//                String propertyQFName = getQualifiedFieldName(classType, attrInfo.name);
                 String propertyQFName = attrInfo.name;
                 if (attrInfo == null) {
                     throw new IllegalArgumentException("Could not find property " + propertyQFName + " in type " + classType.name);
@@ -161,14 +160,16 @@ public final class GraphToTypedInstanceMapper {
                     ClassType clsType = (ClassType) dataType;
                     if (!attrInfo.isComposite) {
                         Id id = (Id) typedInstance.get(propertyQFName);
-                        Vertex classVertex = graphHelper.getVertexForGUID(id._getId());
-                        ITypedReferenceableInstance clsTypedInstance =
-                            clsType.createInstance(id);
+                        if ( id != null) {
+                            Vertex classVertex = graphHelper.getVertexForGUID(id._getId());
+                            ITypedReferenceableInstance clsTypedInstance =
+                                clsType.createInstance(id);
 
-                        //TODO - Optimize to load only required fields
-                        mapVertexToInstance(classVertex, clsTypedInstance, clsType);
-                        Map<String, Object> classPkValues = primaryKeyValue(clsType, clsTypedInstance);
-                        pkValues.put(attrInfo.name, classPkValues);
+                            //TODO - Optimize to load only required fields
+                            mapVertexToInstance(classVertex, clsTypedInstance, clsType);
+                            Map<String, Object> classPkValues = primaryKeyValue(clsType, clsTypedInstance);
+                            pkValues.put(attrInfo.name, classPkValues);
+                        }
                     } else {
                         ITypedReferenceableInstance ref = (ITypedReferenceableInstance) typedInstance.get(propertyQFName);
                         Map<String, Object> classPkValues = primaryKeyValue(clsType, ref);

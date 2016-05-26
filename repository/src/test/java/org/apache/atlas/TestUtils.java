@@ -209,7 +209,7 @@ public final class TestUtils {
         HierarchicalTypeDefinition<ClassType> superTypeDefinition =
                 createClassTypeDef(SUPER_TYPE_NAME, ImmutableSet.<String>of(),
                         createOptionalAttrDef("namespace", DataTypes.STRING_TYPE),
-                        createRequiredAttrDef("cluster", DataTypes.STRING_TYPE),
+                        createOptionalAttrDef("cluster", DataTypes.STRING_TYPE),
                         createOptionalAttrDef("colo", DataTypes.STRING_TYPE));
 
         HierarchicalTypeDefinition<ClassType> databaseTypeDefinition =
@@ -277,8 +277,8 @@ public final class TestUtils {
                 new HierarchicalTypeDefinition<>(ClassType.class, PROCESS_TYPE, PROCESS_TYPE + _description,
                         ImmutableSet.<String>of(), new AttributeDefinition[]{
                         createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
-                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_INPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.REQUIRED, false, null),
-                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.REQUIRED, false, null)
+                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_INPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null),
+                        new AttributeDefinition(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS, "array<" + TABLE_TYPE + ">", Multiplicity.OPTIONAL, false, null)
                 }, PrimaryKeyConstraint.of(new String[] {AtlasClient.NAME, AtlasClient.PROCESS_ATTRIBUTE_INPUTS, AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS} ));
 
         HierarchicalTypeDefinition<ClassType> tableTypeDefinition =

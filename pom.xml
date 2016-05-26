@@ -1686,6 +1686,7 @@
                         <exclude>**/atlas.data/**</exclude>
                         <exclude>**/${sys:atlas.data}/**</exclude>
                         <exclude>**/policy-store.txt</exclude>
+                        <exclude>**/*bak</exclude>
                     </excludes>
                 </configuration>
                 <executions>

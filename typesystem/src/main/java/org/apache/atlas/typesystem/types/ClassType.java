@@ -78,9 +78,10 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
         boolean containsPrimaryKey = false;
         for (AttributeInfo field : fields) {
 
-            if (validateMultiplicity(pkc, field) ) {
-                throw new ConstraintViolationException("Primary key column '" + field.name + "' should have 'required(Multiplicity.REQUIRED) set");
-            }
+            //TODO - Enable this for primary keys
+//            if (validateMultiplicity(pkc, field) ) {
+//                throw new ConstraintViolationException("Primary key column '" + field.name + "' should have 'required(Multiplicity.REQUIRED) set");
+//            }
 
             if ( field.name.equalsIgnoreCase(PrimaryKeyConstraint.PK_ATTR_NAME)) {
                containsPrimaryKey = true;

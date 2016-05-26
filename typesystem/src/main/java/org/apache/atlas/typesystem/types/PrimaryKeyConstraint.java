@@ -29,14 +29,13 @@ import scala.actors.threadpool.Arrays;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.jexl3.JexlContext;
 
 /**
- * A primary key constraint tat can be defined on class types.
+ * A primary key constraint that can be defined on hierarchical types like class, trait.
  * Supports a set of unique columns i.e a composite primary key.
  * The specified primary key columns should already be part of the attribute definition of the class
  * and should be required attributes
@@ -118,9 +117,6 @@ public class PrimaryKeyConstraint {
             return true;
         }
         if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        if (!super.equals(o)) {
             return false;
         }
 

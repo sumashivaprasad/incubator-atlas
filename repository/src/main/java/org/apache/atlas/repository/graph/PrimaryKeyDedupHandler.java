@@ -80,7 +80,6 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
 
         PrimaryKeyQueryContext ctx = addSearchClauses(propertyKeys, classType, ref);
         addClassReferenceSearchClauses(ctx, classType, ref);
-        ctx.select(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
         String gremlinQuery = ctx.buildQuery();
         LOG.debug("Searching for vertex by primary key with gremlin {} ", gremlinQuery);
         Vertex vertex = graphHelper.searchByGremlin(gremlinQuery, PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
@@ -271,6 +270,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         }
 
         public String buildQuery() {
+            select(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
             return "g.V" + gremlinQuery + ".toList()";
         }
 
