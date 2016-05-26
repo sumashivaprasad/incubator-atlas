@@ -42,6 +42,7 @@
         text-overflow: ellipsis;
         max-width: 91%;
         overflow: hidden;
+        display: inline-block;
         small {
             position: relative;
             bottom: 5px;
@@ -63,7 +64,7 @@
     padding: 6px 12px;
     background-color: $color_havelock_blue_approx;
     color: $white;
-    font-size: 12px;
+    font-size: 14px;
     text-transform: uppercase;
     //Instead of the line below you could use @include border-radius($radius, $vertical-radius)
     border-radius: 4px;

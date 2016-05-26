@@ -77,9 +77,9 @@ public final class GraphToTypedInstanceMapper {
         LOG.debug("Mapping graph root vertex {} to typed instance for guid {}", instanceVertex, guid);
         String typeName = instanceVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
         List<String> traits = GraphHelper.getTraitNames(instanceVertex);
+        String state = GraphHelper.getStateAsString(instanceVertex);
 
-        Id id = new Id(guid, instanceVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY), typeName,
-                instanceVertex.<String>getProperty(Constants.STATE_PROPERTY_KEY));
+        Id id = new Id(guid, instanceVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY), typeName, state);
         LOG.debug("Created id {} for instance type {}", id, typeName);
 
         ClassType classType = typeSystem.getDataType(ClassType.class, typeName);
@@ -244,9 +244,9 @@ public final class GraphToTypedInstanceMapper {
 
         Edge edge;
         if (edgeId == null) {
-            edge = GraphHelper.getEdgeForLabel(instanceVertex, relationshipLabel);;
+            edge = GraphHelper.getEdgeForLabel(instanceVertex, relationshipLabel);
         } else {
-            edge = graphHelper.getEdgeById(edgeId);
+            edge = graphHelper.getEdgeByEdgeId(instanceVertex, relationshipLabel, edgeId);
         }
 
         if (edge != null) {
@@ -258,9 +258,10 @@ public final class GraphToTypedInstanceMapper {
                 LOG.debug("Found composite, mapping vertex to instance");
                 return mapGraphToTypedInstance(guid, referenceVertex);
             } else {
+                String state = GraphHelper.getStateAsString(referenceVertex);
                 Id referenceId =
                         new Id(guid, referenceVertex.<Integer>getProperty(Constants.VERSION_PROPERTY_KEY),
-                                dataType.getName());
+                                dataType.getName(), state);
                 LOG.debug("Found non-composite, adding id {} ", referenceId);
                 return referenceId;
             }
@@ -354,7 +355,7 @@ public final class GraphToTypedInstanceMapper {
         if (edgeId == null) {
             edge = GraphHelper.getEdgeForLabel(instanceVertex, relationshipLabel);
         } else {
-            edge = graphHelper.getEdgeById(edgeId);
+            edge = graphHelper.getEdgeByEdgeId(instanceVertex, relationshipLabel, edgeId);
         }
 
         if (edge != null) {

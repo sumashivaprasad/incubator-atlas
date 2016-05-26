@@ -40,26 +40,27 @@ define(['require',
             ui: {
                 tagClick: '[data-id="tagClick"]',
                 addTag: "[data-id='addTag']",
+                addTerm: '[data-id="addTerm"]'
+
             },
             /** ui events hash */
             events: function() {
                 var events = {};
 
-                events["click " + this.ui.addTag] = function(e) {
-                        this.onClickSchemaTag(e);
-                    },
-                    events["click " + this.ui.tagClick] = function(e) {
-                        if (e.target.nodeName.toLocaleLowerCase() == "i") {
-                            this.onClickTagCross(e);
-                        } else {
-                            var value = e.currentTarget.text;
-                            Utils.setUrl({
-                                url: '#!/tag/tagAttribute/' + value,
-                                mergeBrowserUrl: false,
-                                trigger: true
-                            });
-                        }
-                    };
+                events["click " + this.ui.addTag] = 'addTagModalView';
+                events["click " + this.ui.addTerm] = 'addTermModalView';
+                events["click " + this.ui.tagClick] = function(e) {
+                    if (e.target.nodeName.toLocaleLowerCase() == "i") {
+                        this.onClickTagCross(e);
+                    } else {
+                        var value = e.currentTarget.text;
+                        Utils.setUrl({
+                            url: '#!/tag/tagAttribute/' + value,
+                            mergeBrowserUrl: false,
+                            trigger: true
+                        });
+                    }
+                };
                 return events;
             },
             /**
@@ -89,14 +90,20 @@ define(['require',
                 this.listenTo(this.schemaCollection, "reset", function(value) {
                     this.renderTableLayoutView();
                     $('.schemaTable').show();
+                    this.$('.fontLoader').hide();
                 }, this);
                 this.listenTo(this.schemaCollection, "error", function(value) {
                     $('.schemaTable').hide();
+                    this.$('.fontLoader').hide();
                 }, this);
             },
             onRender: function() {
                 this.schemaCollection.fetch({ reset: true });
                 this.renderTableLayoutView();
+            },
+            fetchCollection: function() {
+                this.$('.fontLoader').show();
+                this.schemaCollection.fetch({ reset: true });
             },
             renderTableLayoutView: function() {
                 var that = this;
@@ -106,38 +113,55 @@ define(['require',
                         globalVent: that.globalVent,
                         columns: cols,
                         gridOpts: {
-                            className: "table table-bordered table-hover table-condensed backgrid table-quickMenu",
+                            className: "table table-quickMenu",
                         },
                     })));
                 });
             },
             getSchemaTableColumns: function() {
                 var that = this;
-                return this.schemaCollection.constructor.getTableCols({
-                    name: {
-                        label: "Name",
-                        cell: "Html",
-                        editable: false,
-                        sortable: false,
-                        formatter: _.extend({}, Backgrid.CellFormatter.prototype, {
-                            fromRaw: function(rawValue, model) {
-                                return '<div><a href="#!/detailPage/' + model.get('$id$').id + '">' + rawValue + '</a></div>';
-                            }
-                        })
-                    },
-                    comment: {
-                        label: "Comment",
-                        cell: "html",
-                        editable: false,
-                        sortable: false
-                    },
-                    type: {
-                        label: "DataType",
-                        cell: "html",
-                        editable: false,
-                        sortable: false
-                    },
-                    tag: {
+                var col = {};
+                if (this.schemaCollection.keyList) {
+                    _.each(this.schemaCollection.keyList, function(obj, key) {
+                        col[obj.name] = {
+                            cell: "Html",
+                            editable: false,
+                            sortable: false,
+                            orderable: true,
+                            formatter: _.extend({}, Backgrid.CellFormatter.prototype, {
+                                fromRaw: function(rawValue, model) {
+                                    if (model) {
+                                        if (!_.isArray(rawValue) && _.isObject(rawValue)) {
+                                            if (rawValue.id) {
+                                                return '<div><a href="#!/detailPage/' + rawValue.id + '">' + rawValue.$typeName$ + '</a></div>';
+                                            } else {
+                                                return rawValue.$typeName$;
+                                            }
+                                        } else if (_.isArray(rawValue)) {
+                                            var links = "";
+                                            _.each(rawValue, function(val, key) {
+                                                if (val.id) {
+                                                    links += '<div><a href="#!/detailPage/' + val.id + '">' + val.$typeName$ + '</a></div>';
+                                                } else {
+                                                    links += '<div>' + val.$typeName$ + '</div>';
+                                                }
+                                            });
+                                            return links;
+
+                                        } else if (model.get('$id$') && model.get('$id$').id && model.get('name') == rawValue) {
+                                            return '<div><a href="#!/detailPage/' + model.get('$id$').id + '">' + rawValue + '</a></div>';
+                                        } else {
+                                            return rawValue;
+                                        }
+                                    } else {
+                                        return rawValue;
+                                    }
+
+                                }
+                            })
+                        };
+                    });
+                    col['tag'] = {
                         label: "Tags",
                         cell: "Html",
                         editable: false,
@@ -147,26 +171,73 @@ define(['require',
                                 var traits = model.get('$traits$');
                                 var atags = "";
                                 _.keys(model.get('$traits$')).map(function(key) {
-                                    atags += '<a class="inputTag" data-id="tagClick">' + traits[key].$typeName$ + '<i class="fa fa-times" data-id="delete" data-name="' + traits[key].$typeName$ + '" data-guid="' + model.get('$id$').id + '" ></i></a>';
+                                    var tagName = Utils.checkTagOrTerm(traits[key].$typeName$);
+                                    if (!tagName.term) {
+                                        atags += '<a class="inputTag" data-id="tagClick">' + traits[key].$typeName$ + '<i class="fa fa-times" data-id="delete" data-name="' + traits[key].$typeName$ + '" data-guid="' + model.get('$id$').id + '" ></i></a>';
+                                    }
                                 });
                                 return '<div class="tagList">' + atags + '<a href="javascript:void(0);" class="inputTag" data-id="addTag" data-guid="' + model.get('$id$').id + '"><i style="right:0" class="fa fa-plus"></i></a></div>';
                             }
                         })
-                    }
-                }, this.schemaCollection);
+                    };
+                    col['terms'] = {
+                        label: "Terms",
+                        cell: "Html",
+                        editable: false,
+                        sortable: false,
+                        orderable: true,
+                        formatter: _.extend({}, Backgrid.CellFormatter.prototype, {
+                            fromRaw: function(rawValue, model) {
+                                var traits = model.get('$traits$');
+                                var aterms = "";
+                                _.keys(model.get('$traits$')).map(function(key) {
+                                    var tagName = Utils.checkTagOrTerm(traits[key].$typeName$);
+                                    if (tagName.term) {
+                                        aterms += '<a class="inputTag" data-id="tagClick">' + traits[key].$typeName$ + '<i class="fa fa-times" data-id="delete" data-name="' + traits[key].$typeName$ + '" data-guid="' + model.get('$id$').id + '" ></i></a>';
+                                    }
+                                });
+                                return '<div class="tagList">' + aterms + '<a href="javascript:void(0);" class="inputTag" data-id="addTerm" data-guid="' + model.get('$id$').id + '"><i style="right:0" class="fa fa-plus"></i></a></div>';
+                            }
+                        })
+                    };
+                }
+
+
+                return this.schemaCollection.constructor.getTableCols(col, this.schemaCollection);
             },
-            onClickSchemaTag: function(e) {
+            addTagModalView: function(e) {
+                if (e) {
+                    e.stopPropagation();
+                }
                 var that = this;
                 require(['views/tag/addTagModalView'], function(AddTagModalView) {
                     var view = new AddTagModalView({
-                        vent: that.vent,
                         guid: that.$(e.currentTarget).data("guid"),
-                        modalCollection: that.schemaCollection
+                        callback: function() {
+                            that.fetchCollection();
+                        }
                     });
                     // view.saveTagData = function() {
                     //override saveTagData function 
                     // }
                 });
+            },
+            addTermModalView: function(e) {
+                if (e) {
+                    e.stopPropagation();
+                }
+                var that = this;
+                require([
+                    'views/business_catalog/AddTermToEntityLayoutView',
+                ], function(AddTermToEntityLayoutView) {
+                    var view = new AddTermToEntityLayoutView({
+                        guid: that.$(e.currentTarget).data("guid"),
+                        callback: function() {
+                            that.fetchCollection();
+                        }
+                    });
+                });
+
             },
             onClickTagCross: function(e) {
                 var tagName = $(e.target).data("name"),
@@ -186,7 +257,9 @@ define(['require',
                 CommonViewFunction.deleteTag({
                     'tagName': tagName,
                     'guid': guid,
-                    'collection': that.tagCollection
+                    callback: function() {
+                        that.fetchCollection();
+                    }
                 });
             }
         });

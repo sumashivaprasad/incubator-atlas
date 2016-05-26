@@ -75,6 +75,7 @@ import java.util.Map;
 
 import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
 import static org.apache.atlas.TestUtils.COLUMN_TYPE;
+import static org.apache.atlas.TestUtils.PII;
 import static org.apache.atlas.TestUtils.TABLE_TYPE;
 import static org.apache.atlas.TestUtils.createColumnEntity;
 import static org.apache.atlas.TestUtils.createDBEntity;
@@ -83,6 +84,7 @@ import static org.apache.atlas.TestUtils.createProcessEntity;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 @Guice(modules = RepositoryMetadataModule.class)
@@ -157,23 +159,21 @@ public class DefaultMetadataServiceTest {
         String entityjson = InstanceSerialization.toJson(entity, true);
         JSONArray entitiesJson = new JSONArray();
         entitiesJson.put(entityjson);
-        String response = metadataService.createEntities(entitiesJson.toString());
-        JSONArray guids = new JSONArray(response);
-        if (guids != null && guids.length() > 0) {
-            return guids.getString(guids.length() - 1);
+        List<String> guids = metadataService.createEntities(entitiesJson.toString());
+        if (guids != null && guids.size() > 0) {
+            return guids.get(guids.size() - 1);
         }
         return null;
     }
 
-    private String updateInstance(Referenceable entity) throws Exception {
+    private AtlasClient.EntityResult updateInstance(Referenceable entity) throws Exception {
         RequestContext.createContext();
         ParamChecker.notNull(entity, "Entity");
         ParamChecker.notNull(entity.getId(), "Entity");
         String entityjson = InstanceSerialization.toJson(entity, true);
         JSONArray entitiesJson = new JSONArray();
         entitiesJson.put(entityjson);
-        String response = metadataService.updateEntities(entitiesJson.toString());
-        return new JSONArray(response).getString(0);
+        return metadataService.updateEntities(entitiesJson.toString());
     }
 
     @Test(expectedExceptions = TypeNotFoundException.class)
@@ -239,6 +239,32 @@ public class DefaultMetadataServiceTest {
 
 
     @Test
+    public void testAddDeleteTrait() throws Exception {
+        Referenceable entity = createDBEntity();
+        String id = createInstance(entity);
+
+        //add trait
+        Struct tag = new Struct(TestUtils.PII);
+        metadataService.addTrait(id, InstanceSerialization.toJson(tag, true));
+
+        List<String> traits = metadataService.getTraitNames(id);
+        assertEquals(traits.size(), 1);
+        assertEquals(traits.get(0), PII);
+
+        //delete trait
+        metadataService.deleteTrait(id, PII);
+        traits = metadataService.getTraitNames(id);
+        assertEquals(traits.size(), 0);
+
+        //add trait again
+        metadataService.addTrait(id, InstanceSerialization.toJson(tag, true));
+
+        traits = metadataService.getTraitNames(id);
+        assertEquals(traits.size(), 1);
+        assertEquals(traits.get(0), PII);
+    }
+
+    @Test
     public void testEntityAudit() throws Exception {
         //create entity
         Referenceable entity = createDBEntity();
@@ -259,7 +285,7 @@ public class DefaultMetadataServiceTest {
         assertAuditEvents(id, EntityAuditEvent.EntityAuditAction.ENTITY_DELETE);
     }
 
-    private List<String> deleteEntities(String... guids) throws AtlasException {
+    private AtlasClient.EntityResult deleteEntities(String... guids) throws AtlasException {
         RequestContext.createContext();
         return metadataService.deleteEntities(Arrays.asList(guids));
     }
@@ -377,7 +403,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertTrue(partsMap.get("part2").equalsContents(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part2")));
 
         //Test map pointing to a class
-        final Map<String, Struct> columnsMap = new HashMap<>();
+        final Map<String, Referenceable> columnsMap = new HashMap<>();
         Referenceable col0Type = new Referenceable(TestUtils.COLUMN_TYPE,
             new HashMap<String, Object>() {{
                 put(NAME, RandomStringUtils.randomAlphanumeric(10));
@@ -436,17 +462,33 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(actualColumns, colNameList);
     }
 
-    private void verifyMapUpdates(String typeName, String uniqAttrName, String uniqAttrValue, Map<String, Struct> expectedMap, String mapAttrName) throws AtlasException {
+    private void verifyMapUpdates(String typeName, String uniqAttrName, String uniqAttrValue,
+                                  Map<String, Referenceable> expectedMap, String mapAttrName) throws AtlasException {
         String json =
             metadataService.getEntityDefinition(typeName, uniqAttrName, uniqAttrValue);
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(json, true);
+        Map<String, Referenceable> actualMap = (Map<String, Referenceable>) tableDefinition.get(mapAttrName);
 
-        if(expectedMap == null) {
-            Assert.assertNull(tableDefinition.get(TestUtils.COLUMNS_MAP));
+        if (expectedMap == null && actualMap != null) {
+            //all are marked as deleted in case of soft delete
+            for (String key : actualMap.keySet()) {
+                assertEquals(actualMap.get(key).getId().state, Id.EntityState.DELETED);
+            }
+        } else if(expectedMap == null) {
+            //hard delete case
+            assertNull(actualMap);
         } else {
-            Assert.assertEquals(((Map<String, Referenceable>)tableDefinition.get(mapAttrName)).size(), expectedMap.size());
+            assertTrue(actualMap.size() >= expectedMap.size());
+
             for (String key : expectedMap.keySet()) {
-                Assert.assertTrue(((Map<String, Referenceable>) tableDefinition.get(mapAttrName)).get(key).equalsContents(expectedMap.get(key)));
+                assertTrue(actualMap.get(key).equalsContents(expectedMap.get(key)));
+            }
+
+            //rest of the keys are marked as deleted
+            List<String> extraKeys = new ArrayList<>(actualMap.keySet());
+            extraKeys.removeAll(expectedMap.keySet());
+            for (String key : extraKeys) {
+                assertEquals(actualMap.get(key).getId().getState(), Id.EntityState.DELETED);
             }
         }
     }
@@ -481,126 +523,131 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(actualColumns, updatedColNameList);
     }
 
-    private void updateEntityPartial(String guid, Referenceable entity) throws AtlasException {
+    private AtlasClient.EntityResult updateEntityPartial(String guid, Referenceable entity) throws AtlasException {
         RequestContext.createContext();
-        metadataService.updateEntityPartialByGuid(guid, entity);
+        return metadataService.updateEntityPartialByGuid(guid, entity);
     }
 
     @Test
     public void testUpdateEntityArrayOfClass() throws Exception {
-
-        Referenceable dbEntity = createDBEntity();
-        String dbGuid = createInstance(dbEntity);
-        Referenceable tableEntity = createTableEntity(dbGuid);
-        String tableId = createInstance(tableEntity);
-
         //test array of class with id
         final List<Referenceable> columns = new ArrayList<>();
-        final String col0Name = RandomStringUtils.randomAlphanumeric(10);
         Map<String, Object> values = new HashMap<>();
-        values.put(NAME, col0Name);
+        values.put(NAME, "col1");
         values.put("type", "type");
         Referenceable col1 = new Referenceable(TestUtils.COLUMN_TYPE, values);
         columns.add(col1);
         Referenceable tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
             put(COLUMNS_ATTR_NAME, columns);
         }});
-        updateEntityPartial(tableId, tableUpdated);
 
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), columns, COLUMNS_ATTR_NAME);
+        AtlasClient.EntityResult entityResult = updateEntityPartial(tableId._getId(), tableUpdated);
+        assertEquals(entityResult.getCreatedEntities().size(), 1);  //col1 created
+        assertEquals(entityResult.getUpdateEntities().size(), 1);  //table updated
+        assertEquals(entityResult.getUpdateEntities().get(0), tableId._getId());
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), columns, COLUMNS_ATTR_NAME);
 
-        //Partial update. Add col5 But also update col1
-        final String col5Name = RandomStringUtils.randomAlphanumeric(10);
+        //Partial update. Add col2 But also update col1
         Map<String, Object> valuesCol5 = new HashMap<>();
-        valuesCol5.put(NAME, col5Name);
+        valuesCol5.put(NAME, "col2");
         valuesCol5.put("type", "type");
         Referenceable col2 = new Referenceable(TestUtils.COLUMN_TYPE, valuesCol5);
         //update col1
         col1.set("type", "type1");
-
-        //add col5
-        final List<Referenceable> updateColumns = Arrays.asList(col1, col2);
+        columns.add(col2);
 
         tableUpdated = new Referenceable(TestUtils.TABLE_TYPE, new HashMap<String, Object>() {{
-            put(COLUMNS_ATTR_NAME, updateColumns);
+            put(COLUMNS_ATTR_NAME, columns);
         }});
-        updateEntityPartial(tableId, tableUpdated);
+        entityResult = updateEntityPartial(tableId._getId(), tableUpdated);
+        assertEquals(entityResult.getCreatedEntities().size(), 1);  //col2 created
+        assertEquals(entityResult.getUpdateEntities().size(), 2);  //table, col1 updated
 
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), updateColumns, COLUMNS_ATTR_NAME);
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), columns, COLUMNS_ATTR_NAME);
 
-        //Complete update. Add  array elements - col3,4
-        final String col3Name = RandomStringUtils.randomAlphanumeric(10);
+        //Complete update. Add  array elements - col3,col4
         Map<String, Object> values1 = new HashMap<>();
-        values1.put(NAME, col3Name);
+        values1.put(NAME, "col3");
         values1.put("type", "type");
-        Referenceable ref1 = new Referenceable(TestUtils.COLUMN_TYPE, values1);
-        columns.add(ref1);
+        Referenceable col3 = new Referenceable(TestUtils.COLUMN_TYPE, values1);
+        columns.add(col3);
 
-        String col4Name = RandomStringUtils.randomAlphanumeric(10);
         Map<String, Object> values2 = new HashMap<>();
-        values2.put(NAME, col4Name);
+        values2.put(NAME, "col4");
         values2.put("type", "type");
-        Referenceable ref2 = new Referenceable(TestUtils.COLUMN_TYPE, values2);
-        columns.add(ref2);
+        Referenceable col4 = new Referenceable(TestUtils.COLUMN_TYPE, values2);
+        columns.add(col4);
 
-        tableEntity.set(COLUMNS_ATTR_NAME, columns);
-        updateInstance(tableEntity);
+        table.set(COLUMNS_ATTR_NAME, columns);
+        entityResult = updateInstance(table);
+        assertEquals(entityResult.getCreatedEntities().size(), 2);  //col3, col4 created
 
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), columns, COLUMNS_ATTR_NAME);
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), columns, COLUMNS_ATTR_NAME);
 
         //Swap elements
         columns.clear();
-        columns.add(ref2);
-        columns.add(ref1);
+        columns.add(col4);
+        columns.add(col3);
 
-        tableEntity.set(COLUMNS_ATTR_NAME, columns);
-        updateInstance(tableEntity);
-
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), columns, COLUMNS_ATTR_NAME);
+        table.set(COLUMNS_ATTR_NAME, columns);
+        entityResult = updateInstance(table);
+        assertEquals(entityResult.getDeletedEntities().size(), 2);  //col1, col2 are deleted
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), columns, COLUMNS_ATTR_NAME);
 
         //drop a single column
         columns.clear();
-        columns.add(ref1);
+        columns.add(col3);
 
-        tableEntity.set(COLUMNS_ATTR_NAME, columns);
-        updateInstance(tableEntity);
-
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), columns, COLUMNS_ATTR_NAME);
+        table.set(COLUMNS_ATTR_NAME, columns);
+        entityResult = updateInstance(table);
+        assertEquals(entityResult.getDeletedEntities().size(), 1);  //col4 deleted
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), columns, COLUMNS_ATTR_NAME);
 
         //Remove a class reference/Id and insert another reference
         //Also covers isComposite case since columns is a composite
         values.clear();
         columns.clear();
 
-        final String col2Name = RandomStringUtils.randomAlphanumeric(10);
-        values.put(NAME, col2Name);
+        values.put(NAME, "col5");
         values.put("type", "type");
-        col1 = new Referenceable(TestUtils.COLUMN_TYPE, values);
-        columns.add(col1);
-        tableEntity.set(COLUMNS_ATTR_NAME, columns);
-        updateInstance(tableEntity);
+        Referenceable col5 = new Referenceable(TestUtils.COLUMN_TYPE, values);
+        columns.add(col5);
+        table.set(COLUMNS_ATTR_NAME, columns);
+        entityResult = updateInstance(table);
+        assertEquals(entityResult.getCreatedEntities().size(), 1);  //col5 created
+        assertEquals(entityResult.getDeletedEntities().size(), 1);  //col3 deleted
 
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), columns, COLUMNS_ATTR_NAME);
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), columns, COLUMNS_ATTR_NAME);
 
         //Update array column to null
-        tableEntity.setNull(COLUMNS_ATTR_NAME);
-        String newtableId = updateInstance(tableEntity);
-        Assert.assertEquals(newtableId, tableId);
-
-        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.get(NAME), null, COLUMNS_ATTR_NAME);
+        table.setNull(COLUMNS_ATTR_NAME);
+        entityResult = updateInstance(table);
+        assertEquals(entityResult.getDeletedEntities().size(), 1);
+        verifyArrayUpdates(TestUtils.TABLE_TYPE, NAME, (String) table.get(NAME), null, COLUMNS_ATTR_NAME);
     }
 
-    private void verifyArrayUpdates(String typeName, String uniqAttrName, String uniqAttrValue, List<? extends Struct> expectedArray, String arrAttrName) throws AtlasException {
-        String json =
-            metadataService.getEntityDefinition(typeName, uniqAttrName, uniqAttrValue);
+    private void verifyArrayUpdates(String typeName, String uniqAttrName, String uniqAttrValue,
+                                    List<Referenceable> expectedArray, String arrAttrName) throws AtlasException {
+        String json = metadataService.getEntityDefinition(typeName, uniqAttrName, uniqAttrValue);
         Referenceable entityDefinition = InstanceSerialization.fromJsonReferenceable(json, true);
-
-        if (expectedArray == null) {
-            Assert.assertNull(entityDefinition.get(arrAttrName));
+        List<Referenceable> actualArray = (List<Referenceable>) entityDefinition.get(arrAttrName);
+        if (expectedArray == null && actualArray != null) {
+            //all are marked as deleted in case of soft delete
+            for (int index = 0; index < actualArray.size(); index++) {
+                assertEquals(actualArray.get(index).getId().state, Id.EntityState.DELETED);
+            }
+        } else if(expectedArray == null) {
+            //hard delete case
+            assertNull(actualArray);
         } else {
-            Assert.assertEquals(((List<Referenceable>)entityDefinition.get(arrAttrName)).size(), expectedArray.size());
-            for (int index = 0; index < expectedArray.size(); index++) {
-                Assert.assertTrue(((List<Referenceable>) entityDefinition.get(arrAttrName)).get(index).equalsContents(expectedArray.get(index)));
+            int index;
+            for (index = 0; index < expectedArray.size(); index++) {
+                Assert.assertTrue(actualArray.get(index).equalsContents(expectedArray.get(index)));
+            }
+
+            //Rest of the entities in the list are marked as deleted
+            for (; index < actualArray.size(); index++) {
+                assertEquals(actualArray.get(index).getId().state, Id.EntityState.DELETED);
             }
         }
     }
@@ -618,7 +665,7 @@ public class DefaultMetadataServiceTest {
         serdeInstance.set("description", "testDesc");
         tableEntity.set("serde1", serdeInstance);
 
-        String newtableId = updateInstance(tableEntity);
+        String newtableId = updateInstance(tableEntity).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId);
 
         String tableDefinitionJson =
@@ -722,7 +769,7 @@ public class DefaultMetadataServiceTest {
         List<Struct> partitions = new ArrayList<Struct>(){{ add(partition1); add(partition2); }};
         table.set("partitions", partitions);
 
-        String newtableId = updateInstance(table);
+        String newtableId = updateInstance(table).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId._getId());
 
         String tableDefinitionJson =
@@ -731,15 +778,14 @@ public class DefaultMetadataServiceTest {
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
         List<Struct> partitionsActual = (List<Struct>) tableDefinition.get("partitions");
-        Assert.assertEquals(partitionsActual.size(), 2);
-        Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
+        assertPartitions(partitionsActual, partitions);
 
         //add a new element to array of struct
         final Struct partition3 = new Struct(TestUtils.PARTITION_STRUCT_TYPE);
         partition3.set(NAME, "part3");
         partitions.add(partition3);
         table.set("partitions", partitions);
-        newtableId = updateInstance(table);
+        newtableId = updateInstance(table).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
@@ -748,13 +794,12 @@ public class DefaultMetadataServiceTest {
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
         partitionsActual = (List<Struct>) tableDefinition.get("partitions");
-        Assert.assertEquals(partitionsActual.size(), 3);
-        Assert.assertTrue(partitions.get(2).equalsContents(partitionsActual.get(2)));
+        assertPartitions(partitionsActual, partitions);
 
         //remove one of the struct values
         partitions.remove(1);
         table.set("partitions", partitions);
-        newtableId = updateInstance(table);
+        newtableId = updateInstance(table).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
@@ -763,13 +808,11 @@ public class DefaultMetadataServiceTest {
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
         partitionsActual = (List<Struct>) tableDefinition.get("partitions");
-        Assert.assertEquals(partitionsActual.size(), 2);
-        Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
-        Assert.assertTrue(partitions.get(1).equalsContents(partitionsActual.get(1)));
+        assertPartitions(partitionsActual, partitions);
 
         //Update struct value within array of struct
-        partition1.set(NAME, "part4");
-        newtableId = updateInstance(table);
+        partitions.get(0).set(NAME, "part4");
+        newtableId = updateInstance(table).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
@@ -778,15 +821,14 @@ public class DefaultMetadataServiceTest {
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
         partitionsActual = (List<Struct>) tableDefinition.get("partitions");
-        Assert.assertEquals(partitionsActual.size(), 2);
-        Assert.assertTrue(partitions.get(0).equalsContents(partitionsActual.get(0)));
+        assertPartitions(partitionsActual, partitions);
 
         //add a repeated element to array of struct
         final Struct partition4 = new Struct(TestUtils.PARTITION_STRUCT_TYPE);
         partition4.set(NAME, "part4");
         partitions.add(partition4);
         table.set("partitions", partitions);
-        newtableId = updateInstance(table);
+        newtableId = updateInstance(table).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
@@ -795,15 +837,12 @@ public class DefaultMetadataServiceTest {
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
         partitionsActual = (List<Struct>) tableDefinition.get("partitions");
-        Assert.assertEquals(partitionsActual.size(), 3);
-        Assert.assertEquals(partitionsActual.get(2).get(NAME), "part4");
-        Assert.assertEquals(partitionsActual.get(0).get(NAME), "part4");
-        Assert.assertTrue(partitions.get(2).equalsContents(partitionsActual.get(2)));
+        assertPartitions(partitionsActual, partitions);
 
 
         // Remove all elements. Should set array attribute to null
         partitions.clear();
-        newtableId = updateInstance(table);
+        newtableId = updateInstance(table).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
@@ -811,6 +850,13 @@ public class DefaultMetadataServiceTest {
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNull(tableDefinition.get("partitions"));
+    }
+
+    private void assertPartitions(List<Struct> partitionsActual, List<Struct> partitions) {
+        assertEquals(partitionsActual.size(), partitions.size());
+        for (int index = 0; index < partitions.size(); index++) {
+            assertTrue(partitionsActual.get(index).equalsContents(partitions.get(index)));
+        }
     }
 
 
@@ -845,7 +891,7 @@ public class DefaultMetadataServiceTest {
         //Update optional attribute
             tableEntity.setNull("created");
 
-        String newtableId = updateInstance(tableEntity);
+        String newtableId = updateInstance(tableEntity).getUpdateEntities().get(0);
         Assert.assertEquals(newtableId, tableId);
 
         tableDefinitionJson =
@@ -916,39 +962,43 @@ public class DefaultMetadataServiceTest {
 
         // Register an EntityChangeListener to verify the notification mechanism
         // is working for deleteEntities().
-        DeleteEntitiesChangeListener listener = new DeleteEntitiesChangeListener();
+        EntitiesChangeListener listener = new EntitiesChangeListener();
         metadataService.registerListener(listener);
+
+        //Delete one column
+        String columnId = table1Columns.get(0).getId()._getId();
+        AtlasClient.EntityResult entityResult = deleteEntities(columnId);
+        //column is deleted and table is updated
+        assertEquals(entityResult.getDeletedEntities().get(0), columnId);
+        assertEquals(entityResult.getUpdateEntities().get(0), table1Entity.getId()._getId());
+
+        //verify listener was called for updates and deletes
+        assertEquals(entityResult.getDeletedEntities(), listener.getDeletedEntities());
+        assertEquals(entityResult.getUpdateEntities(), listener.getUpdatedEntities());
 
         // Delete the table entities.  The deletion should cascade
         // to their composite columns.
-        List<String> deletedGuids = deleteEntities(table1Entity.getId()._getId());
+        entityResult = deleteEntities(table1Entity.getId()._getId());
 
         // Verify that deleteEntities() response has guids for tables and their composite columns.
-        Assert.assertTrue(deletedGuids.contains(table1Entity.getId()._getId()));
-        for (IReferenceableInstance column : table1Columns) {
-            Assert.assertTrue(deletedGuids.contains(column.getId()._getId()));
-        }
+        Assert.assertTrue(entityResult.getDeletedEntities().contains(table1Entity.getId()._getId()));
+        Assert.assertTrue(entityResult.getDeletedEntities().contains(table1Columns.get(1).getId()._getId()));
+        Assert.assertTrue(entityResult.getDeletedEntities().contains(table1Columns.get(2).getId()._getId()));
 
         // Verify that tables and their composite columns have been deleted from the repository.
         assertEntityDeleted(TABLE_TYPE, NAME, table1Entity.get(NAME));
-        assertEntityDeleted(COLUMN_TYPE, NAME, col1.get(NAME));
         assertEntityDeleted(COLUMN_TYPE, NAME, col2.get(NAME));
         assertEntityDeleted(COLUMN_TYPE, NAME, col3.get(NAME));
 
         // Verify that the listener was notified about the deleted entities.
-        Collection<ITypedReferenceableInstance> deletedEntitiesFromListener = listener.getDeletedEntities();
+        List<String> deletedEntitiesFromListener = listener.getDeletedEntities();
         Assert.assertNotNull(deletedEntitiesFromListener);
-        Assert.assertEquals(deletedEntitiesFromListener.size(), deletedGuids.size());
-        List<String> deletedGuidsFromListener = new ArrayList<>(deletedGuids.size());
-        for (ITypedReferenceableInstance deletedEntity : deletedEntitiesFromListener) {
-            deletedGuidsFromListener.add(deletedEntity.getId()._getId());
-        }
-        Assert.assertEquals(deletedGuidsFromListener.size(), deletedGuids.size());
-        Assert.assertTrue(deletedGuidsFromListener.containsAll(deletedGuids));
+        Assert.assertEquals(deletedEntitiesFromListener.size(), entityResult.getDeletedEntities().size());
+        Assert.assertTrue(deletedEntitiesFromListener.containsAll(entityResult.getDeletedEntities()));
     }
 
     private void assertEntityDeleted(String typeName, String attributeName, Object attributeValue)
-            throws AtlasException {
+    throws AtlasException {
         try {
             metadataService.getEntityDefinition(typeName, attributeName, (String) attributeValue);
             fail("Expected EntityNotFoundException");
@@ -978,12 +1028,13 @@ public class DefaultMetadataServiceTest {
 
         // Register an EntityChangeListener to verify the notification mechanism
         // is working for deleteEntityByUniqueAttribute().
-        DeleteEntitiesChangeListener listener = new DeleteEntitiesChangeListener();
+        EntitiesChangeListener listener = new EntitiesChangeListener();
         metadataService.registerListener(listener);
 
         // Delete the table entities.  The deletion should cascade
         // to their composite columns.
-        List<String> deletedGuids = metadataService.deleteEntityByUniqueAttribute(TestUtils.TABLE_TYPE, NAME, (String) table1Entity.get(NAME));
+        List<String> deletedGuids = metadataService.deleteEntityByUniqueAttribute(TestUtils.TABLE_TYPE, NAME,
+                (String) table1Entity.get(NAME)).getDeletedEntities();
 
         // Verify that deleteEntities() response has guids for tables and their composite columns.
         Assert.assertTrue(deletedGuids.contains(table1Entity.getId()._getId()));
@@ -999,15 +1050,10 @@ public class DefaultMetadataServiceTest {
         assertEntityDeleted(COLUMN_TYPE, NAME, col3.get(NAME));
 
         // Verify that the listener was notified about the deleted entities.
-        Collection<ITypedReferenceableInstance> deletedEntitiesFromListener = listener.getDeletedEntities();
+        List<String> deletedEntitiesFromListener = listener.getDeletedEntities();
         Assert.assertNotNull(deletedEntitiesFromListener);
         Assert.assertEquals(deletedEntitiesFromListener.size(), deletedGuids.size());
-        List<String> deletedGuidsFromListener = new ArrayList<>(deletedGuids.size());
-        for (ITypedReferenceableInstance deletedEntity : deletedEntitiesFromListener) {
-            deletedGuidsFromListener.add(deletedEntity.getId()._getId());
-        }
-        Assert.assertEquals(deletedGuidsFromListener.size(), deletedGuids.size());
-        Assert.assertTrue(deletedGuidsFromListener.containsAll(deletedGuids));
+        Assert.assertTrue(deletedEntitiesFromListener.containsAll(deletedGuids));
     }
 
     @Test
@@ -1087,10 +1133,10 @@ public class DefaultMetadataServiceTest {
         }
     }
 
-    private static class DeleteEntitiesChangeListener implements EntityChangeListener {
-        
-        private Collection<ITypedReferenceableInstance> deletedEntities_;
-        
+    private static class EntitiesChangeListener implements EntityChangeListener {
+        private List<String> deletedEntities = new ArrayList<>();
+        private List<String> updatedEntities = new ArrayList<>();
+
         @Override
         public void onEntitiesAdded(Collection<ITypedReferenceableInstance> entities)
             throws AtlasException {
@@ -1099,6 +1145,10 @@ public class DefaultMetadataServiceTest {
         @Override
         public void onEntitiesUpdated(Collection<ITypedReferenceableInstance> entities)
             throws AtlasException {
+            updatedEntities.clear();
+            for (ITypedReferenceableInstance entity : entities) {
+                updatedEntities.add(entity.getId()._getId());
+            }
         }
 
         @Override
@@ -1114,11 +1164,18 @@ public class DefaultMetadataServiceTest {
         @Override
         public void onEntitiesDeleted(Collection<ITypedReferenceableInstance> entities)
             throws AtlasException {
-            deletedEntities_ = entities;
+            deletedEntities.clear();
+            for (ITypedReferenceableInstance entity : entities) {
+                deletedEntities.add(entity.getId()._getId());
+            }
         }
         
-        public Collection<ITypedReferenceableInstance> getDeletedEntities() {
-            return deletedEntities_;
+        public List<String> getDeletedEntities() {
+            return deletedEntities;
+        }
+
+        public List<String> getUpdatedEntities() {
+            return updatedEntities;
         }
     }
 }
