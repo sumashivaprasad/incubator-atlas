@@ -36,6 +36,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Local atlas client which calls the resource methods directly. Used by NotificationHookConsumer.
@@ -149,14 +150,13 @@ public class LocalAtlasClient extends AtlasClient {
     }
 
     @Override
-    public EntityResult deleteEntity(final String entityType, final String uniqueAttributeName,
-                                     final String uniqueAttributeValue) throws AtlasServiceException {
-        LOG.debug("Deleting entity type: {}, attributeName: {}, attributeValue: {}", entityType, uniqueAttributeName,
-                uniqueAttributeValue);
+    public EntityResult deleteEntity(final String entityType, final Map<String, Object> primaryKeyValues) throws AtlasServiceException {
+        LOG.debug("Deleting entity type: {}, attributeName: {}, attributeValue: {}", entityType,
+                primaryKeyValues);
         EntityOperation entityOperation = new EntityOperation(API.DELETE_ENTITY) {
             @Override
             Response invoke() {
-                return entityResource.deleteEntities(null, entityType, uniqueAttributeName, uniqueAttributeValue);
+                return entityResource.deleteEntities(null, entityType, primaryKeyValues);
             }
         };
         JSONObject response = entityOperation.run();
@@ -211,11 +211,11 @@ public class LocalAtlasClient extends AtlasClient {
         throw new IllegalStateException("Not supported in LocalAtlasClient");
     }
 
-    @Override
-    public Referenceable getEntity(final String entityType, final String attribute, final String value)
-            throws AtlasServiceException {
-        throw new IllegalStateException("Not supported in LocalAtlasClient");
-    }
+//    @Override
+//    public Referenceable getEntity(final String entityType, final String attribute, final String value)
+//            throws AtlasServiceException {
+//        throw new IllegalStateException("Not supported in LocalAtlasClient");
+//    }
 
     @Override
     public List<String> listEntities(final String entityType) throws AtlasServiceException {

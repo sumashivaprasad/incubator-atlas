@@ -33,6 +33,7 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -82,8 +83,11 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testInputsGraphForEntity() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE, "name", salesMonthlyTable).getId()._getId();
-        JSONObject results = serviceClient.getInputGraphForEntity(tableId);
+        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, salesMonthlyTable);
+        }});
+
+        JSONObject results = serviceClient.getInputGraphForEntity(entity.getId()._getId());
         Assert.assertNotNull(results);
 
         JSONObject values = results.getJSONObject("values");
@@ -126,8 +130,10 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testOutputsGraphForEntity() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE, "name", salesFactTable).getId()._getId();
-        JSONObject results = serviceClient.getOutputGraphForEntity(tableId);
+        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, salesFactTable);
+        }});
+        JSONObject results = serviceClient.getOutputGraphForEntity(entity.getId()._getId());
         Assert.assertNotNull(results);
 
         JSONObject values = results.getJSONObject("values");
@@ -172,8 +178,10 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSchemaForEntity() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE, "name", salesFactTable).getId()._getId();
-        JSONObject results = serviceClient.getSchemaForEntity(tableId);
+        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, salesFactTable);
+        }});
+        JSONObject results = serviceClient.getSchemaForEntity(entity.getId()._getId());
         Assert.assertNotNull(results);
 
         JSONArray rows = results.getJSONArray("rows");

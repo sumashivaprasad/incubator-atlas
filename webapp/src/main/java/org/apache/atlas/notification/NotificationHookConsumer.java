@@ -215,8 +215,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
                     HookNotification.EntityDeleteRequest deleteRequest =
                         (HookNotification.EntityDeleteRequest) message;
                     atlasClient.deleteEntity(deleteRequest.getTypeName(),
-                        deleteRequest.getAttribute(),
-                        deleteRequest.getAttributeValue());
+                        deleteRequest.primaryKeyValues());
                     break;
 
                 case ENTITY_FULL_UPDATE:

@@ -28,7 +28,9 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 import kafka.consumer.ConsumerTimeoutException;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.AtlasServiceException;
+import org.apache.atlas.discovery.graph.DefaultGraphPersistenceStrategy;
 import org.apache.atlas.notification.NotificationConsumer;
 import org.apache.atlas.notification.entity.EntityNotification;
 import org.apache.atlas.typesystem.Referenceable;
@@ -38,6 +40,7 @@ import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
+import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.EnumTypeDefinition;
@@ -47,6 +50,7 @@ import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeUtils;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.atlas.utils.AuthenticationUtil;
@@ -54,6 +58,8 @@ import org.apache.atlas.utils.ParamChecker;
 import org.apache.atlas.web.util.Servlets;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +70,7 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Base class for integration tests.
@@ -147,14 +154,14 @@ public abstract class BaseResourceIT {
     protected void createTypeDefinitions() throws Exception {
         HierarchicalTypeDefinition<ClassType> dbClsDef = TypesUtil
                 .createClassTypeDef(DATABASE_TYPE, null,
-                        TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
-                        TypesUtil.createRequiredAttrDef("description", DataTypes.STRING_TYPE),
-                        attrDef("locationUri", DataTypes.STRING_TYPE),
-                        attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.INT_TYPE));
+                    TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
+                    TypesUtil.createRequiredAttrDef("description", DataTypes.STRING_TYPE),
+                    attrDef("locationUri", DataTypes.STRING_TYPE),
+                    attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.INT_TYPE));
 
         HierarchicalTypeDefinition<ClassType> columnClsDef = TypesUtil
                 .createClassTypeDef(COLUMN_TYPE, null, attrDef("name", DataTypes.STRING_TYPE),
-                        attrDef("dataType", DataTypes.STRING_TYPE), attrDef("comment", DataTypes.STRING_TYPE));
+                    attrDef("dataType", DataTypes.STRING_TYPE), attrDef("comment", DataTypes.STRING_TYPE));
 
         StructTypeDefinition structTypeDefinition = new StructTypeDefinition("serdeType",
                 new AttributeDefinition[]{TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE),
@@ -166,28 +173,28 @@ public abstract class BaseResourceIT {
 
         HierarchicalTypeDefinition<ClassType> tblClsDef = TypesUtil
                 .createClassTypeDef(HIVE_TABLE_TYPE, ImmutableSet.of("DataSet"),
-                        attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.LONG_TYPE),
-                        attrDef("lastAccessTime", DataTypes.DATE_TYPE),
-                        attrDef("temporary", DataTypes.BOOLEAN_TYPE),
-                        new AttributeDefinition("db", DATABASE_TYPE, Multiplicity.REQUIRED, true, null),
-                        new AttributeDefinition("columns", DataTypes.arrayTypeName(COLUMN_TYPE),
-                                Multiplicity.OPTIONAL, true, null),
-                new AttributeDefinition("tableType", "tableType", Multiplicity.OPTIONAL, false, null),
-                new AttributeDefinition("serde1", "serdeType", Multiplicity.OPTIONAL, false, null),
-                new AttributeDefinition("serde2", "serdeType", Multiplicity.OPTIONAL, false, null));
+                    attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.LONG_TYPE),
+                    attrDef("lastAccessTime", DataTypes.DATE_TYPE),
+                    attrDef("temporary", DataTypes.BOOLEAN_TYPE),
+                    new AttributeDefinition("db", DATABASE_TYPE, Multiplicity.REQUIRED, true, null),
+                    new AttributeDefinition("columns", DataTypes.arrayTypeName(COLUMN_TYPE),
+                        Multiplicity.OPTIONAL, true, null),
+                    new AttributeDefinition("tableType", "tableType", Multiplicity.OPTIONAL, false, null),
+                    new AttributeDefinition("serde1", "serdeType", Multiplicity.OPTIONAL, false, null),
+                    new AttributeDefinition("serde2", "serdeType", Multiplicity.OPTIONAL, false, null));
 
         HierarchicalTypeDefinition<ClassType> loadProcessClsDef = TypesUtil
                 .createClassTypeDef(HIVE_PROCESS_TYPE, ImmutableSet.of("Process"),
-                        attrDef("userName", DataTypes.STRING_TYPE), attrDef("startTime", DataTypes.INT_TYPE),
-                        attrDef("endTime", DataTypes.LONG_TYPE),
-                        attrDef("queryText", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
-                        attrDef("queryPlan", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
-                        attrDef("queryId", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
-                        attrDef("queryGraph", DataTypes.STRING_TYPE, Multiplicity.REQUIRED));
+                    attrDef("userName", DataTypes.STRING_TYPE), attrDef("startTime", DataTypes.INT_TYPE),
+                    attrDef("endTime", DataTypes.LONG_TYPE),
+                    attrDef("queryText", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
+                    attrDef("queryPlan", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
+                    attrDef("queryId", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
+                    attrDef("queryGraph", DataTypes.STRING_TYPE, Multiplicity.REQUIRED));
 
         HierarchicalTypeDefinition<TraitType> classificationTrait = TypesUtil
                 .createTraitTypeDef("classification", ImmutableSet.<String>of(),
-                        TypesUtil.createRequiredAttrDef("tag", DataTypes.STRING_TYPE));
+                    TypesUtil.createRequiredAttrDef("tag", DataTypes.STRING_TYPE));
         HierarchicalTypeDefinition<TraitType> piiTrait =
                 TypesUtil.createTraitTypeDef("pii", ImmutableSet.<String>of());
         HierarchicalTypeDefinition<TraitType> phiTrait =

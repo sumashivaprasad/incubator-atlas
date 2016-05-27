@@ -27,6 +27,7 @@ import scala.language.{dynamics, implicitConversions, postfixOps}
 import scala.util.DynamicVariable
 import com.google.common.collect.ImmutableSet
 
+
 object TypesBuilder {
 
   case class Context(enums : ArrayBuffer[EnumTypeDefinition],
@@ -154,18 +155,17 @@ class TypesBuilder {
       context.value.classes.toSeq)
   }
 
-  def _class(name: String, superTypes: List[String] = List())(f: => Unit): Unit = {
-
-//    val pkc = primaryKeyCols match {
-//      case Some(x) => PrimaryKeyConstraint.of(x: _*);
-//      case None => null
-//    }
+  def _class(name: String, superTypes: List[String] = List(), pkc: Option[PrimaryKeyConstraint] = None)(f: => Unit): Unit = {
+    val pkcVal = pkc match {
+      case Some(x) => x
+      case None => null
+    }
     val attrs = new ArrayBuffer[Attr]()
     context.withValue(context.value.copy(currentTypeAttrs = attrs)) {
       f
     }
     context.value.classes +=
-      TypesUtil.createClassTypeDef(name, ImmutableSet.copyOf[String](superTypes.toArray), attrs.map(_.getDef): _*)
+      TypesUtil.createClassTypeDef(name, null, ImmutableSet.copyOf[String](superTypes.toArray), pkcVal, attrs.map(_.getDef): _*)
 }
 
   def _trait(name : String, superTypes : List[String] = List())(f : => Unit): Unit = {

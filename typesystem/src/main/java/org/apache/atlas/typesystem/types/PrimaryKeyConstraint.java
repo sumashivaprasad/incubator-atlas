@@ -69,6 +69,10 @@ public class PrimaryKeyConstraint {
         return new PrimaryKeyConstraint(uniqueColumns, isVisible, displayFormat);
     }
 
+    public static PrimaryKeyConstraint of(List<String> uniqueColumns, boolean isVisible) {
+        return new PrimaryKeyConstraint(uniqueColumns, isVisible, null);
+    }
+
     public static PrimaryKeyConstraint of(final String... uniqueColumns) {
         ParamChecker.notNull(uniqueColumns, "Primary key columns");
         return new PrimaryKeyConstraint(Arrays.asList(uniqueColumns), true, null);

@@ -116,11 +116,11 @@ public class PrimaryKeyQueryContext {
         return this;
     }
 
-    static String getFormattedString(Object attrVal) {
+    public static String getFormattedString(Object attrVal) {
         return "'" + String.valueOf(attrVal) + "'";
     }
 
-    static String getFormattedString(List elements) {
+    public static String getFormattedString(List elements) {
         return "['" + Joiner.on("','").join(elements) + "']";
     }
 

@@ -18,19 +18,33 @@
 
 package org.apache.atlas.examples;
 
+import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.Atlas;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.AtlasServiceException;
+import org.apache.atlas.discovery.DiscoveryException;
+import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
+import org.apache.atlas.repository.graph.PrimaryKeyQueryContext;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.types.AttributeDefinition;
+import org.apache.atlas.typesystem.types.AttributeInfo;
+import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.EnumType;
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.web.resources.BaseResourceIT;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.springframework.context.annotation.Primary;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -52,12 +66,14 @@ public class QuickStartIT extends BaseResourceIT {
         assertEquals(QuickStart.SALES_DB_DESCRIPTION, db.get("description"));
     }
 
-    private Referenceable getDB(String dbName) throws AtlasServiceException, JSONException {
-        return serviceClient.getEntity(QuickStart.DATABASE_TYPE, "name", dbName);
+    private Referenceable getDB(final String dbName) throws AtlasServiceException, JSONException, AtlasException {
+        return serviceClient.getEntityByPrimaryKey(QuickStart.DATABASE_TYPE, new HashMap<String, Object>() {{
+            put("name", dbName);
+        }} );
     }
 
     @Test
-    public void testTablesAreAdded() throws AtlasServiceException, JSONException {
+    public void testTablesAreAdded() throws AtlasServiceException, JSONException, AtlasException {
         Referenceable table = getTable(QuickStart.SALES_FACT_TABLE);
         verifySimpleTableAttributes(table);
 
@@ -68,8 +84,10 @@ public class QuickStartIT extends BaseResourceIT {
         verifyTrait(table);
     }
 
-    private Referenceable getTable(String tableName) throws AtlasServiceException {
-        return serviceClient.getEntity(QuickStart.TABLE_TYPE, "name", tableName);
+    private Referenceable getTable(final String tableName) throws AtlasServiceException, AtlasException, JSONException {
+        return serviceClient.getEntityByPrimaryKey(QuickStart.TABLE_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, tableName);
+        }});
     }
 
     private void verifyTrait(Referenceable table) throws JSONException {
@@ -84,7 +102,7 @@ public class QuickStartIT extends BaseResourceIT {
         assertEquals("int", column.get("dataType"));
     }
 
-    private void verifyDBIsLinkedToTable(Referenceable table) throws AtlasServiceException, JSONException {
+    private void verifyDBIsLinkedToTable(Referenceable table) throws AtlasServiceException, JSONException, AtlasException {
         Referenceable db = getDB(QuickStart.SALES_DB);
         assertEquals(db.getId(), table.get(QuickStart.DB_ATTRIBUTE));
     }
@@ -95,15 +113,16 @@ public class QuickStartIT extends BaseResourceIT {
     }
 
     @Test
-    public void testProcessIsAdded() throws AtlasServiceException, JSONException {
-        Referenceable loadProcess = serviceClient.getEntity(QuickStart.LOAD_PROCESS_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
-                QuickStart.LOAD_SALES_DAILY_PROCESS);
+    public void testProcessIsAdded() throws AtlasServiceException, AtlasException, JSONException {
 
+        Referenceable loadProcess = serviceClient.getEntityByPrimaryKey(QuickStart.LOAD_PROCESS_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, QuickStart.LOAD_SALES_DAILY_PROCESS);
+        }});
         assertEquals(QuickStart.LOAD_SALES_DAILY_PROCESS, loadProcess.get(AtlasClient.NAME));
         assertEquals(QuickStart.LOAD_SALES_DAILY_PROCESS_DESCRIPTION, loadProcess.get("description"));
 
-        List<Id> inputs = (List<Id>)loadProcess.get(QuickStart.INPUTS_ATTRIBUTE);
-        List<Id> outputs = (List<Id>)loadProcess.get(QuickStart.OUTPUTS_ATTRIBUTE);
+        List<Id> inputs = (List<Id>) loadProcess.get(QuickStart.INPUTS_ATTRIBUTE);
+        List<Id> outputs = (List<Id>) loadProcess.get(QuickStart.OUTPUTS_ATTRIBUTE);
         assertEquals(2, inputs.size());
         String salesFactTableId = getTableId(QuickStart.SALES_FACT_TABLE);
         String timeDimTableId = getTableId(QuickStart.TIME_DIM_TABLE);
@@ -114,12 +133,12 @@ public class QuickStartIT extends BaseResourceIT {
         assertEquals(salesFactDailyMVId, outputs.get(0)._getId());
     }
 
-    private String getTableId(String tableName) throws AtlasServiceException {
+    private String getTableId(String tableName) throws AtlasServiceException, AtlasException, JSONException {
         return getTable(tableName).getId()._getId();
     }
 
     @Test
-    public void testLineageIsMaintained() throws AtlasServiceException, JSONException {
+    public void testLineageIsMaintained() throws AtlasServiceException, JSONException, AtlasException {
         String salesFactTableId = getTableId(QuickStart.SALES_FACT_TABLE);
         String timeDimTableId = getTableId(QuickStart.TIME_DIM_TABLE);
         String salesFactDailyMVId = getTableId(QuickStart.SALES_FACT_DAILY_MV_TABLE);
@@ -133,7 +152,7 @@ public class QuickStartIT extends BaseResourceIT {
         assertTrue(vertices.has(salesFactDailyMVId));
 
         assertTrue(edges.has(salesFactDailyMVId));
-        JSONArray inputs = (JSONArray)edges.get((String) ((JSONArray) edges.get(salesFactDailyMVId)).get(0));
+        JSONArray inputs = (JSONArray) edges.get((String) ((JSONArray) edges.get(salesFactDailyMVId)).get(0));
         String i1 = inputs.getString(0);
         String i2 = inputs.getString(1);
         assertTrue(salesFactTableId.equals(i1) || salesFactTableId.equals(i2));
@@ -141,9 +160,11 @@ public class QuickStartIT extends BaseResourceIT {
     }
 
     @Test
-    public void testViewIsAdded() throws AtlasServiceException, JSONException {
+    public void testViewIsAdded() throws AtlasServiceException, JSONException, AtlasException {
 
-        Referenceable view = serviceClient.getEntity(QuickStart.VIEW_TYPE, AtlasClient.NAME, QuickStart.PRODUCT_DIM_VIEW);
+        Referenceable view = serviceClient.getEntityByPrimaryKey(QuickStart.VIEW_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, QuickStart.PRODUCT_DIM_VIEW);
+        }});
 
         assertEquals(QuickStart.PRODUCT_DIM_VIEW, view.get(AtlasClient.NAME));
 
@@ -151,4 +172,5 @@ public class QuickStartIT extends BaseResourceIT {
         Id inputTableId = ((List<Id>) view.get(QuickStart.INPUT_TABLES_ATTRIBUTE)).get(0);
         assertEquals(productDimId, inputTableId);
     }
+
 }

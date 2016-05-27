@@ -183,7 +183,7 @@ public class QuickStart {
 
         HierarchicalTypeDefinition<ClassType> loadProcessClsDef = TypesUtil
                 .createClassTypeDef(LOAD_PROCESS_TYPE, LOAD_PROCESS_TYPE, ImmutableSet.of("Process"),
-                        PrimaryKeyConstraint.of("name", "inputs", "outputs"),
+                        PrimaryKeyConstraint.of("name"),
                         attrDef("userName", DataTypes.STRING_TYPE), attrDef("startTime", DataTypes.LONG_TYPE),
                         attrDef("endTime", DataTypes.LONG_TYPE),
                         attrDef("queryText", DataTypes.STRING_TYPE, Multiplicity.REQUIRED),
@@ -382,7 +382,6 @@ public class QuickStart {
         Referenceable referenceable = new Referenceable(LOAD_PROCESS_TYPE, traitNames);
         // super type attributes
         referenceable.set(AtlasClient.NAME, name);
-        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
         referenceable.set("description", description);
         referenceable.set(INPUTS_ATTRIBUTE, inputTables);
         referenceable.set(OUTPUTS_ATTRIBUTE, outputTables);

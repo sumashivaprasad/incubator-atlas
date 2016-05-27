@@ -18,6 +18,12 @@
 
 package org.apache.atlas.discovery;
 
+import org.apache.atlas.AtlasException;
+import org.apache.atlas.AtlasServiceException;
+import org.apache.atlas.classification.InterfaceAudience;
+import org.apache.atlas.typesystem.IReferenceableInstance;
+import org.apache.atlas.typesystem.Referenceable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -49,4 +55,14 @@ public interface DiscoveryService {
      * @throws org.apache.atlas.discovery.DiscoveryException
      */
     List<Map<String, String>> searchByGremlin(String gremlinQuery) throws DiscoveryException;
+
+    /**
+     * Internal API to get enity definition by entity typeName and primary key attributes
+     * @param entityType
+     * @param attributes
+     * @return
+     * @throws AtlasException
+     */
+    @InterfaceAudience.Private
+    IReferenceableInstance getEntityByPrimaryKey(String entityType, Map<String, String> attributes) throws AtlasException;
 }

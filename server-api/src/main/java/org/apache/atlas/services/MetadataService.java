@@ -20,6 +20,7 @@ package org.apache.atlas.services;
 
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
@@ -116,12 +117,11 @@ public interface MetadataService {
     /**
      * Return the definition given type and attribute. The attribute has to be unique attribute for the type
      * @param entityType - type name
-     * @param attribute - attribute name
-     * @param value - attribute value
-     * @return
+     * @param primaryKeys The keys by which the entity can be uniquely identified
+     * @return  entity definition json
      * @throws AtlasException
      */
-    String getEntityDefinition(String entityType, String attribute, String value) throws AtlasException;
+    String getEntityByPrimaryKey(String entityType, Map<String, String> primaryKeys) throws AtlasException, AtlasServiceException;
 
     /**
      * Return the list of entity names for the given type in the repository.
@@ -160,20 +160,6 @@ public interface MetadataService {
     AtlasClient.EntityResult updateEntities(String entityJson) throws AtlasException;
 
     // Trait management functions
-
-    /**
-     * Updates entity identified by a qualified name
-     *
-     * @param typeName
-     * @param uniqueAttributeName
-     * @param attrValue
-     * @param updatedEntity
-     * @return Guid of updated entity
-     * @throws AtlasException
-     */
-    AtlasClient.EntityResult updateEntityByUniqueAttribute(String typeName, String uniqueAttributeName,
-                                                           String attrValue,
-                                                           Referenceable updatedEntity) throws AtlasException;
 
     /**
      * Gets the list of trait names for a given entity represented by a guid.
@@ -233,14 +219,12 @@ public interface MetadataService {
     /**
      * Delete the specified entity from the repository identified by its unique attribute (including its composite references)
      *
-     * @param typeName The entity's type
-     * @param uniqueAttributeName attribute name by which the entity could be identified uniquely
-     * @param attrValue attribute value by which the entity could be identified uniquely
+     * @param entityType The entity's type
+     * @param primaryKeys The keys by which the entity can be uniquely identified
      * @return List of guids for deleted entities (including their composite references)
      * @throws AtlasException
      */
-    AtlasClient.EntityResult deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName,
-                                                           String attrValue) throws AtlasException;
+    AtlasClient.EntityResult deleteEntityByPrimaryKey(String entityType, Map<String, String> primaryKeys) throws AtlasException, AtlasServiceException;
 
     /**
      * Returns entity audit events for entity id in the decreasing order of timestamp
@@ -251,12 +235,4 @@ public interface MetadataService {
      */
     List<EntityAuditEvent> getAuditEvents(String guid, String startKey, short count) throws AtlasException;
 
-    /**
-     *
-     * @param entityType
-     * @param values
-     * @return
-     * @throws AtlasException
-     */
-    String getEntityByPrimaryKey(String entityType, List<String> values) throws AtlasException;
 }

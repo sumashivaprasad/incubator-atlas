@@ -163,4 +163,5 @@ public interface MetadataRepository {
      * @return entity instance
      */
     ITypedReferenceableInstance getEntityDefinition(String entityType, String attribute, Object value) throws AtlasException;
+
 }

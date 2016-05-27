@@ -50,6 +50,10 @@ public class AtlasServiceException extends Exception {
         super(e);
     }
 
+    public AtlasServiceException(String message) {
+        super(message);
+    }
+
     public ClientResponse.Status getStatus() {
         return status;
     }

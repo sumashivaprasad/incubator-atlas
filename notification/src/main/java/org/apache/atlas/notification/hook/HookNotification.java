@@ -33,6 +33,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Contains the structure of messages transferred from hooks to atlas.
@@ -50,9 +51,6 @@ public class HookNotification implements JsonDeserializer<HookNotification.HookN
 
         case ENTITY_FULL_UPDATE:
             return context.deserialize(json, EntityUpdateRequest.class);
-
-        case ENTITY_PARTIAL_UPDATE:
-            return context.deserialize(json, EntityPartialUpdateRequest.class);
 
         case ENTITY_DELETE:
             return context.deserialize(json, EntityDeleteRequest.class);
@@ -175,77 +173,33 @@ public class HookNotification implements JsonDeserializer<HookNotification.HookN
     }
 
     /**
-     * Hook message for updating entities(partial update).
-     */
-    public static class EntityPartialUpdateRequest extends HookNotificationMessage {
-        private String typeName;
-        private String attribute;
-        private Referenceable entity;
-        private String attributeValue;
-
-        private EntityPartialUpdateRequest() {
-        }
-
-        public EntityPartialUpdateRequest(String user, String typeName, String attribute, String attributeValue,
-                                          Referenceable entity) {
-            super(HookNotificationType.ENTITY_PARTIAL_UPDATE, user);
-            this.typeName = typeName;
-            this.attribute = attribute;
-            this.attributeValue = attributeValue;
-            this.entity = entity;
-        }
-
-        public String getTypeName() {
-            return typeName;
-        }
-
-        public String getAttribute() {
-            return attribute;
-        }
-
-        public Referenceable getEntity() {
-            return entity;
-        }
-
-        public String getAttributeValue() {
-            return attributeValue;
-        }
-    }
-
-    /**
      * Hook message for creating new entities.
      */
     public static class EntityDeleteRequest extends HookNotificationMessage {
 
         private String typeName;
-        private String attribute;
-        private String attributeValue;
+        private Map<String, Object> primaryKeyValues;
 
         private EntityDeleteRequest() {
         }
 
-        public EntityDeleteRequest(String user, String typeName, String attribute, String attributeValue) {
-            this(HookNotificationType.ENTITY_DELETE, user, typeName, attribute, attributeValue);
+        public EntityDeleteRequest(String user, String typeName, Map<String, Object> primaryKeyValues) {
+            this(HookNotificationType.ENTITY_DELETE, user, typeName, primaryKeyValues);
         }
 
         protected EntityDeleteRequest(HookNotificationType type,
-            String user, String typeName, String attribute, String attributeValue) {
+            String user, String typeName, Map<String, Object> primaryKeyValues) {
             super(type, user);
             this.typeName = typeName;
-            this.attribute = attribute;
-            this.attributeValue = attributeValue;
+            this.primaryKeyValues = primaryKeyValues;
         }
 
         public String getTypeName() {
             return typeName;
         }
 
-        public String getAttribute() {
-            return attribute;
-        }
-
-        public String getAttributeValue() {
-            return attributeValue;
+        public Map<String, Object> primaryKeyValues() {
+            return primaryKeyValues;
         }
     }
 }

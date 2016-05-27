@@ -29,6 +29,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.security.SecureClientUtils;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
@@ -49,6 +50,7 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.persistence.EntityNotFoundException;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -818,19 +820,18 @@ public class AtlasClient {
     /**
      * Supports Deletion of an entity identified by its unique attribute value
      * @param entityType Type of the entity being deleted
-     * @param uniqueAttributeName Attribute Name that uniquely identifies the entity
-     * @param uniqueAttributeValue Attribute Value that uniquely identifies the entity
+     * @param primaryKeys a map of primary key attributes vs values used to identify the entity uniquely
      * @return List of entity ids updated/deleted(including composite references from that entity)
      */
-    public EntityResult deleteEntity(String entityType, String uniqueAttributeName, String uniqueAttributeValue)
+    public EntityResult deleteEntity(String entityType, Map<String, String> primaryKeys)
             throws AtlasServiceException {
-        LOG.debug("Deleting entity type: {}, attributeName: {}, attributeValue: {}", entityType, uniqueAttributeName,
-                uniqueAttributeValue);
+        LOG.debug("Deleting entity type: {}, primary keys {}", entityType, primaryKeys);
         API api = API.DELETE_ENTITY;
         WebResource resource = getResource(api);
         resource = resource.queryParam(TYPE, entityType);
-        resource = resource.queryParam(ATTRIBUTE_NAME, uniqueAttributeName);
-        resource = resource.queryParam(ATTRIBUTE_VALUE, uniqueAttributeValue);
+        for (String pk : primaryKeys.keySet()) {
+            resource = resource.queryParam(pk, primaryKeys.get(pk));
+        }
         JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource, null);
         EntityResult results = extractEntityResult(jsonResponse);
         LOG.debug("Delete entities returned results: {}", results);
@@ -864,20 +865,21 @@ public class AtlasClient {
     /**
      * Get an entity given the entity id
      * @param entityType entity type name
-     * @param attribute qualified name of the entity
-     * @param value
+     * @param primaryKeys the primary key by which to identify the entity
      * @return result object
      * @throws AtlasServiceException
      */
-    public Referenceable getEntity(final String entityType, final String attribute, final String value)
+    public Referenceable getEntity(final String entityType, final Map<String, String> primaryKeys)
             throws AtlasServiceException {
         JSONObject jsonResponse = callAPIWithRetries(API.GET_ENTITY, null, new ResourceCreator() {
             @Override
             public WebResource createResource() {
                 WebResource resource = getResource(API.GET_ENTITY);
                 resource = resource.queryParam(TYPE, entityType);
-                resource = resource.queryParam(ATTRIBUTE_NAME, attribute);
-                resource = resource.queryParam(ATTRIBUTE_VALUE, value);
+                for (String pk : primaryKeys.keySet()) {
+                    resource = resource.queryParam(ATTRIBUTE_NAME, pk);
+                    resource = resource.queryParam(ATTRIBUTE_VALUE, primaryKeys.get(pk));
+                }
                 return resource;
             }
         });
@@ -1193,6 +1195,5 @@ public class AtlasClient {
             return ugi;
         }
     }
-
 
 }

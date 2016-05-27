@@ -160,7 +160,6 @@ public class HiveMetaStoreBridge {
             dbRef = new Referenceable(HiveDataTypes.HIVE_DB.getName());
         }
         String dbName = hiveDB.getName().toLowerCase();
-        dbRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getDBQualifiedName(clusterName, dbName));
         dbRef.set(HiveDataModelGenerator.NAME, dbName);
         dbRef.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, clusterName);
         dbRef.set(DESCRIPTION_ATTR, hiveDB.getDescription());
@@ -435,7 +434,6 @@ public class HiveMetaStoreBridge {
         LOG.debug("Filling storage descriptor information for " + storageDesc);
 
         Referenceable sdReferenceable = new Referenceable(HiveDataTypes.HIVE_STORAGEDESC.getName());
-        sdReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, sdQualifiedName);
 
         SerDeInfo serdeInfo = storageDesc.getSerdeInfo();
         LOG.debug("serdeInfo = " + serdeInfo);
@@ -489,7 +487,6 @@ public class HiveMetaStoreBridge {
 //        ref.set("name", path.getName());
         //TODO - Fix after ATLAS-542 to shorter Name
         ref.set(HiveDataModelGenerator.NAME, pathUri);
-        ref.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, pathUri);
         return ref;
     }
 
@@ -506,8 +503,6 @@ public class HiveMetaStoreBridge {
         for (FieldSchema fs : schemaList) {
             LOG.debug("Processing field " + fs);
             Referenceable colReferenceable = new Referenceable(HiveDataTypes.HIVE_COLUMN.getName());
-            colReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
-                    getColumnQualifiedName(tableQualifiedName, fs.getName()));
             colReferenceable.set(HiveDataModelGenerator.NAME, fs.getName());
             colReferenceable.set("type", fs.getType());
             colReferenceable.set(HiveDataModelGenerator.COMMENT, fs.getComment());

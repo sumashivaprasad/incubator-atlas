@@ -24,7 +24,10 @@ import com.thinkaurelius.titan.core.TitanProperty;
 import com.thinkaurelius.titan.core.TitanVertex;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasException;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.GraphTransaction;
+import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.discovery.DiscoveryException;
 import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.query.Expressions;
@@ -38,6 +41,13 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graph.GraphProvider;
+import org.apache.atlas.repository.graph.PrimaryKeyQueryContext;
+import org.apache.atlas.typesystem.IReferenceableInstance;
+import org.apache.atlas.typesystem.exception.EntityNotFoundException;
+import org.apache.atlas.typesystem.types.AttributeInfo;
+import org.apache.atlas.typesystem.types.ClassType;
+import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -48,10 +58,6 @@ import scala.util.parsing.combinator.Parsers;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.script.Bindings;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -166,6 +172,75 @@ public class GraphBackedDiscoveryService implements DiscoveryService {
         LOG.info("Executing gremlin query={}", gremlinQuery);
         Object o = graphHelper.executeGremlin(gremlinQuery);
         return extractResult(o);
+    }
+
+    @Override
+    @InterfaceAudience.Private
+    public IReferenceableInstance getEntityByPrimaryKey(final String entityType, final Map<String, String> attributes) throws AtlasException {
+//        ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, entityType);
+//        PrimaryKeyQueryContext pkc = new PrimaryKeyQueryContext();
+//        pkc.typeName(entityType);
+//        for (String attr : attributes.keySet()) {
+//            AttributeInfo attributeInfo = classType.fieldMapping.fields.get(attr);
+//            String attrQFName = graphHelper.getQualifiedFieldName(classType, attributeInfo.name);
+//            pkc.has(attrQFName, attributes.get(attr));
+//        }
+//
+//        Vertex vertex = pkc.executeQuery(pkc.buildQuery());
+//        return graphPersistenceStrategy.constructInstance(classType, vertex);
+
+            ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, entityType);
+            final String DSL_QUERY_FMT = "%s where %s";
+
+            String filters = constructDSLPredicates(classType, attributes);
+
+            GremlinQueryResult result = evaluate(String.format(DSL_QUERY_FMT, entityType, filters));
+
+            if (result.rows().length() == 1) {
+                IReferenceableInstance row = (IReferenceableInstance) result.rows().head();
+                return row;
+            } else if (result.rows().length() > 1) {
+                throw new AtlasException("More than one entity returned for the query by primary key with type " + entityType + "{" + attributes + "}");
+            } else {
+                throw new EntityNotFoundException("No entity was returned by the primary key with type " + entityType + "{" + attributes + "}");
+            }
+
+    }
+
+    private String constructDSLPredicates(ClassType classType, Map<String, String> attributes) {
+        StringBuilder filters = new StringBuilder();
+        for (String attr : attributes.keySet()) {
+            int index = 0;
+            String attrName = attr;
+            if (attr.contains(".")) {
+                attrName = attr.split(".")[0];
+            }
+            AttributeInfo attributeInfo = classType.fieldMapping.fields.get(attrName);
+            final String typeName = attributeInfo.dataType().getName();
+            switch (attributeInfo.dataType().getTypeCategory()) {
+            case PRIMITIVE:
+                if (typeName.equals(DataTypes.STRING_TYPE.getName()) ||
+                    typeName.equals(DataTypes.DATE_TYPE.getName())) {
+                    String value = String.valueOf(attributes.get(attr));
+                    filters.append(String.format("%s='%s'", typeName, value));
+                } else {
+                    Object value = attributes.get(attr);
+                    filters.append(String.format("%s=%s", typeName, value));
+                }
+                break;
+            case ENUM:
+                String value = String.valueOf(attributes.get(attr));
+                filters.append(String.format("%s='%s'", typeName, value));
+                break;
+            default:
+                throw new UnsupportedOperationException("Primary key by non-primitive attributes are not supported " + attributeInfo.name);
+            }
+
+            if (++index < attributes.size()) {
+                filters.append(" and ");
+            }
+        }
+        return filters.toString();
     }
 
     private List<Map<String, String>> extractResult(Object o) throws DiscoveryException {

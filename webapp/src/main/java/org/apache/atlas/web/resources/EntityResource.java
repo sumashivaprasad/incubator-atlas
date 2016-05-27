@@ -60,7 +60,9 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -202,56 +204,6 @@ public class EntityResource {
     }
 
     /**
-     * Adds/Updates given entity identified by its unique attribute( entityType, attributeName and value)
-     * Updates support only partial update of an entity - Adds/updates any new values specified
-     * Updates do not support removal of attribute values
-     *
-     * @param entityType the entity type
-     * @param attribute the unique attribute used to identify the entity
-     * @param value the unique attributes value
-     * @param request The updated entity json
-     * @return response payload as json
-     * The body contains the JSONArray of entity json. The service takes care of de-duping the entities based on any
-     * unique attribute for the give type.
-     */
-    @POST
-    @Path("qualifiedName")
-    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public Response updateByUniqueAttribute(@QueryParam("type") String entityType,
-                                            @QueryParam("property") String attribute,
-                                            @QueryParam("value") String value, @Context HttpServletRequest request) {
-        try {
-            String entities = Servlets.getRequestPayload(request);
-
-            LOG.debug("Partially updating entity by unique attribute {} {} {} {} ", entityType, attribute, value, entities);
-
-            Referenceable updatedEntity =
-                InstanceSerialization.fromJsonReferenceable(entities, true);
-            AtlasClient.EntityResult entityResult =
-                    metadataService.updateEntityByUniqueAttribute(entityType, attribute, value, updatedEntity);
-
-            JSONObject response = getResponse(entityResult);
-            return Response.ok(response).build();
-        } catch (ValueConversionException ve) {
-            LOG.error("Unable to persist entity instance due to a desrialization error ", ve);
-            throw new WebApplicationException(Servlets.getErrorResponse(ve.getCause(), Response.Status.BAD_REQUEST));
-        } catch(EntityExistsException e) {
-            LOG.error("Unique constraint violation", e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.CONFLICT));
-        } catch (EntityNotFoundException e) {
-            LOG.error("An entity with type={} and qualifiedName={} does not exist", entityType, value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
-        } catch (AtlasException | IllegalArgumentException e) {
-            LOG.error("Unable to create/update entity {}" + entityType + ":" + attribute + "." + value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
-        } catch (Throwable e) {
-            LOG.error("Unable to update entity {}" + entityType + ":" + attribute + "." + value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
-        }
-    }
-
-    /**
      * Updates entity identified by its GUID
      * Support Partial update of an entity - Adds/updates any new values specified
      * Does not support removal of attribute values
@@ -335,23 +287,26 @@ public class EntityResource {
      * @param guids list of deletion candidate guids
      *              or
      * @param entityType the entity type
-     * @param attribute the unique attribute used to identify the entity
-     * @param value the unique attribute value used to identify the entity
+     * @param attributes the primary keys  used to identify the entity
+     * @param values the primary key values value used to identify the entity
      * @return response payload as json - including guids of entities(including composite references from that entity) that were deleted
      */
     @DELETE
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public Response deleteEntities(@QueryParam("guid") List<String> guids,
         @QueryParam("type") String entityType,
-        @QueryParam("property") String attribute,
-        @QueryParam("value") String value) {
+        @QueryParam("property") final List<String> attributes,
+        @QueryParam("value") final List<String> values) {
         
         try {
             AtlasClient.EntityResult entityResult;
             if (guids != null && !guids.isEmpty()) {
                 entityResult = metadataService.deleteEntities(guids);
             } else {
-                entityResult = metadataService.deleteEntityByUniqueAttribute(entityType, attribute, value);
+                ParamChecker.notEmptyElements(attributes, "Primary keys");
+                ParamChecker.notEmptyElements(values, "Primary key values");
+
+                entityResult = metadataService.deleteEntityByPrimaryKey(entityType, getPrimaryKeys(attributes, values));
             }
             JSONObject response = getResponse(entityResult);
             return Response.ok(response).build();
@@ -359,7 +314,7 @@ public class EntityResource {
             if(guids != null || !guids.isEmpty()) {
                 LOG.error("An entity with GUID={} does not exist", guids, e);
             } else {
-                LOG.error("An entity with qualifiedName {}-{}-{} does not exist", entityType, attribute, value, e);
+                LOG.error("An entity with qualifiedName {}-{}-{} does not exist", entityType, attributes, values, e);
             }
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
         }  catch (AtlasException | IllegalArgumentException e) {
@@ -369,6 +324,14 @@ public class EntityResource {
             LOG.error("Unable to delete entities {}", guids, e);
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
         }
+    }
+
+    private Map<String, String> getPrimaryKeys(List<String> attributes, List<String> values) {
+        Map<String, String> primaryKeys = new LinkedHashMap<String, String>();
+        for(int i = 0; i < attributes.size() ; i++) {
+            primaryKeys.put(attributes.get(i), values.get(i));
+        }
+        return primaryKeys;
     }
 
     /**
@@ -446,56 +409,39 @@ public class EntityResource {
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public Response getEntity(@QueryParam("type") String entityType,
-                              @QueryParam("property") String attribute,
-                              @QueryParam("value") String value) {
-        if (StringUtils.isEmpty(attribute)) {
-            //List API
+        @QueryParam("property") final List<String> attributes,
+        @QueryParam("value") final List<String> values) {
+        if (attributes != null && attributes.isEmpty()) {
             return getEntityListByType(entityType);
         } else {
-            //Get entity by unique attribute
-            return getEntityDefinitionByAttribute(entityType, attribute, value);
-        }
-    }
+            try {
 
-    /**
-     * Fetch the complete definition of an entity given its qualified name.
-     *
-     * @param entityType
-     * @param attribute
-     * @param value
-     */
-    public Response getEntityDefinitionByAttribute(String entityType, String attribute, String value) {
-        try {
-            LOG.debug("Fetching entity definition for type={}, qualified name={}", entityType, value);
-            ParamChecker.notEmpty(entityType, "Entity type cannot be null");
-            ParamChecker.notEmpty(attribute, "attribute name cannot be null");
-            ParamChecker.notEmpty(value, "attribute value cannot be null");
+                String entityDefinition = metadataService.getEntityByPrimaryKey(entityType, getPrimaryKeys(attributes, values));
 
-            final String entityDefinition = metadataService.getEntityDefinition(entityType, attribute, value);
+                JSONObject response = new JSONObject();
+                response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
 
-            JSONObject response = new JSONObject();
-            response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
+                Response.Status status = Response.Status.NOT_FOUND;
+                if (entityDefinition != null) {
+                    response.put(AtlasClient.DEFINITION, new JSONObject(entityDefinition));
+                    status = Response.Status.OK;
+                } else {
+                    response.put(AtlasClient.ERROR,
+                        Servlets.escapeJsonString(String.format("An entity with type=%s and primary key{%s}={%s} does not exist", entityType, attributes, values)));
+                }
 
-            Response.Status status = Response.Status.NOT_FOUND;
-            if (entityDefinition != null) {
-                response.put(AtlasClient.DEFINITION, new JSONObject(entityDefinition));
-                status = Response.Status.OK;
-            } else {
-                response.put(AtlasClient.ERROR, Servlets.escapeJsonString(String.format("An entity with type={%s}, " +
-                        "qualifiedName={%s} does not exist", entityType, value)));
+                return Response.status(status).entity(response).build();
+
+            } catch (EntityNotFoundException e) {
+                LOG.error("An entity with type and primary key {}-{}-{} does not exist", entityType, attributes, values, e);
+                throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
+            } catch (AtlasException | IllegalArgumentException e) {
+                LOG.error("Unable to delete entities with primary key(s) {} {} ", attributes, values, e);
+                throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
+            } catch (Throwable e) {
+                LOG.error("Unable to delete entities with primary key(s) {} {} ", attributes, values, e);
+                throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
             }
-
-            return Response.status(status).entity(response).build();
-
-        } catch (EntityNotFoundException e) {
-            LOG.error("An entity with type={} and qualifiedName={} does not exist", entityType, value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
-        } catch (AtlasException | IllegalArgumentException e) {
-            LOG.error("Bad type={}, qualifiedName={}", entityType, value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
-        } catch (Throwable e) {
-            LOG.error("Unable to get instance definition for type={}, qualifiedName={}", entityType, value, e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
         }
     }
 

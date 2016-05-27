@@ -55,6 +55,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import javax.persistence.EntityNotFoundException;
 import java.io.File;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -1484,14 +1485,18 @@ public class HiveHookIT {
         waitFor(80000, new Predicate() {
             @Override
             public void evaluate() throws Exception {
-                Referenceable entity = atlasClient.getEntity(typeName, property, value);
+                Referenceable entity =  atlasClient.getEntityByPrimaryKey(typeName, new HashMap<String, Object>() {{
+                    put(property, value);
+                }});
                 assertNotNull(entity);
                 if (assertPredicate != null) {
                     assertPredicate.assertOnEntity(entity);
                 }
             }
         });
-        Referenceable entity = atlasClient.getEntity(typeName, property, value);
+        Referenceable entity =  atlasClient.getEntityByPrimaryKey(typeName, new HashMap<String, Object>() {{
+            put(property, value);
+        }});
         return entity.getId()._getId();
     }
 
@@ -1500,11 +1505,10 @@ public class HiveHookIT {
             @Override
             public void evaluate() throws Exception {
                 try {
-                    atlasClient.getEntity(typeName, property, value);
-                } catch (AtlasServiceException e) {
-                    if (e.getStatus() == ClientResponse.Status.NOT_FOUND) {
-                        return;
-                    }
+                    atlasClient.getEntityByPrimaryKey(typeName, new HashMap<String, Object>() {{
+                        put(property, value);
+                    }});
+                } catch (EntityNotFoundException e) {
                 }
                 fail(String.format("Entity was not supposed to exist for typeName = %s, attributeName = %s, "
                     + "attributeValue = %s", typeName, property, value));

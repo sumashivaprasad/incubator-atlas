@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.persistence.UniqueConstraint;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -304,10 +305,12 @@ public class HiveDataModelGenerator {
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_PROCESS.getName(), null,
                     ImmutableSet.of(AtlasClient.PROCESS_SUPER_TYPE), attributeDefinitions,
                     PrimaryKeyConstraint.of(
-                        AtlasClient.NAME,
-                        AtlasClient.PROCESS_ATTRIBUTE_INPUTS,
-                        AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS
-                    ));
+                        new ArrayList<String>() {{
+                            add(AtlasClient.NAME);
+                            add(AtlasClient.PROCESS_ATTRIBUTE_INPUTS);
+                            add(AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS);
+                        }}, false)
+                    );
         classTypeDefinitions.put(HiveDataTypes.HIVE_PROCESS.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_PROCESS.getName());
     }

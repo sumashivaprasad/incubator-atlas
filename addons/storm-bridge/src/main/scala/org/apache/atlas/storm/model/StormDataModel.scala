@@ -18,10 +18,11 @@
 
 package org.apache.atlas.storm.model
 
-import org.apache.atlas.AtlasClient
+import org.apache.atlas.{AtlasConstants, AtlasClient}
 import org.apache.atlas.typesystem.TypesDef
 import org.apache.atlas.typesystem.builders.TypesBuilder
 import org.apache.atlas.typesystem.json.TypesSerialization
+import org.apache.atlas.typesystem.types.PrimaryKeyConstraint
 
 
 /**
@@ -33,6 +34,7 @@ object StormDataModel extends App {
 
     val typesBuilder = new TypesBuilder
     import typesBuilder._
+    import scala.collection.JavaConversions._
 
     typesDef = types {
 
@@ -43,7 +45,9 @@ object StormDataModel extends App {
          * Also, Topology contains the Graph of Nodes
          * Topology => Node(s) -> Spouts/Bolts
          */
-        _class(StormDataTypes.STORM_TOPOLOGY.getName, List(AtlasClient.PROCESS_SUPER_TYPE)) {
+        _class(StormDataTypes.STORM_TOPOLOGY.getName, List(AtlasClient.PROCESS_SUPER_TYPE),
+            Some(PrimaryKeyConstraint.of(
+                List(AtlasClient.NAME, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), true, s"\${$AtlasClient.NAME}@\${${AtlasConstants.CLUSTER_NAME_ATTRIBUTE}}"))) {
             "id" ~ (string, required, indexed, unique)
             "description" ~ (string, optional, indexed)
             "owner" ~ (string, required, indexed)
@@ -81,21 +85,29 @@ object StormDataModel extends App {
         }
 
         // Kafka Data Set
-        _class(StormDataTypes.KAFKA_TOPIC.getName, List("DataSet")) {
+        _class(StormDataTypes.KAFKA_TOPIC.getName, List("DataSet"),
+            Some(PrimaryKeyConstraint.of(
+                List("topic"), true, s"\${\"topic\"}"))
+        ) {
             "topic" ~ (string, required, unique, indexed)
             "uri" ~ (string, required)
             "owner" ~ (string, required, indexed)
         }
 
         // JMS Data Set
-        _class(StormDataTypes.JMS_TOPIC.getName, List("DataSet")) {
+        _class(StormDataTypes.JMS_TOPIC.getName, List("DataSet"),
+          Some(PrimaryKeyConstraint.of(
+            List("topic"), true, s"\${\"topic\"}"))) {
             "topic" ~ (string, required, unique, indexed)
             "uri" ~ (string, required)
             "owner" ~ (string, required, indexed)
         }
 
         // HBase Data Set
-        _class(StormDataTypes.HBASE_TABLE.getName, List("DataSet")) {
+        _class(StormDataTypes.HBASE_TABLE.getName, List("DataSet"),
+          Some(PrimaryKeyConstraint.of(
+            List("tableName"), true, s"\${\"tableName\"}"))
+        )  {
             "tableName" ~ (string, required, unique, indexed)
             "uri" ~ (string, required)
             "owner" ~ (string, required, indexed)

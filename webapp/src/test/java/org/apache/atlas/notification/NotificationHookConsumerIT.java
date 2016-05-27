@@ -19,6 +19,7 @@
 package org.apache.atlas.notification;
 
 import com.google.inject.Inject;
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.typesystem.Referenceable;
@@ -30,6 +31,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.util.HashMap;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
@@ -97,7 +99,9 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         });
 
         //Assert that user passed in hook message is used in audit
-        Referenceable instance = serviceClient.getEntity(DATABASE_TYPE, "name", (String) entity.get("name"));
+        Referenceable instance =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
+            put("name", (String) entity.get("name"));
+        }});
         List<EntityAuditEvent> events =
                 serviceClient.getEntityAuditEvents(instance.getId()._getId(), (short) 1);
         assertEquals(events.size(), 1);
@@ -119,13 +123,17 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         waitFor(MAX_WAIT_TIME, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
-                Referenceable localEntity = serviceClient.getEntity(DATABASE_TYPE, "name", dbName);
+                Referenceable localEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
+                    put("name", dbName);
+                }});
                 return (localEntity.get("owner") != null && localEntity.get("owner").equals(newEntity.get("owner")));
             }
         });
 
         //Its partial update and un-set fields are not updated
-        Referenceable actualEntity = serviceClient.getEntity(DATABASE_TYPE, "name", dbName);
+        Referenceable actualEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
+            put(AtlasClient.NAME, dbName);
+        }});
         assertEquals(actualEntity.get("description"), entity.get("description"));
     }
 
@@ -201,7 +209,10 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
             }
         });
 
-        Referenceable actualEntity = serviceClient.getEntity(DATABASE_TYPE, "name", dbName);
+
+        Referenceable actualEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
+            put("name", dbName);
+        }});
         assertEquals(actualEntity.get("description"), newEntity.get("description"));
         assertEquals(actualEntity.get("owner"), newEntity.get("owner"));
     }
