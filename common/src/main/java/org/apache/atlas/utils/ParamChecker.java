@@ -169,7 +169,8 @@ public final class ParamChecker {
 
     public static void equals(short source, short target, String name) {
         if (source != target) {
-            throw new IllegalArgumentException(name + " should be equal, current values ( " + source + "," + target + ')');
+            throw new IllegalArgumentException(name + " should be equal,"
+                + " current values ( " + source + "," + target + ')');
         }
     }
 }
