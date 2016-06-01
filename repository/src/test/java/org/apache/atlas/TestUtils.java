@@ -231,12 +231,13 @@ public final class TestUtils {
         EnumTypeDefinition enumTypeDefinition = new EnumTypeDefinition("tableType", "tableType" + _description, values);
 
         HierarchicalTypeDefinition<ClassType> columnsDefinition =
-                createClassTypeDef(COLUMN_TYPE, ImmutableSet.<String>of(),
-                        createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
+                createClassTypeDef(COLUMN_TYPE, "column", ImmutableSet.<String>of(),
+                        PrimaryKeyConstraint.of(new ArrayList<String>() {{ add(NAME); }}, false),
+                        createUniqueRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
                         createRequiredAttrDef("type", DataTypes.STRING_TYPE));
 
         StructTypeDefinition partitionDefinition = new StructTypeDefinition("partition_struct_type", "partition_struct_type" + _description,
-                new AttributeDefinition[]{createRequiredAttrDef("name", DataTypes.STRING_TYPE),});
+                new AttributeDefinition[]{createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),});
 
         AttributeDefinition[] attributeDefinitions = new AttributeDefinition[]{
             new AttributeDefinition("location", DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false,

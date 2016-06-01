@@ -32,11 +32,14 @@ import org.testng.annotations.Test;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import static org.apache.atlas.AtlasClient.ENTITIES;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -91,8 +94,8 @@ public class LocalAtlasClientTest {
             assertEquals(e.getStatus(), ClientResponse.Status.BAD_REQUEST);
         }
 
-        when(entityResource.updateByUniqueAttribute(anyString(), anyString(), anyString(),
-                any(HttpServletRequest.class))).thenThrow(new WebApplicationException(response));
+        when(entityResource.updateByPrimaryKey(anyString(), anyList(), anyList(),
+            any(HttpServletRequest.class))).thenThrow(new WebApplicationException(response));
         when(response.getStatus()).thenReturn(Response.Status.NOT_FOUND.getStatusCode());
         try {
             atlasClient.updateEntity(random(), random(), random(), new Referenceable(random()));
@@ -117,8 +120,8 @@ public class LocalAtlasClientTest {
     public void testUpdateEntity() throws Exception {
         final String guid = random();
         Response response = mock(Response.class);
-        when(entityResource.updateByUniqueAttribute(anyString(), anyString(), anyString(),
-                any(HttpServletRequest.class))).thenReturn(response);
+        when(entityResource.updateByPrimaryKey(anyString(), anyList(), anyList(),
+            any(HttpServletRequest.class))).thenReturn(response);
         when(response.getEntity()).thenReturn(new JSONObject() {{
             put(ENTITIES, new JSONObject(
                     new AtlasClient.EntityResult(null, Arrays.asList(guid), null).toString()).get(ENTITIES));
@@ -139,9 +142,11 @@ public class LocalAtlasClientTest {
                     new AtlasClient.EntityResult(null, null, Arrays.asList(guid)).toString()).get(ENTITIES));
         }});
 
-        when(entityResource.deleteEntities(anyListOf(String.class), anyString(), anyString(), anyString())).thenReturn(response);
+        when(entityResource.deleteEntities(anyListOf(String.class), anyString(), anyList(), anyList())).thenReturn(response);
         LocalAtlasClient atlasClient = new LocalAtlasClient(serviceState, entityResource);
-        AtlasClient.EntityResult entityResult = atlasClient.deleteEntity(random(), random(), random());
+        AtlasClient.EntityResult entityResult = atlasClient.deleteEntity(random(), new LinkedHashMap<String, String>() {{
+            put(random(), random());
+        }});
         assertEquals(entityResult.getDeletedEntities(), Arrays.asList(guid));
     }
 

@@ -20,6 +20,7 @@ package org.apache.atlas.services;
 
 import com.google.inject.Provider;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.listener.TypesChangeListener;
 import org.apache.atlas.repository.MetadataRepository;
@@ -55,6 +56,9 @@ public class DefaultMetadataServiceMockTest {
     private IBootstrapTypesRegistrar typesRegistrar;
 
     @Mock
+    private DiscoveryService discoveryService;
+
+    @Mock
     private TypeSystem typeSystem;
 
     @Mock
@@ -77,7 +81,9 @@ public class DefaultMetadataServiceMockTest {
         when(configuration.getBoolean(HAConfiguration.ATLAS_SERVER_HA_ENABLED_KEY, false)).thenReturn(false);
         DefaultMetadataService defaultMetadataService = new DefaultMetadataService(mock(MetadataRepository.class),
                 mock(ITypeStore.class),
-                typesRegistrar, new ArrayList<Provider<TypesChangeListener>>(),
+                typesRegistrar,
+                mock(DiscoveryService.class),
+                new ArrayList<Provider<TypesChangeListener>>(),
                 new ArrayList<Provider<EntityChangeListener>>(), typeSystem, configuration);
 
         verify(typesRegistrar).registerTypes(ReservedTypesRegistrar.getTypesDir(),
@@ -90,7 +96,9 @@ public class DefaultMetadataServiceMockTest {
 
         DefaultMetadataService defaultMetadataService = new DefaultMetadataService(metadataRepository,
                 typeStore,
-                typesRegistrar, new ArrayList<Provider<TypesChangeListener>>(),
+                typesRegistrar,
+                mock(DiscoveryService.class),
+                new ArrayList<Provider<TypesChangeListener>>(),
                 new ArrayList<Provider<EntityChangeListener>>(), typeSystem, configuration);
 
         verifyZeroInteractions(typeStore);
@@ -108,7 +116,9 @@ public class DefaultMetadataServiceMockTest {
 
         DefaultMetadataService defaultMetadataService = new DefaultMetadataService(metadataRepository,
                 typeStore,
-                typesRegistrar, new ArrayList<Provider<TypesChangeListener>>(),
+                typesRegistrar,
+                mock(DiscoveryService.class),
+                new ArrayList<Provider<TypesChangeListener>>(),
                 new ArrayList<Provider<EntityChangeListener>>(), typeSystem, configuration);
         defaultMetadataService.instanceIsActive();
 
@@ -133,7 +143,9 @@ public class DefaultMetadataServiceMockTest {
                 thenReturn(transientTypeSystem);
         DefaultMetadataService defaultMetadataService = new DefaultMetadataService(metadataRepository,
                 typeStore,
-                typesRegistrar, new ArrayList<Provider<TypesChangeListener>>(),
+                typesRegistrar,
+                mock(DiscoveryService.class),
+                new ArrayList<Provider<TypesChangeListener>>(),
                 new ArrayList<Provider<EntityChangeListener>>(), typeSystem, configuration);
 
         defaultMetadataService.instanceIsActive();

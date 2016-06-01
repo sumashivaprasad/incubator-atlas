@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -131,32 +132,19 @@ public class LocalAtlasClient extends AtlasClient {
     }
 
     @Override
-    public EntityResult updateEntity(final String entityType, final String uniqueAttributeName,
-                               final String uniqueAttributeValue, Referenceable entity) throws AtlasServiceException {
-        final String entityJson = InstanceSerialization.toJson(entity, true);
-        LOG.debug("Updating entity type: {}, attributeName: {}, attributeValue: {}, entity: {}", entityType,
-                uniqueAttributeName, uniqueAttributeValue, entityJson);
-        EntityOperation entityOperation = new EntityOperation(API.UPDATE_ENTITY_PARTIAL) {
-            @Override
-            Response invoke() {
-                return entityResource.updateByUniqueAttribute(entityType, uniqueAttributeName, uniqueAttributeValue,
-                        new LocalServletRequest(entityJson));
-            }
-        };
-        JSONObject response = entityOperation.run();
-        EntityResult result = extractEntityResult(response);
-        LOG.debug("Update entity returned result: {}", result);
-        return result;
-    }
-
-    @Override
-    public EntityResult deleteEntity(final String entityType, final Map<String, Object> primaryKeyValues) throws AtlasServiceException {
+    public EntityResult deleteEntity(final String entityType, final Map<String, String> primaryKeyValues) throws AtlasServiceException {
         LOG.debug("Deleting entity type: {}, attributeName: {}, attributeValue: {}", entityType,
-                primaryKeyValues);
+            primaryKeyValues);
         EntityOperation entityOperation = new EntityOperation(API.DELETE_ENTITY) {
             @Override
             Response invoke() {
-                return entityResource.deleteEntities(null, entityType, primaryKeyValues);
+                return entityResource.deleteEntities(null, entityType, new ArrayList<String>() {{
+                    addAll(primaryKeyValues.keySet());
+                }}, new ArrayList<String>() {
+                    {
+                        addAll(primaryKeyValues.values());
+                    }
+                });
             }
         };
         JSONObject response = entityOperation.run();

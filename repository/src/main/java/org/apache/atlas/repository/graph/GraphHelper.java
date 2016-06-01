@@ -176,7 +176,8 @@ public final class GraphHelper {
      * @return vertex with the given property keys
      * @throws EntityNotFoundException
      */
-    private Vertex findVertex(Map<String, Object> args) throws EntityNotFoundException {
+    public Iterator<Vertex> findVertices(Map<String, Object> args) throws EntityNotFoundException {
+        List<Vertex> result = new ArrayList<>();
         StringBuilder condition = new StringBuilder();
         GraphQuery query = titanGraph.query();
 
@@ -189,16 +190,14 @@ public final class GraphHelper {
 
         Iterator<Vertex> results = query.vertices().iterator();
         // returning one since entityType, qualifiedName should be unique
-        Vertex vertex = results.hasNext() ? results.next() : null;
-
-        if (vertex == null) {
+        if (results.hasNext()) {
+            LOG.debug("Found atleast one vertex with {}", conditionStr);
+        } else {
             LOG.debug("Could not find a vertex with {}", condition.toString());
             throw new EntityNotFoundException("Could not find an entity in the repository with " + conditionStr);
-        } else {
-            LOG.debug("Found a vertex {} with {}", string(vertex), conditionStr);
         }
 
-        return vertex;
+        return results;
     }
 
     public static Iterator<Edge> getOutGoingEdgesByLabel(Vertex instanceVertex, String edgeLabel) {
@@ -311,14 +310,26 @@ public final class GraphHelper {
     }
 
     public Vertex getVertexForGUID(final String guid) throws EntityNotFoundException {
-        return findVertex(new HashMap<String, Object>() {{ put(Constants.GUID_PROPERTY_KEY, guid); }} );
+        Iterator<Vertex> vertices = findVertices(new HashMap<String, Object>() {{
+            put(Constants.GUID_PROPERTY_KEY, guid);
+        }});
+
+        if ( vertices.hasNext() ) {
+            return vertices.next();
+        }
+        return null;
     }
 
     public Vertex getVertexForProperty(final String propertyKey, final Object value) throws EntityNotFoundException {
-        return findVertex(new HashMap<String, Object>() {{
+        Iterator<Vertex> vertices = findVertices(new HashMap<String, Object>() {{
             put(propertyKey, value);
             put(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
         }});
+
+        if ( vertices.hasNext() ) {
+            return vertices.next();
+        }
+        return null;
     }
 
 

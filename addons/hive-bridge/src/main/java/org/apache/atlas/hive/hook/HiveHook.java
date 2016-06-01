@@ -274,10 +274,10 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         LOG.info("Deleting table {} ", tblQualifiedName);
         new HookNotification.EntityDeleteRequest(event.getUser(),
             HiveDataTypes.HIVE_TABLE.getName(),
-            new HashMap<String, Object>() {{
-                put(AtlasClient.NAME, output.getDatabase().getName());
-                put(getPrimaryKey(HiveDataModelGenerator.DB, AtlasClient.NAME), output.getTable().getDbName());
-                put(getPrimaryKey(HiveDataModelGenerator.DB, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), dgiBridge.getClusterName());
+            new LinkedHashMap<String, String>() {{
+                put(AtlasClient.NAME, (String) output.getDatabase().getName());
+                put(getPrimaryKey(HiveDataModelGenerator.DB, AtlasClient.NAME), (String) output.getTable().getDbName());
+                put(getPrimaryKey(HiveDataModelGenerator.DB, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), (String) dgiBridge.getClusterName());
             }});
     }
 
@@ -297,7 +297,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 messages.add(
                     new HookNotification.EntityDeleteRequest(event.getUser(),
                         HiveDataTypes.HIVE_DB.getName(),
-                        new HashMap<String, Object>() {{
+                        new HashMap<String, String>() {{
                            put(AtlasClient.NAME, output.getDatabase().getName());
                            put(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, dgiBridge.getClusterName());
                         }}));

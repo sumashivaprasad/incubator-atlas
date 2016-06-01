@@ -68,7 +68,7 @@ public class HookNotification implements JsonDeserializer<HookNotification.HookN
      * Type of the hook message.
      */
     public enum HookNotificationType {
-        TYPE_CREATE, TYPE_UPDATE, ENTITY_CREATE, ENTITY_PARTIAL_UPDATE, ENTITY_FULL_UPDATE, ENTITY_DELETE
+        TYPE_CREATE, TYPE_UPDATE, ENTITY_CREATE, ENTITY_FULL_UPDATE, ENTITY_DELETE
     }
 
     /**
@@ -178,17 +178,17 @@ public class HookNotification implements JsonDeserializer<HookNotification.HookN
     public static class EntityDeleteRequest extends HookNotificationMessage {
 
         private String typeName;
-        private Map<String, Object> primaryKeyValues;
+        private Map<String, String> primaryKeyValues;
 
         private EntityDeleteRequest() {
         }
 
-        public EntityDeleteRequest(String user, String typeName, Map<String, Object> primaryKeyValues) {
+        public EntityDeleteRequest(String user, String typeName, Map<String, String> primaryKeyValues) {
             this(HookNotificationType.ENTITY_DELETE, user, typeName, primaryKeyValues);
         }
 
         protected EntityDeleteRequest(HookNotificationType type,
-            String user, String typeName, Map<String, Object> primaryKeyValues) {
+            String user, String typeName, Map<String, String> primaryKeyValues) {
             super(type, user);
             this.typeName = typeName;
             this.primaryKeyValues = primaryKeyValues;
@@ -198,7 +198,7 @@ public class HookNotification implements JsonDeserializer<HookNotification.HookN
             return typeName;
         }
 
-        public Map<String, Object> primaryKeyValues() {
+        public Map<String, String> primaryKeyValues() {
             return primaryKeyValues;
         }
     }

@@ -400,7 +400,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
             return InstanceSerialization.toJson(ref, true);
 
         } catch (DiscoveryException e) {
-            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and attributes " + values);
+            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and attributes " + values, e);
         }
     }
 
@@ -446,6 +446,25 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         AtlasClient.EntityResult entityResult = repository.updateEntities(typedInstances);
         onEntitiesAddedUpdated(entityResult);
         return entityResult;
+    }
+
+    @Override
+    public AtlasClient.EntityResult updateEntityPartialByPrimaryKey(final String entityType, final Map<String, String> primaryKeys, final Referenceable updatedEntity) throws AtlasException {
+        ParamChecker.notEmpty(entityType, "entity type");
+        ParamChecker.notNull(primaryKeys, "primary key values");
+
+        try {
+            IReferenceableInstance oldInstance =  discoveryService.getEntityByPrimaryKey(entityType, primaryKeys);
+            ITypedReferenceableInstance newInstance = convertToTypedInstance(updatedEntity, entityType);
+            ((ReferenceableInstance)newInstance).replaceWithNewId(oldInstance.getId());
+
+            AtlasClient.EntityResult entityResult = repository.updatePartial(newInstance);
+            onEntitiesAddedUpdated(entityResult);
+            return entityResult;
+
+        } catch (DiscoveryException e) {
+            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and primary key " + primaryKeys);
+        }
     }
 
     private void onEntitiesAddedUpdated(AtlasClient.EntityResult entityResult) throws AtlasException {
@@ -734,21 +753,6 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         ParamChecker.notEmpty(deleteCandidateGuids, "delete candidate guids");
         return deleteGuids(deleteCandidateGuids);
     }
-
-//    @Override
-//    public AtlasClient.EntityResult deleteEntityByUniqueAttribute(String typeName, String uniqueAttributeName,
-//                                                                  String attrValue) throws AtlasException {
-//        ParamChecker.notEmpty(typeName, "delete candidate typeName");
-//        ParamChecker.notEmpty(uniqueAttributeName, "delete candidate unique attribute name");
-//        ParamChecker.notEmpty(attrValue, "delete candidate unique attribute value");
-//
-//        //Throws EntityNotFoundException if the entity could not be found by its unique attribute
-//        ITypedReferenceableInstance instance = getEntityDefinitionReference(typeName, uniqueAttributeName, attrValue);
-//        final Id instanceId = instance.getId();
-//        List<String> deleteCandidateGuids  = new ArrayList<String>() {{ add(instanceId._getId());}};
-//
-//        return deleteGuids(deleteCandidateGuids);
-//    }
 
     private AtlasClient.EntityResult deleteGuids(List<String> deleteCandidateGuids) throws AtlasException {
         AtlasClient.EntityResult entityResult = repository.deleteEntities(deleteCandidateGuids);

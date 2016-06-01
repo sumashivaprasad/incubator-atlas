@@ -25,6 +25,7 @@ import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.typesystem.IReferenceableInstance;
+import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
@@ -37,7 +38,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.atlas.repository.graph.GraphHelper.getQualifiedFieldName;
 
@@ -49,6 +53,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
     protected IReferenceableInstance instance;
     protected TypedInstanceToGraphMapper mapper;
     protected TypeSystem typeSystem;
+    protected Map<String, Vertex> vertexCache = new LinkedHashMap<>(10000);
 
     public PrimaryKeyDedupHandler(final TypedInstanceToGraphMapper typedInstanceToGraphMapper) {
         this.mapper = typedInstanceToGraphMapper;
@@ -77,19 +82,28 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
 
     private Vertex getVertexByProperties(final ClassType classType, final List<String> propertyKeys, final IReferenceableInstance ref) throws AtlasException {
 
-        PrimaryKeyQueryContext ctx = addSearchClauses(propertyKeys, classType, ref);
-        addClassReferenceSearchClauses(ctx, classType, ref);
-        String gremlinQuery = ctx.buildQuery();
-        LOG.debug("Searching for vertex by primary key with gremlin {} ", gremlinQuery);
-        Vertex vertex = ctx.executeQuery(gremlinQuery);
+        PrimaryKeyQueryContext ctx = addPrimitiveSearchClauses(propertyKeys, classType, ref);
+
+        Vertex vertex = null;
+        if ( ctx.startVertices() == null || !ctx.startVertices().hasNext() ) {
+            return null;
+        } else if (ctx.getClassReferences() != null) {
+            addClassReferenceSearchClauses(ctx, classType, ref);
+            String gremlinQuery = ctx.buildQuery();
+            LOG.debug("Searching for vertex by primary key with gremlin {} ", gremlinQuery);
+            vertex = ctx.executeQuery(gremlinQuery);
+        } else {
+            vertex = ctx.startVertices().next();
+        }
+
+
         if (vertex != null) {
             //Check for array of classes property matches
             if (ctx.hasArrayRefInPrimaryKey()) {
                 return checkArrayReferences(ctx, vertex, classType, ref);
-            } else {
-                return vertex;
             }
         }
+
         return vertex;
     }
 
@@ -140,11 +154,12 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         }
     }
 
-    PrimaryKeyQueryContext addSearchClauses(List<String> propertyKeys, ClassType classType, IReferenceableInstance ref) throws AtlasException {
+    PrimaryKeyQueryContext addPrimitiveSearchClauses(List<String> propertyKeys, ClassType classType, IReferenceableInstance ref) throws AtlasException {
         PrimaryKeyQueryContext gremlinCtx = new PrimaryKeyQueryContext();
         List<AttributeInfo> classReferences = null;
         List<AttributeInfo> arrReferences = null;
 
+        Map<String, Object> vertexFilterKeys = new LinkedHashMap<>();
         for (final String property : propertyKeys) {
             AttributeInfo attrInfo = classType.fieldMapping().fields.get(property);
             String propertyQFName = getQualifiedFieldName(classType, attrInfo.name);
@@ -154,10 +169,12 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
             final IDataType dataType = attrInfo.dataType();
             switch (dataType.getTypeCategory()) {
             case ENUM:
-                gremlinCtx.has(propertyQFName, PrimaryKeyQueryContext.getFormattedString(ref.get(property)));
+//                gremlinCtx.has(propertyQFName, PrimaryKeyQueryContext.getFormattedString(ref.get(property)));
+                vertexFilterKeys.put(propertyQFName, PrimaryKeyQueryContext.getFormattedString(ref.get(property)));
                 break;
             case PRIMITIVE:
-                gremlinCtx.has(propertyQFName, ref.get(property));
+//                gremlinCtx.has(propertyQFName, ref.get(property));
+                vertexFilterKeys.put(propertyQFName, ref.get(property));
                 break;
             case CLASS:
                 if (classReferences == null) {
@@ -190,9 +207,21 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         }
 
         //Should be an active entity
-        gremlinCtx.has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+//        gremlinCtx.has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+        vertexFilterKeys.put(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
         //Add clause for typeName
-        gremlinCtx.typeName(ref.getTypeName()).alias(PrimaryKeyQueryContext.getFormattedString(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
+//        gremlinCtx.typeName(ref.getTypeName());
+        vertexFilterKeys.put(Constants.ENTITY_TYPE_PROPERTY_KEY, ref.getTypeName());
+
+        try {
+            Iterator<Vertex> startVertices = graphHelper.findVertices(vertexFilterKeys);
+
+            if (startVertices != null && startVertices.hasNext()) {
+                gremlinCtx.start(startVertices);
+            }
+        } catch(EntityNotFoundException enfe) {
+            //Ignore
+        }
 
         return gremlinCtx;
     }

@@ -159,6 +159,17 @@ public interface MetadataService {
      */
     AtlasClient.EntityResult updateEntities(String entityJson) throws AtlasException;
 
+    /**
+     * Updates entity identified by a primary key
+     *
+     * @param entityType The entity's type
+     * @param primaryKeys The keys by which the entity can be uniquely identified
+     * @param updatedEntity
+     * @return Guid of updated entity
+     * @throws AtlasException
+     */
+    AtlasClient.EntityResult updateEntityPartialByPrimaryKey(String entityType, Map<String, String> primaryKeys, Referenceable updatedEntity) throws AtlasException;
+
     // Trait management functions
 
     /**

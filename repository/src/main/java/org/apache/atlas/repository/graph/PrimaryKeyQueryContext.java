@@ -25,7 +25,9 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.commons.lang.StringUtils;
 
+import java.util.Iterator;
 import java.util.List;
 
 public class PrimaryKeyQueryContext {
@@ -37,6 +39,8 @@ public class PrimaryKeyQueryContext {
     public static final String GREMLIN_PROPERTY_PRED_SEARCH_FMT = ".has('%s', '%s',  %s)";
     public static final String GREMLIN_ALIAS_FMT = ".as(%s)";
     public static final String GREMLIN_REFER_STEP_FMT = ".back(%s)";
+
+    private Iterator<Vertex> startVertices;
 
     public final StringBuilder gremlinQuery = new StringBuilder();
     private List<AttributeInfo> classReferences;
@@ -101,14 +105,18 @@ public class PrimaryKeyQueryContext {
         return this;
     }
 
-    public String buildQuery(String step) {
-        select(step);
-        return "g.V" + gremlinQuery + ".toList()";
-    }
-
     public String buildQuery() {
+
         select(GREMLIN_STEP_RESULT);
-        return "g.V" + gremlinQuery + ".toList()";
+        StringBuilder startVertexIds = new StringBuilder();
+
+        while (startVertices.hasNext()) {
+            startVertexIds.append(startVertices.next().getId());
+            if (startVertices.hasNext()) {
+                startVertexIds.append(",");
+            }
+        }
+        return String.format("g.v(%s).as('%s')" + gremlinQuery + ".toList()", startVertexIds.toString(), GREMLIN_STEP_RESULT);
     }
 
     public PrimaryKeyQueryContext select(String step) {
@@ -129,7 +137,16 @@ public class PrimaryKeyQueryContext {
     }
 
     public Vertex executeQuery(String gremlinQuery) throws DiscoveryException {
+
         return graphHelper.searchByGremlin(gremlinQuery, GREMLIN_STEP_RESULT);
+    }
+
+    public void start(Iterator<Vertex> vertices) {
+        startVertices = vertices;
+    }
+
+    public Iterator<Vertex> startVertices() {
+        return startVertices;
     }
 }
 

@@ -301,4 +301,11 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
     public boolean hasPrimaryKey() {
         return primaryKey != null;
     }
+
+    public boolean isPrimaryKeyAttribute(String attrName) {
+        if (hasPrimaryKey()) {
+            return getPrimaryKey().columns().contains(attrName);
+        }
+        return false;
+    }
 }

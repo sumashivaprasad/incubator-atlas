@@ -25,9 +25,7 @@ import com.thinkaurelius.titan.core.TitanVertex;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.GraphTransaction;
-import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.discovery.DiscoveryException;
 import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.query.Expressions;
@@ -41,12 +39,13 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graph.GraphProvider;
-import org.apache.atlas.repository.graph.PrimaryKeyQueryContext;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
+import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -175,72 +174,76 @@ public class GraphBackedDiscoveryService implements DiscoveryService {
     }
 
     @Override
-    @InterfaceAudience.Private
+    @GraphTransaction
     public IReferenceableInstance getEntityByPrimaryKey(final String entityType, final Map<String, String> attributes) throws AtlasException {
-//        ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, entityType);
-//        PrimaryKeyQueryContext pkc = new PrimaryKeyQueryContext();
-//        pkc.typeName(entityType);
-//        for (String attr : attributes.keySet()) {
-//            AttributeInfo attributeInfo = classType.fieldMapping.fields.get(attr);
-//            String attrQFName = graphHelper.getQualifiedFieldName(classType, attributeInfo.name);
-//            pkc.has(attrQFName, attributes.get(attr));
-//        }
-//
-//        Vertex vertex = pkc.executeQuery(pkc.buildQuery());
-//        return graphPersistenceStrategy.constructInstance(classType, vertex);
 
-            ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, entityType);
-            final String DSL_QUERY_FMT = "%s where %s";
+        ClassType classType = TypeSystem.getInstance().getDataType(ClassType.class, entityType);
+        final String DSL_QUERY_FMT = "%s where %s";
 
-            String filters = constructDSLPredicates(classType, attributes);
+        String filters = constructDSLPredicates(classType, attributes);
 
-            GremlinQueryResult result = evaluate(String.format(DSL_QUERY_FMT, entityType, filters));
+        GremlinQueryResult result = evaluate(String.format(DSL_QUERY_FMT, entityType, filters));
 
-            if (result.rows().length() == 1) {
-                IReferenceableInstance row = (IReferenceableInstance) result.rows().head();
-                return row;
-            } else if (result.rows().length() > 1) {
-                throw new AtlasException("More than one entity returned for the query by primary key with type " + entityType + "{" + attributes + "}");
-            } else {
-                throw new EntityNotFoundException("No entity was returned by the primary key with type " + entityType + "{" + attributes + "}");
-            }
-
+        if (result.rows().length() == 1) {
+            IReferenceableInstance row = (IReferenceableInstance) result.rows().head();
+            return row;
+        } else if (result.rows().length() > 1) {
+            throw new AtlasException("More than one entity returned for the query by primary key with type " + entityType + "{" + attributes + "}");
+        } else {
+            throw new EntityNotFoundException("No entity was returned by the primary key with type " + entityType + "{" + attributes + "}");
+        }
     }
 
     private String constructDSLPredicates(ClassType classType, Map<String, String> attributes) {
         StringBuilder filters = new StringBuilder();
+        int index = 0;
         for (String attr : attributes.keySet()) {
-            int index = 0;
-            String attrName = attr;
-            if (attr.contains(".")) {
-                attrName = attr.split(".")[0];
-            }
-            AttributeInfo attributeInfo = classType.fieldMapping.fields.get(attrName);
-            final String typeName = attributeInfo.dataType().getName();
-            switch (attributeInfo.dataType().getTypeCategory()) {
+            IDataType attrType = getDataType(classType, attr);
+            final String typeName = attrType.getName();
+            switch (attrType.getTypeCategory()) {
             case PRIMITIVE:
                 if (typeName.equals(DataTypes.STRING_TYPE.getName()) ||
                     typeName.equals(DataTypes.DATE_TYPE.getName())) {
                     String value = String.valueOf(attributes.get(attr));
-                    filters.append(String.format("%s='%s'", typeName, value));
+                    filters.append(String.format("%s = '%s'", attr, value));
                 } else {
                     Object value = attributes.get(attr);
-                    filters.append(String.format("%s=%s", typeName, value));
+                    filters.append(String.format("%s = %s", attr, value));
                 }
                 break;
             case ENUM:
                 String value = String.valueOf(attributes.get(attr));
-                filters.append(String.format("%s='%s'", typeName, value));
+                filters.append(String.format("%s = '%s'", typeName, value));
                 break;
             default:
-                throw new UnsupportedOperationException("Primary key by non-primitive attributes are not supported " + attributeInfo.name);
+                throw new UnsupportedOperationException("Primary key by non-primitive attributes are not supported " + attrType);
             }
 
-            if (++index < attributes.size()) {
-                filters.append(" and ");
-            }
+            filters.append(" and ");
         }
+
+        filters.append(String.format("%s = '%s'", Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name()));
         return filters.toString();
+    }
+
+    IDataType getDataType(ClassType classType, String attrName) {
+        String parentAttribute = attrName;
+        if (attrName.contains(".")) {
+            parentAttribute = attrName.split("\\.")[0];
+        }
+        if (!classType.isPrimaryKeyAttribute(parentAttribute)) {
+            throw new IllegalArgumentException("Attribute " + parentAttribute + " is not part of the primary key for " + classType.getName() + ". Primary key attributes are " + classType.getPrimaryKey().columns());
+        }
+        AttributeInfo attributeInfo = classType.fieldMapping.fields.get(parentAttribute);
+        switch(attributeInfo.dataType().getTypeCategory()) {
+        case PRIMITIVE:
+        case ENUM:
+            return attributeInfo.dataType();
+        case CLASS:
+            return getDataType((ClassType) attributeInfo.dataType(), attrName.substring(attrName.indexOf(".") + 1));
+        default:
+            throw new UnsupportedOperationException("Primary key by non-primitive attributes are not supported " + attributeInfo.name);
+        }
     }
 
     private List<Map<String, String>> extractResult(Object o) throws DiscoveryException {

@@ -279,6 +279,8 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
                 {"hive_table where name='sales_fact', db where name='Sales'", 1},
                 {"hive_table where name='sales_fact', db where name='Reporting'", 0},
                 {"hive_partition as p where values = ['2015-01-01']", 1},
+                //Search with two dots
+                {"hive_partition where table.db.name='Reporting'", 1},
 //              {"StorageDesc select cols", 6} //Not working since loading of lists needs to be fixed yet
         };
     }

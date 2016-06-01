@@ -204,6 +204,56 @@ public class EntityResource {
     }
 
     /**
+     * Adds/Updates given entity identified by its unique attribute( entityType, attributeName and value)
+     * Updates support only partial update of an entity - Adds/updates any new values specified
+     * Updates do not support removal of attribute values
+     *
+     * @param entityType the entity type
+     * @param attributes the primary key attributes used to identify the entity
+     * @param values the primary key attribute values
+     * @param request The updated entity json
+     * @return response payload as json
+     * The body contains the JSONArray of entity json. The service takes care of de-duping the entities based on any
+     * unique attribute for the give type.
+     */
+    @POST
+    @Path("qualifiedName")
+    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    public Response updateByPrimaryKey(@QueryParam("type") String entityType,
+        @QueryParam("property") List<String> attributes,
+        @QueryParam("value") List<String> values, @Context HttpServletRequest request) {
+        try {
+            String entities = Servlets.getRequestPayload(request);
+
+            LOG.debug("Partially updating entity by unique attribute {} {} {} {} ", entityType, attributes, values, entities);
+
+            Referenceable updatedEntity =
+                InstanceSerialization.fromJsonReferenceable(entities, true);
+            AtlasClient.EntityResult entityResult =
+                metadataService.updateEntityPartialByPrimaryKey(entityType, getPrimaryKeys(attributes, values), updatedEntity);
+
+            JSONObject response = getResponse(entityResult);
+            return Response.ok(response).build();
+        } catch (ValueConversionException ve) {
+            LOG.error("Unable to persist entity instance due to a desrialization error ", ve);
+            throw new WebApplicationException(Servlets.getErrorResponse(ve.getCause(), Response.Status.BAD_REQUEST));
+        } catch(EntityExistsException e) {
+            LOG.error("Unique constraint violation", e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.CONFLICT));
+        } catch (EntityNotFoundException e) {
+            LOG.error("An entity with type={} and qualifiedName={} does not exist", entityType, values, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
+        } catch (AtlasException | IllegalArgumentException e) {
+            LOG.error("Unable to create/update entity {}" + entityType + ":" + attributes + "." + values, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
+        } catch (Throwable e) {
+            LOG.error("Unable to update entity {}" + entityType + ":" + attributes + "." + values, e);
+            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
+        }
+    }
+
+    /**
      * Updates entity identified by its GUID
      * Support Partial update of an entity - Adds/updates any new values specified
      * Does not support removal of attribute values
