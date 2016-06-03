@@ -96,19 +96,19 @@ public final class GraphToTypedInstanceMapper {
 
     public void setPrimaryKeyValue(ClassType classType, ITypedReferenceableInstance typedInstance) throws AtlasException {
         if ( classType.hasPrimaryKey() && classType.getPrimaryKey().isVisible() ) {
-            Map<String, Object> pkValues = primaryKeyValue(classType, typedInstance);
-            Map<String, String> flattenedMap = flattenMap(pkValues);
+            LinkedHashMap<String, Object> pkValues = primaryKeyValue(classType, typedInstance);
+            LinkedHashMap<String, String> flattenedMap = flattenMap(pkValues);
             PrimaryKeyConstraint pkc = classType.getPrimaryKey();
             typedInstance.set(pkc.attributeName(), pkc.displayValue(flattenedMap));
         }
     }
 
-    private Map<String, String> flattenMap(Map<String, Object> pkValues) {
+    private LinkedHashMap<String, String> flattenMap(LinkedHashMap<String, Object> pkValues) {
         LinkedHashMap<String, String> flatMap = new LinkedHashMap<>();
         for (String key : pkValues.keySet()) {
             Object value = pkValues.get(key);
             if ( value instanceof Map) {
-                Map<String, String> flattendKVPairs = flattenMap((Map<String, Object>) value);
+                Map<String, String> flattendKVPairs = flattenMap((LinkedHashMap<String, Object>) value);
                 for (String innerKey : flattendKVPairs.keySet()) {
                     flatMap.put(key + "." + innerKey , flattendKVPairs.get(innerKey));
                 }
@@ -138,10 +138,10 @@ public final class GraphToTypedInstanceMapper {
         }
     }
 
-    private Map<String, Object> primaryKeyValue(ClassType classType, ITypedInstance typedInstance) throws AtlasException {
+    private LinkedHashMap<String, Object> primaryKeyValue(ClassType classType, ITypedInstance typedInstance) throws AtlasException {
         //Map the primary key
         PrimaryKeyConstraint pkc = classType.getPrimaryKey();
-        Map<String, Object> pkValues = null;
+        LinkedHashMap<String, Object> pkValues = null;
         if ( pkc != null) {
             pkValues = new LinkedHashMap<>();
             for (String pkColumn : pkc.columns()) {

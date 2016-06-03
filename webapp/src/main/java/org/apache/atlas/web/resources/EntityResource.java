@@ -220,18 +220,18 @@ public class EntityResource {
     @Path("qualifiedName")
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public Response updateByPrimaryKey(@QueryParam("type") String entityType,
+    public Response updateByPrimaryKeyOrUniqueAttribute(@QueryParam("type") String entityType,
         @QueryParam("property") List<String> attributes,
         @QueryParam("value") List<String> values, @Context HttpServletRequest request) {
         try {
             String entities = Servlets.getRequestPayload(request);
 
-            LOG.debug("Partially updating entity by unique attribute {} {} {} {} ", entityType, attributes, values, entities);
+            LOG.debug("Partially updating entity by primary key {} {} {} {} ", entityType, attributes, values, entities);
 
             Referenceable updatedEntity =
                 InstanceSerialization.fromJsonReferenceable(entities, true);
             AtlasClient.EntityResult entityResult =
-                metadataService.updateEntityPartialByPrimaryKey(entityType, getPrimaryKeys(attributes, values), updatedEntity);
+                metadataService.updateEntityPartialByPrimaryKeyOrUniqueAttribute(entityType, getUniqueKeys(attributes, values), updatedEntity);
 
             JSONObject response = getResponse(entityResult);
             return Response.ok(response).build();
@@ -356,7 +356,7 @@ public class EntityResource {
                 ParamChecker.notEmptyElements(attributes, "Primary keys");
                 ParamChecker.notEmptyElements(values, "Primary key values");
 
-                entityResult = metadataService.deleteEntityByPrimaryKey(entityType, getPrimaryKeys(attributes, values));
+                entityResult = metadataService.deleteEntityByPrimaryKeyOrUniqueAttribute(entityType, getUniqueKeys(attributes, values));
             }
             JSONObject response = getResponse(entityResult);
             return Response.ok(response).build();
@@ -376,7 +376,7 @@ public class EntityResource {
         }
     }
 
-    private Map<String, String> getPrimaryKeys(List<String> attributes, List<String> values) {
+    private Map<String, String> getUniqueKeys(List<String> attributes, List<String> values) {
         Map<String, String> primaryKeys = new LinkedHashMap<String, String>();
         for(int i = 0; i < attributes.size() ; i++) {
             primaryKeys.put(attributes.get(i), values.get(i));
@@ -466,7 +466,7 @@ public class EntityResource {
         } else {
             try {
 
-                String entityDefinition = metadataService.getEntityByPrimaryKey(entityType, getPrimaryKeys(attributes, values));
+                String entityDefinition = metadataService.getEntityByPrimaryKeyOrUniqueAttribute(entityType, getUniqueKeys(attributes, values));
 
                 JSONObject response = new JSONObject();
                 response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());

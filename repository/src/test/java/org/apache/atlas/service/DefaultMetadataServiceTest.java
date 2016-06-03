@@ -127,7 +127,7 @@ public class DefaultMetadataServiceTest {
         table = createTableEntity(dbGUid);
         String tableGuid = createInstance(table);
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         table = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         tableId = new Id(tableGuid, 0, TestUtils.TABLE_TYPE);
     }
@@ -222,6 +222,7 @@ public class DefaultMetadataServiceTest {
         newId = createInstance(processEntity);
         assertNull(newId);
 
+        //Verify if primary key expression evaluates and is set correctly
         Referenceable dbEntity = getEntity(dbId);
         Assert.assertEquals(dbEntity.get(PrimaryKeyConstraint.PK_ATTR_NAME), String.format("%s@%s", (String) dbEntity.get(AtlasClient.NAME), (String) dbEntity.get("cluster")));
 
@@ -327,7 +328,7 @@ public class DefaultMetadataServiceTest {
 
         //table create should re-use the db instance created earlier
         String tableDefinitionJson =
-                metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+                metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Referenceable actualDb = (Referenceable) tableDefinition.get("databaseComposite");
         Assert.assertEquals(actualDb.getId().id, dbId);
@@ -353,7 +354,7 @@ public class DefaultMetadataServiceTest {
 
         updateInstance(tableEntity);
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertTrue(partsMap.get("part0").equalsContents(((Map<String, Struct>)tableDefinition.get("partitionsMap")).get("part0")));
@@ -367,7 +368,7 @@ public class DefaultMetadataServiceTest {
 
         updateInstance(tableEntity);
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertEquals(((Map<String, Struct>)tableDefinition.get("partitionsMap")).size(), 2);
@@ -383,7 +384,7 @@ public class DefaultMetadataServiceTest {
 
         updateInstance(tableEntity);
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertEquals(((Map<String, Struct>)tableDefinition.get("partitionsMap")).size(), 2);
@@ -395,7 +396,7 @@ public class DefaultMetadataServiceTest {
         partition2.set(NAME, "test2Updated");
         updateInstance(tableEntity);
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertEquals(((Map<String, Struct>)tableDefinition.get("partitionsMap")).size(), 2);
@@ -449,7 +450,7 @@ public class DefaultMetadataServiceTest {
     private void verifyMapUpdates(String typeName, Referenceable tableEntity,
                                   Map<String, Referenceable> expectedMap, String mapAttrName) throws AtlasException, AtlasServiceException {
         String json =
-            metadataService.getEntityByPrimaryKey(typeName, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(typeName, getTablePrimaryKey(tableEntity));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(json, true);
         Map<String, Referenceable> actualMap = (Map<String, Referenceable>) tableDefinition.get(mapAttrName);
 
@@ -488,7 +489,7 @@ public class DefaultMetadataServiceTest {
         metadataService.updateEntityPartialByGuid(tableId._getId(), tableUpdated);
 
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         List<String> actualColumns = (List) tableDefinition.get("columnNames");
         Assert.assertEquals(actualColumns, colNameList);
@@ -501,7 +502,7 @@ public class DefaultMetadataServiceTest {
         metadataService.updateEntityPartialByGuid(tableId.getId()._getId(), tableUpdated);
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         actualColumns = (List) tableDefinition.get("columnNames");
         Assert.assertEquals(actualColumns, updatedColNameList);
@@ -612,7 +613,7 @@ public class DefaultMetadataServiceTest {
 
     private void verifyArrayUpdates(String typeName, Referenceable tableEntity,
                                     List<Referenceable> expectedArray, String arrAttrName) throws AtlasException, AtlasServiceException {
-        String json = metadataService.getEntityByPrimaryKey(typeName, getTablePrimaryKey(tableEntity));
+        String json = metadataService.getEntityByPrimaryKeyOrUniqueAttribute(typeName, getTablePrimaryKey(tableEntity));
         Referenceable entityDefinition = InstanceSerialization.fromJsonReferenceable(json, true);
         List<Referenceable> actualArray = (List<Referenceable>) entityDefinition.get(arrAttrName);
         if (expectedArray == null && actualArray != null) {
@@ -653,7 +654,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId);
 
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Assert.assertNotNull(tableDefinition.get("serde1"));
         Assert.assertTrue(serdeInstance.equalsContents(tableDefinition.get("serde1")));
@@ -662,7 +663,7 @@ public class DefaultMetadataServiceTest {
         serdeInstance.set("serde", "testUpdated");
         updateInstance(tableEntity);
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertTrue(serdeInstance.equalsContents(tableDefinition.get("serde1")));
@@ -757,7 +758,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId._getId());
 
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
@@ -773,7 +774,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
@@ -787,7 +788,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
@@ -800,7 +801,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
@@ -816,7 +817,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNotNull(tableDefinition.get("partitions"));
@@ -830,7 +831,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId._getId());
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertNull(tableDefinition.get("partitions"));
@@ -848,7 +849,7 @@ public class DefaultMetadataServiceTest {
     public void testUpdateRequiredAttrToNull() throws Exception {
         //Update required attribute
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         Assert.assertEquals(tableDefinition.get("description"), "random table");
@@ -867,7 +868,7 @@ public class DefaultMetadataServiceTest {
         String tableId = createInstance(tableEntity);
 
         String tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         //Update optional Attribute
@@ -879,7 +880,7 @@ public class DefaultMetadataServiceTest {
         Assert.assertEquals(newtableId, tableId);
 
         tableDefinitionJson =
-            metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(tableEntity));
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Assert.assertNull(tableDefinition.get("created"));
     }
@@ -887,7 +888,7 @@ public class DefaultMetadataServiceTest {
     @Test
     public void testCreateEntityWithEnum ()throws Exception {
         String tableDefinitionJson =
-                metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
+                metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table));
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         EnumValue tableType = (EnumValue) tableDefinition.get("tableType");
 
@@ -900,14 +901,14 @@ public class DefaultMetadataServiceTest {
         createInstance(entity);
 
         //get entity by valid primary key
-        String entityJson = metadataService.getEntityByPrimaryKey(TestUtils.DATABASE_TYPE, getDBPrimaryKey(entity));
+        String entityJson = metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.DATABASE_TYPE, getDBPrimaryKey(entity));
         Assert.assertNotNull(entityJson);
         Referenceable referenceable = InstanceSerialization.fromJsonReferenceable(entityJson, true);
         Assert.assertEquals(referenceable.get(NAME), entity.get(NAME));
 
         //get entity by invalid primary key value
         try {
-            metadataService.getEntityByPrimaryKey(TestUtils.DATABASE_TYPE, new HashMap<String, String>() {{
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.DATABASE_TYPE, new HashMap<String, String>() {{
                 put(NAME, "random");
                 put("cluster", (String) entity.get("cluster"));
             }});
@@ -918,7 +919,7 @@ public class DefaultMetadataServiceTest {
 
         //get entity by non-primary key
         try {
-            metadataService.getEntityByPrimaryKey(TestUtils.DATABASE_TYPE, new HashMap<String, String>() {{
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.DATABASE_TYPE, new HashMap<String, String>() {{
                 put("description", (String) entity.get("description"));
             }});
             Assert.fail("Expected IllegalArgumentException");
@@ -971,7 +972,7 @@ public class DefaultMetadataServiceTest {
 
         // Retrieve the table entities from the repository,
         // to get their guids and the composite column guids.
-        String entityJson = metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table1Entity));
+        String entityJson = metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table1Entity));
         Assert.assertNotNull(entityJson);
         table1Entity = InstanceSerialization.fromJsonReferenceable(entityJson, true);
         List<IReferenceableInstance> table1Columns = (List<IReferenceableInstance>) table1Entity.get(COLUMNS_ATTR_NAME);
@@ -1016,7 +1017,7 @@ public class DefaultMetadataServiceTest {
     private void assertTableDeleted(Referenceable entity)
         throws AtlasException, AtlasServiceException {
         try {
-            metadataService.getEntityByPrimaryKey(TABLE_TYPE, getTablePrimaryKey(entity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TABLE_TYPE, getTablePrimaryKey(entity));
             fail("Expected EntityNotFoundException");
         } catch(EntityNotFoundException e) {
             //expected
@@ -1026,7 +1027,7 @@ public class DefaultMetadataServiceTest {
     private void assertColumnDeleted(Referenceable entity)
         throws AtlasException, AtlasServiceException {
         try {
-            metadataService.getEntityByPrimaryKey(COLUMN_TYPE, getColumnPrimaryKey(entity));
+            metadataService.getEntityByPrimaryKeyOrUniqueAttribute(COLUMN_TYPE, getColumnPrimaryKey(entity));
             fail("Expected EntityNotFoundException");
         } catch(EntityNotFoundException e) {
             //expected
@@ -1046,7 +1047,7 @@ public class DefaultMetadataServiceTest {
         createInstance(table1Entity);
 
         // to get their guids and the composite column guids.
-        String entityJson = metadataService.getEntityByPrimaryKey(TestUtils.TABLE_TYPE,
+        String entityJson = metadataService.getEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE,
             getTablePrimaryKey(table1Entity));
         Assert.assertNotNull(entityJson);
         table1Entity = InstanceSerialization.fromJsonReferenceable(entityJson, true);
@@ -1059,7 +1060,7 @@ public class DefaultMetadataServiceTest {
 
         // Delete the table entities.  The deletion should cascade
         // to their composite columns.
-        List<String> deletedGuids = metadataService.deleteEntityByPrimaryKey(TestUtils.TABLE_TYPE, getTablePrimaryKey(table1Entity)).getDeletedEntities();
+        List<String> deletedGuids = metadataService.deleteEntityByPrimaryKeyOrUniqueAttribute(TestUtils.TABLE_TYPE, getTablePrimaryKey(table1Entity)).getDeletedEntities();
 
         // Verify that deleteEntities() response has guids for tables and their composite columns.
         Assert.assertTrue(deletedGuids.contains(table1Entity.getId()._getId()));

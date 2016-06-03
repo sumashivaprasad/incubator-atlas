@@ -28,13 +28,13 @@ import java.util.Map;
 public class PrimaryKeyConstraintTest {
 
     @Test
-    public void testGetDisplayValue() {
-        Map<String, String> values = new LinkedHashMap<>();
+    public void testGetDisplayValue() throws EvaluationException {
+        LinkedHashMap<String, String> values = new LinkedHashMap<>();
         values.put("name", "test");
         values.put("db.name", "testDB");
         values.put("db.cluster.name", "default");
 
-        PrimaryKeyConstraint pkc = PrimaryKeyConstraint.of(ImmutableList.of("name", "db"), true, "${name}.${db.name}@${db.cluster.name}");
+        PrimaryKeyConstraint pkc = PrimaryKeyConstraint.of(ImmutableList.of("name", "db"), true, "%s.%s@%s");
         String displayStr = pkc.displayValue(values);
         Assert.assertEquals(displayStr, "test.testDB@default");
     }

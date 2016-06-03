@@ -30,12 +30,13 @@ import scala.actors.threadpool.Arrays;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.jexl3.JexlContext;
 
 /**
- * A primary key constraint that can be defined on hierarchical types like class, trait.
+ * A primary key constraint that can be defined on hierarchical types - currently supported only for class.
  * Supports a set of unique columns i.e a composite primary key.
  * The specified primary key columns should already be part of the attribute definition of the class
  * and should be required attributes
@@ -90,24 +91,12 @@ public class PrimaryKeyConstraint {
         return displayFormat;
     }
 
-    public String displayValue(Map<String, String> pkValues) {
+    public String displayValue(LinkedHashMap<String, String> pkValues) throws EvaluationException {
         if (displayFormat() == null) {
             return Joiner.on(":").join(pkValues.values());
         } else {
-            String exprString = displayFormat();
-            JexlEngine jexl = new JexlBuilder().create();
-            // Create an expression
-            JxltEngine jxlt = jexl.createJxltEngine();
-            JxltEngine.Expression expr = jxlt.createExpression(exprString);
-
-            // Create a context and add data
-            JexlContext jc = new MapContext();
-            for (String key : pkValues.keySet()) {
-                jc.set(key, pkValues.get(key));
-            }
-
-            // Now evaluate the expression, getting the result
-            return (String) expr.evaluate(jc);
+            final String exprString = displayFormat();
+            return PrimaryKeyExpressionFactory.instance.getDefaultHandler().evaluate(exprString, pkValues);
         }
     }
 

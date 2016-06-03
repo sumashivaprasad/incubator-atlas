@@ -83,7 +83,7 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testInputsGraphForEntity() throws Exception {
-        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, String>() {{
             put(AtlasClient.NAME, salesMonthlyTable);
         }});
 
@@ -130,7 +130,7 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testOutputsGraphForEntity() throws Exception {
-        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, String>() {{
             put(AtlasClient.NAME, salesFactTable);
         }});
         JSONObject results = serviceClient.getOutputGraphForEntity(entity.getId()._getId());
@@ -178,7 +178,7 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSchemaForEntity() throws Exception {
-        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, Object>() {{
+        Referenceable entity =  serviceClient.getEntityByPrimaryKey(HIVE_TABLE_TYPE, new HashMap<String, String>() {{
             put(AtlasClient.NAME, salesFactTable);
         }});
         JSONObject results = serviceClient.getSchemaForEntity(entity.getId()._getId());

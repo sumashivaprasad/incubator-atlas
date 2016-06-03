@@ -457,20 +457,20 @@ public final class GraphHelper {
         }
     }
 
-    public Vertex extractVertexFromGremlinResult(Object o, String step) throws DiscoveryException {
+    public List<Vertex> extractVerticesFromGremlinResult(Object o, String step) throws DiscoveryException {
         if (!(o instanceof List)) {
             throw new DiscoveryException(String.format("Cannot process result %s", o.toString()));
         }
 
         List l = (List) o;
-        Vertex result = null;
+        List<Vertex> result = new ArrayList<>();
         for (Object r : l) {
             if (r instanceof TitanVertex) {
-                result = (TitanVertex) r;
+                result.add((TitanVertex) r);
             } else if (r instanceof Map) {
-                result = ((Map<String, Vertex>) r).get(step);
+                result.add(((Map<String, Vertex>) r).get(step));
             } else if (r instanceof Row) {
-                result = (Vertex) ((Row) r).get(0);
+                result.add((Vertex) ((Row) r).get(0));
             } else {
                 throw new DiscoveryException(String.format("Cannot process result %s", o.toString()));
             }
@@ -478,9 +478,9 @@ public final class GraphHelper {
         return result;
     }
 
-    public Vertex searchByGremlin(String gremlinQuery, String resultStep) throws DiscoveryException {
+    public List<Vertex> searchByGremlin(String gremlinQuery, String resultStep) throws DiscoveryException {
         Object o = executeGremlin(gremlinQuery);
-        return extractVertexFromGremlinResult(o, resultStep);
+        return extractVerticesFromGremlinResult(o, resultStep);
     }
 
     public Object executeGremlin(String gremlinQuery) throws DiscoveryException {

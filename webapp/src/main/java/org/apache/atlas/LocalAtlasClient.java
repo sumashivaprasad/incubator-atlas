@@ -179,15 +179,53 @@ public class LocalAtlasClient extends AtlasClient {
     }
 
     @Override
-    public EntityResult updateEntityAttribute(final String guid, final String attribute, String value) throws AtlasServiceException {
-        throw new IllegalStateException("Not supported in LocalAtlasClient");
-    }
-
-    @Override
     public EntityResult updateEntity(String guid, Referenceable entity) throws AtlasServiceException {
         throw new IllegalStateException("Not supported in LocalAtlasClient");
     }
 
+    @Override
+    public EntityResult updateEntity(final String entityType, final String uniqueAttributeName,
+        final String uniqueAttributeValue, Referenceable entity) throws AtlasServiceException {
+        final String entityJson = InstanceSerialization.toJson(entity, true);
+        LOG.debug("Updating entity type: {}, attributeName: {}, attributeValue: {}, entity: {}", entityType,
+            uniqueAttributeName, uniqueAttributeValue, entityJson);
+        EntityOperation entityOperation = new EntityOperation(API.UPDATE_ENTITY_PARTIAL) {
+            @Override
+            Response invoke() {
+                return entityResource.updateByPrimaryKeyOrUniqueAttribute(entityType, new ArrayList<String>() {{
+                    add(uniqueAttributeName);
+                }}, new ArrayList<String>() {{
+                    add(uniqueAttributeValue);
+                }},
+                new LocalServletRequest(entityJson));
+            }
+        };
+        JSONObject response = entityOperation.run();
+        EntityResult result = extractEntityResult(response);
+        LOG.debug("Update entity returned result: {}", result);
+        return result;
+    }
+
+    @Override
+    public EntityResult deleteEntity(final String entityType, final String uniqueAttributeName,
+        final String uniqueAttributeValue) throws AtlasServiceException {
+        LOG.debug("Deleting entity type: {}, attributeName: {}, attributeValue: {}", entityType, uniqueAttributeName,
+            uniqueAttributeValue);
+        EntityOperation entityOperation = new EntityOperation(API.DELETE_ENTITY) {
+            @Override
+            Response invoke() {
+                return entityResource.deleteEntities(null, entityType, new ArrayList<String>() {{
+                    add(uniqueAttributeName);
+                }}, new ArrayList<String>() {{
+                    add(uniqueAttributeValue);
+                }});
+            }
+        };
+        JSONObject response = entityOperation.run();
+        EntityResult results = extractEntityResult(response);
+        LOG.debug("Delete entities returned results: {}", results);
+        return results;
+    }
 
     @Override
     public EntityResult deleteEntities(final String ... guids) throws AtlasServiceException {
@@ -198,12 +236,6 @@ public class LocalAtlasClient extends AtlasClient {
     public Referenceable getEntity(String guid) throws AtlasServiceException {
         throw new IllegalStateException("Not supported in LocalAtlasClient");
     }
-
-//    @Override
-//    public Referenceable getEntity(final String entityType, final String attribute, final String value)
-//            throws AtlasServiceException {
-//        throw new IllegalStateException("Not supported in LocalAtlasClient");
-//    }
 
     @Override
     public List<String> listEntities(final String entityType) throws AtlasServiceException {

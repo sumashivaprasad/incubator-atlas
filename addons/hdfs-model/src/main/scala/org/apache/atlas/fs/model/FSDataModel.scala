@@ -67,7 +67,7 @@ object FSDataModel extends App {
         //HDFS DataSet
         _class(FSDataTypes.HDFS_PATH.toString, List(FSDataTypes.FS_PATH.toString),
             Some(PrimaryKeyConstraint.of(
-                List(AtlasClient.NAME, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), true, s"\${$AtlasClient.NAME}@\${${AtlasConstants.CLUSTER_NAME_ATTRIBUTE}}"))) {
+                List(AtlasClient.NAME, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), true, "%s@%s"))) {
             //Making cluster optional since path is already unique containing the namenode URI
             AtlasConstants.CLUSTER_NAME_ATTRIBUTE ~ (string, optional, indexed)
             "numberOfReplicas" ~ (int, optional, indexed)

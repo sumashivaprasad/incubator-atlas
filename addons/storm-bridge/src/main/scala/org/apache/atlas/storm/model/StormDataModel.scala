@@ -47,7 +47,7 @@ object StormDataModel extends App {
          */
         _class(StormDataTypes.STORM_TOPOLOGY.getName, List(AtlasClient.PROCESS_SUPER_TYPE),
             Some(PrimaryKeyConstraint.of(
-                List(AtlasClient.NAME, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), true, s"\${$AtlasClient.NAME}@\${${AtlasConstants.CLUSTER_NAME_ATTRIBUTE}}"))) {
+                List(AtlasClient.NAME, AtlasConstants.CLUSTER_NAME_ATTRIBUTE), true, "%s@%s"))) {
             "id" ~ (string, required, indexed, unique)
             "description" ~ (string, optional, indexed)
             "owner" ~ (string, required, indexed)
@@ -87,7 +87,7 @@ object StormDataModel extends App {
         // Kafka Data Set
         _class(StormDataTypes.KAFKA_TOPIC.getName, List("DataSet"),
             Some(PrimaryKeyConstraint.of(
-                List("topic"), true, s"\${\"topic\"}"))
+                List("topic"), true, "%s"))
         ) {
             "topic" ~ (string, required, unique, indexed)
             "uri" ~ (string, required)
@@ -97,7 +97,7 @@ object StormDataModel extends App {
         // JMS Data Set
         _class(StormDataTypes.JMS_TOPIC.getName, List("DataSet"),
           Some(PrimaryKeyConstraint.of(
-            List("topic"), true, s"\${\"topic\"}"))) {
+            List("topic"), true, "%s"))) {
             "topic" ~ (string, required, unique, indexed)
             "uri" ~ (string, required)
             "owner" ~ (string, required, indexed)
@@ -106,7 +106,7 @@ object StormDataModel extends App {
         // HBase Data Set
         _class(StormDataTypes.HBASE_TABLE.getName, List("DataSet"),
           Some(PrimaryKeyConstraint.of(
-            List("tableName"), true, s"\${\"tableName\"}"))
+            List("tableName"), true, "%s"))
         )  {
             "tableName" ~ (string, required, unique, indexed)
             "uri" ~ (string, required)

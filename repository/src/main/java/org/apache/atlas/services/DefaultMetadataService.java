@@ -383,7 +383,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value)
-            throws AtlasException {
+        throws AtlasException {
         validateTypeExists(entityType);
         validateUniqueAttribute(entityType, attribute);
 
@@ -391,16 +391,23 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     @Override
-    public String getEntityByPrimaryKey(final String entityType, final Map<String, String> values) throws AtlasException {
+    public String getEntityByPrimaryKeyOrUniqueAttribute(final String entityType, final Map<String, String> uniqueValues) throws AtlasException {
         ParamChecker.notEmpty(entityType, "entity type");
-        ParamChecker.notNull(values, "primary key values");
+        ParamChecker.notNull(uniqueValues, "unique key values");
 
         try {
-            IReferenceableInstance ref =  discoveryService.getEntityByPrimaryKey(entityType, values);
+            ClassType classType = typeSystem.getDataType(ClassType.class, entityType);
+            IReferenceableInstance ref;
+            if ( classType.hasPrimaryKey()) {
+                ref = discoveryService.getEntityByPrimaryKey(entityType, uniqueValues);
+            } else {
+                validateUniqueAttibuteArgs(entityType, uniqueValues);
+                ref = getEntityDefinitionReference(entityType, uniqueValues.keySet().iterator().next(), uniqueValues.values().iterator().next());
+            }
             return InstanceSerialization.toJson(ref, true);
 
         } catch (DiscoveryException e) {
-            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and attributes " + values, e);
+            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and attributes " + uniqueValues, e);
         }
     }
 
@@ -449,12 +456,20 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     @Override
-    public AtlasClient.EntityResult updateEntityPartialByPrimaryKey(final String entityType, final Map<String, String> primaryKeys, final Referenceable updatedEntity) throws AtlasException {
+    public AtlasClient.EntityResult updateEntityPartialByPrimaryKeyOrUniqueAttribute(final String entityType, final Map<String, String> keys, final Referenceable updatedEntity) throws AtlasException {
         ParamChecker.notEmpty(entityType, "entity type");
-        ParamChecker.notNull(primaryKeys, "primary key values");
+        ParamChecker.notNull(keys, "unique key values");
 
         try {
-            IReferenceableInstance oldInstance =  discoveryService.getEntityByPrimaryKey(entityType, primaryKeys);
+            ClassType type = typeSystem.getDataType(ClassType.class, entityType);
+            IReferenceableInstance oldInstance = null;
+            if (type.hasPrimaryKey()) {
+                oldInstance = discoveryService.getEntityByPrimaryKey(entityType, keys);
+            } else {
+             validateUniqueAttibuteArgs(entityType, keys);
+                oldInstance = getEntityDefinitionReference(entityType, keys.keySet().iterator().next(), keys.values().iterator().next());
+            }
+
             ITypedReferenceableInstance newInstance = convertToTypedInstance(updatedEntity, entityType);
             ((ReferenceableInstance)newInstance).replaceWithNewId(oldInstance.getId());
 
@@ -463,7 +478,13 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
             return entityResult;
 
         } catch (DiscoveryException e) {
-            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and primary key " + primaryKeys);
+            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and unique key " + keys);
+        }
+    }
+
+    private void validateUniqueAttibuteArgs(String entityType, Map<String, String> args) {
+        if ( args.size() > 1) {
+            throw new IllegalArgumentException("More than one unique key specified for type " + entityType + ":" + args);
         }
     }
 
@@ -786,18 +807,24 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     @Override
-    public AtlasClient.EntityResult deleteEntityByPrimaryKey(final String entityType, final Map<String, String> values) throws AtlasException {
+    public AtlasClient.EntityResult deleteEntityByPrimaryKeyOrUniqueAttribute(final String entityType, final Map<String, String> uniqueValues) throws AtlasException {
         ParamChecker.notEmpty(entityType, "entity type");
-        ParamChecker.notNull(values, "primary key values");
+        ParamChecker.notNull(uniqueValues, "unique key values");
 
         try {
-            IReferenceableInstance ref =  discoveryService.getEntityByPrimaryKey(entityType, values);
+            ClassType classType = typeSystem.getDataType(ClassType.class, entityType);
+            IReferenceableInstance ref;
+            if (classType.hasPrimaryKey()) {
+                ref = discoveryService.getEntityByPrimaryKey(entityType, uniqueValues);
+            } else {
+                ref = getEntityDefinitionReference(entityType, uniqueValues.keySet().iterator().next(), uniqueValues.values().iterator().next());
+            }
             final Id instanceId = ref.getId();
             List<String> deleteCandidateGuids  = new ArrayList<String>() {{ add(instanceId._getId());}};
             return deleteGuids(deleteCandidateGuids);
 
         } catch (DiscoveryException e) {
-            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and attributes " + values);
+            throw new EntityNotFoundException("Could not find the entity with type " + entityType + " and attributes " + uniqueValues);
         }
     }
 }

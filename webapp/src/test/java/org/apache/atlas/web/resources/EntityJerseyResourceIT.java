@@ -269,21 +269,19 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         }
     }
 
-//    @Test
-//    public void testGetEntityByAttribute() throws Exception {
-//        Referenceable databaseInstance = new Referenceable(DATABASE_TYPE);
-//        final String dbName = randomString();
-//        databaseInstance.set("name", dbName);
-//        databaseInstance.set("description", "foo database");
-//        createInstance(databaseInstance);
-//
-//        //get entity by attribute
-//        Referenceable referenceable =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
-//            put(AtlasClient.NAME, dbName);
-//        }});
-//        Assert.assertEquals(referenceable.getTypeName(), DATABASE_TYPE);
-//        Assert.assertEquals(referenceable.get("name"), dbName);
-//    }
+    @Test
+    public void testGetEntityByAttribute() throws Exception {
+        Referenceable databaseInstance = new Referenceable(DATABASE_TYPE);
+        final String dbName = randomString();
+        databaseInstance.set("name", dbName);
+        databaseInstance.set("description", "foo database");
+        createInstance(databaseInstance);
+
+        //get entity by attribute
+        Referenceable referenceable =  serviceClient.getEntity(DATABASE_TYPE, AtlasClient.NAME, dbName);
+        Assert.assertEquals(referenceable.getTypeName(), DATABASE_TYPE);
+        Assert.assertEquals(referenceable.get("name"), dbName);
+    }
 
     @Test
     public void testSubmitEntityWithBadDateFormat() throws Exception {
@@ -729,8 +727,8 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         }});
 
         LOG.debug("Updating entity= " + tableUpdated);
-        entityResult = serviceClient.updateEntity(BaseResourceIT.HIVE_TABLE_TYPE, "name",
-                (String) tableInstance.get("name"), tableUpdated);
+        entityResult = serviceClient.updateEntity(BaseResourceIT.HIVE_TABLE_TYPE, new HashMap<String, String>() {{ put("name",
+            (String) tableInstance.get("name")); }} , tableUpdated);
         assertEquals(entityResult.getUpdateEntities().size(), 1);
         assertEquals(entityResult.getUpdateEntities().get(0), tableId._getId());
 
@@ -863,13 +861,13 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     public void testDeleteEntityByUniqAttribute() throws Exception {
         // Create database entity
         Referenceable db1 = new Referenceable(DATABASE_TYPE);
-        String dbName = randomString();
+        final String dbName = randomString();
         db1.set("name", dbName);
         db1.set("description", randomString());
         Id db1Id = createInstance(db1);
 
         // Delete the database entity
-        List<String> deletedGuidsList = serviceClient.deleteEntity(DATABASE_TYPE, "name", dbName).getDeletedEntities();
+        List<String> deletedGuidsList = serviceClient.deleteEntity(DATABASE_TYPE, new HashMap<String, String>() {{ put("name", dbName); }} ).getDeletedEntities();
 
         // Verify that deleteEntities() response has database entity guids
         Assert.assertEquals(deletedGuidsList.size(), 1);

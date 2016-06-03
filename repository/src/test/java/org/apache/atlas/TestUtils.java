@@ -216,7 +216,7 @@ public final class TestUtils {
                 createClassTypeDef(DATABASE_TYPE, DATABASE_TYPE + _description,ImmutableSet.of(SUPER_TYPE_NAME),
                         PrimaryKeyConstraint.of (new ArrayList<String>() {{ add(NAME); add("cluster"); }},
                             true, "${name}@${cluster}"),
-                        TypesUtil.createUniqueRequiredAttrDef(NAME, DataTypes.STRING_TYPE),
+                        TypesUtil.createRequiredAttrDef(NAME, DataTypes.STRING_TYPE),
                         createOptionalAttrDef("created", DataTypes.DATE_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE));
 
@@ -233,7 +233,7 @@ public final class TestUtils {
         HierarchicalTypeDefinition<ClassType> columnsDefinition =
                 createClassTypeDef(COLUMN_TYPE, "column", ImmutableSet.<String>of(),
                         PrimaryKeyConstraint.of(new ArrayList<String>() {{ add(NAME); }}, false),
-                        createUniqueRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
+                        createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
                         createRequiredAttrDef("type", DataTypes.STRING_TYPE));
 
         StructTypeDefinition partitionDefinition = new StructTypeDefinition("partition_struct_type", "partition_struct_type" + _description,
@@ -286,7 +286,7 @@ public final class TestUtils {
                 createClassTypeDef(TABLE_TYPE, TABLE_TYPE + _description, ImmutableSet.of(SUPER_TYPE_NAME),
                         PrimaryKeyConstraint.of (new ArrayList<String>() {{ add(NAME); add("database"); }},
                                                      true, "${name}.${database.name}@${database.cluster}"),
-                        TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
+                        TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("type", DataTypes.STRING_TYPE),
                         createOptionalAttrDef("created", DataTypes.DATE_TYPE),

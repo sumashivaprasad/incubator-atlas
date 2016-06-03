@@ -18,33 +18,20 @@
 
 package org.apache.atlas.examples;
 
-import com.tinkerpop.blueprints.Vertex;
-import org.apache.atlas.Atlas;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.AtlasServiceException;
-import org.apache.atlas.discovery.DiscoveryException;
-import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
-import org.apache.atlas.repository.graph.PrimaryKeyQueryContext;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.typesystem.types.AttributeDefinition;
-import org.apache.atlas.typesystem.types.AttributeInfo;
-import org.apache.atlas.typesystem.types.DataTypes;
-import org.apache.atlas.typesystem.types.EnumType;
-import org.apache.atlas.typesystem.types.PrimaryKeyConstraint;
 import org.apache.atlas.web.resources.BaseResourceIT;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.springframework.context.annotation.Primary;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -67,7 +54,7 @@ public class QuickStartIT extends BaseResourceIT {
     }
 
     private Referenceable getDB(final String dbName) throws AtlasServiceException, JSONException, AtlasException {
-        return serviceClient.getEntityByPrimaryKey(QuickStart.DATABASE_TYPE, new HashMap<String, Object>() {{
+        return serviceClient.getEntityByPrimaryKey(QuickStart.DATABASE_TYPE, new HashMap<String, String>() {{
             put("name", dbName);
         }} );
     }
@@ -85,7 +72,7 @@ public class QuickStartIT extends BaseResourceIT {
     }
 
     private Referenceable getTable(final String tableName) throws AtlasServiceException, AtlasException, JSONException {
-        return serviceClient.getEntityByPrimaryKey(QuickStart.TABLE_TYPE, new HashMap<String, Object>() {{
+        return serviceClient.getEntityByPrimaryKey(QuickStart.TABLE_TYPE, new HashMap<String, String>() {{
             put(AtlasClient.NAME, tableName);
         }});
     }
@@ -115,7 +102,7 @@ public class QuickStartIT extends BaseResourceIT {
     @Test
     public void testProcessIsAdded() throws AtlasServiceException, AtlasException, JSONException {
 
-        Referenceable loadProcess = serviceClient.getEntityByPrimaryKey(QuickStart.LOAD_PROCESS_TYPE, new HashMap<String, Object>() {{
+        Referenceable loadProcess = serviceClient.getEntityByPrimaryKey(QuickStart.LOAD_PROCESS_TYPE, new HashMap<String, String>() {{
             put(AtlasClient.NAME, QuickStart.LOAD_SALES_DAILY_PROCESS);
         }});
         assertEquals(QuickStart.LOAD_SALES_DAILY_PROCESS, loadProcess.get(AtlasClient.NAME));
@@ -162,7 +149,7 @@ public class QuickStartIT extends BaseResourceIT {
     @Test
     public void testViewIsAdded() throws AtlasServiceException, JSONException, AtlasException {
 
-        Referenceable view = serviceClient.getEntityByPrimaryKey(QuickStart.VIEW_TYPE, new HashMap<String, Object>() {{
+        Referenceable view = serviceClient.getEntityByPrimaryKey(QuickStart.VIEW_TYPE, new HashMap<String, String>() {{
             put(AtlasClient.NAME, QuickStart.PRODUCT_DIM_VIEW);
         }});
 

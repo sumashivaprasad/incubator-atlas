@@ -114,14 +114,15 @@ public interface MetadataService {
      */
     String getEntityDefinition(String guid) throws AtlasException;
 
+
     /**
      * Return the definition given type and attribute. The attribute has to be unique attribute for the type
      * @param entityType - type name
-     * @param primaryKeys The keys by which the entity can be uniquely identified
+     * @param uniqueKeys The keys by which the entity can be uniquely identified
      * @return  entity definition json
      * @throws AtlasException
      */
-    String getEntityByPrimaryKey(String entityType, Map<String, String> primaryKeys) throws AtlasException, AtlasServiceException;
+    String getEntityByPrimaryKeyOrUniqueAttribute(String entityType, Map<String, String> uniqueKeys) throws AtlasException, AtlasServiceException;
 
     /**
      * Return the list of entity names for the given type in the repository.
@@ -168,7 +169,7 @@ public interface MetadataService {
      * @return Guid of updated entity
      * @throws AtlasException
      */
-    AtlasClient.EntityResult updateEntityPartialByPrimaryKey(String entityType, Map<String, String> primaryKeys, Referenceable updatedEntity) throws AtlasException;
+    AtlasClient.EntityResult updateEntityPartialByPrimaryKeyOrUniqueAttribute(String entityType, Map<String, String> primaryKeys, Referenceable updatedEntity) throws AtlasException;
 
     // Trait management functions
 
@@ -231,11 +232,11 @@ public interface MetadataService {
      * Delete the specified entity from the repository identified by its unique attribute (including its composite references)
      *
      * @param entityType The entity's type
-     * @param primaryKeys The keys by which the entity can be uniquely identified
+     * @param uniqueKeys The keys by which the entity can be uniquely identified
      * @return List of guids for deleted entities (including their composite references)
      * @throws AtlasException
      */
-    AtlasClient.EntityResult deleteEntityByPrimaryKey(String entityType, Map<String, String> primaryKeys) throws AtlasException, AtlasServiceException;
+    AtlasClient.EntityResult deleteEntityByPrimaryKeyOrUniqueAttribute(String entityType, Map<String, String> uniqueKeys) throws AtlasException, AtlasServiceException;
 
     /**
      * Returns entity audit events for entity id in the decreasing order of timestamp

@@ -43,6 +43,7 @@ import org.testng.annotations.Test;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -116,7 +117,7 @@ public class EntityNotificationIT extends BaseResourceIT {
         final String property = "name";
         final String name = (String) tableInstance.get(property);
 
-        serviceClient.deleteEntity(HIVE_TABLE_TYPE, property, name);
+        serviceClient.deleteEntity(HIVE_TABLE_TYPE, new HashMap<String, String>() {{ put(property, name); }} );
 
         waitForNotification(notificationConsumer, MAX_WAIT_TIME,
             newNotificationPredicate(EntityNotification.OperationType.ENTITY_DELETE, HIVE_TABLE_TYPE, guid));

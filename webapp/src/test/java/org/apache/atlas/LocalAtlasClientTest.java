@@ -94,7 +94,7 @@ public class LocalAtlasClientTest {
             assertEquals(e.getStatus(), ClientResponse.Status.BAD_REQUEST);
         }
 
-        when(entityResource.updateByPrimaryKey(anyString(), anyList(), anyList(),
+        when(entityResource.updateByPrimaryKeyOrUniqueAttribute(anyString(), anyList(), anyList(),
             any(HttpServletRequest.class))).thenThrow(new WebApplicationException(response));
         when(response.getStatus()).thenReturn(Response.Status.NOT_FOUND.getStatusCode());
         try {
@@ -120,16 +120,16 @@ public class LocalAtlasClientTest {
     public void testUpdateEntity() throws Exception {
         final String guid = random();
         Response response = mock(Response.class);
-        when(entityResource.updateByPrimaryKey(anyString(), anyList(), anyList(),
+        when(entityResource.updateByPrimaryKeyOrUniqueAttribute(anyString(), anyList(), anyList(),
             any(HttpServletRequest.class))).thenReturn(response);
         when(response.getEntity()).thenReturn(new JSONObject() {{
             put(ENTITIES, new JSONObject(
-                    new AtlasClient.EntityResult(null, Arrays.asList(guid), null).toString()).get(ENTITIES));
+                new AtlasClient.EntityResult(null, Arrays.asList(guid), null).toString()).get(ENTITIES));
         }});
 
         LocalAtlasClient atlasClient = new LocalAtlasClient(serviceState, entityResource);
         AtlasClient.EntityResult
-                entityResult = atlasClient.updateEntity(random(), random(), random(), new Referenceable(random()));
+            entityResult = atlasClient.updateEntity(random(), random(), random(), new Referenceable(random()));
         assertEquals(entityResult.getUpdateEntities(), Arrays.asList(guid));
     }
 

@@ -62,7 +62,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
     @Test
     public void testMessageHandleFailureConsumerContinues() throws Exception {
         //send invalid message - update with invalid type
-        sendHookMessage(new HookNotification.EntityPartialUpdateRequest(TEST_USER, randomString(), null, null,
+        sendHookMessage(new HookNotification.EntityUpdateRequest(TEST_USER,
                 new Referenceable(randomString())));
 
         //send valid message
@@ -99,7 +99,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         });
 
         //Assert that user passed in hook message is used in audit
-        Referenceable instance =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
+        Referenceable instance =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, String>() {{
             put("name", (String) entity.get("name"));
         }});
         List<EntityAuditEvent> events =
@@ -119,21 +119,17 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         final Referenceable newEntity = new Referenceable(DATABASE_TYPE);
         newEntity.set("owner", randomString());
         sendHookMessage(
-                new HookNotification.EntityPartialUpdateRequest(TEST_USER, DATABASE_TYPE, "name", dbName, newEntity));
+            new HookNotification.EntityPartialUpdateRequest(TEST_USER, DATABASE_TYPE, "name", dbName, newEntity));
         waitFor(MAX_WAIT_TIME, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
-                Referenceable localEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
-                    put("name", dbName);
-                }});
+                Referenceable localEntity = serviceClient.getEntity(DATABASE_TYPE, "name", dbName);
                 return (localEntity.get("owner") != null && localEntity.get("owner").equals(newEntity.get("owner")));
             }
         });
 
         //Its partial update and un-set fields are not updated
-        Referenceable actualEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
-            put(AtlasClient.NAME, dbName);
-        }});
+        Referenceable actualEntity = serviceClient.getEntity(DATABASE_TYPE, "name", dbName);
         assertEquals(actualEntity.get("description"), entity.get("description"));
     }
 
@@ -150,12 +146,12 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         newEntity.set("name", newName);
 
         sendHookMessage(
-                new HookNotification.EntityPartialUpdateRequest(TEST_USER, DATABASE_TYPE, "name", dbName, newEntity));
+            new HookNotification.EntityPartialUpdateRequest(TEST_USER, DATABASE_TYPE, "name", dbName, newEntity));
         waitFor(MAX_WAIT_TIME, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
                 JSONArray results = serviceClient.searchByDSL(String.format("%s where name='%s'", DATABASE_TYPE,
-                        newName));
+                    newName));
                 return results.length() == 1;
             }
         });
@@ -175,7 +171,9 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         final String dbId = serviceClient.createEntity(entity).get(0);
 
         sendHookMessage(
-            new HookNotification.EntityDeleteRequest(TEST_USER, DATABASE_TYPE, "name", dbName));
+            new HookNotification.EntityDeleteRequest(TEST_USER, DATABASE_TYPE, new HashMap<String, String>() {{
+                put("name", dbName);
+            }}));
         waitFor(MAX_WAIT_TIME, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
@@ -210,7 +208,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         });
 
 
-        Referenceable actualEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, Object>() {{
+        Referenceable actualEntity =  serviceClient.getEntityByPrimaryKey(DATABASE_TYPE, new HashMap<String, String>() {{
             put("name", dbName);
         }});
         assertEquals(actualEntity.get("description"), newEntity.get("description"));

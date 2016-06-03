@@ -694,7 +694,7 @@ public class AtlasClient {
      * @param value     property value
      */
     public EntityResult updateEntityAttribute(final String guid, final String attribute, String value)
-            throws AtlasServiceException {
+        throws AtlasServiceException {
         LOG.debug("Updating entity id: {}, attribute name: {}, attribute value: {}", guid, attribute, value);
         JSONObject response = callAPIWithRetries(API.UPDATE_ENTITY_PARTIAL, value, new ResourceCreator() {
             @Override
@@ -707,7 +707,6 @@ public class AtlasClient {
         });
         return extractEntityResult(response);
     }
-
     @VisibleForTesting
     JSONObject callAPIWithRetries(API api, Object requestObject, ResourceCreator resourceCreator)
             throws AtlasServiceException {
@@ -756,19 +755,19 @@ public class AtlasClient {
 
     /**
      * Supports Partial updates
-     * Updates properties set in the definition for the entity corresponding to guid
+     * Updates properties set in the definition for the entity identified by its unique attribute
      * @param entityType Type of the entity being updated
      * @param uniqueAttributeName Attribute Name that uniquely identifies the entity
      * @param uniqueAttributeValue Attribute Value that uniquely identifies the entity
      * @param entity entity definition
      */
     public EntityResult updateEntity(final String entityType, final String uniqueAttributeName,
-                                     final String uniqueAttributeValue,
-                                     Referenceable entity) throws AtlasServiceException {
+        final String uniqueAttributeValue,
+        Referenceable entity) throws AtlasServiceException {
         final API api = API.UPDATE_ENTITY_PARTIAL;
         String entityJson = InstanceSerialization.toJson(entity, true);
         LOG.debug("Updating entity type: {}, attributeName: {}, attributeValue: {}, entity: {}", entityType,
-                uniqueAttributeName, uniqueAttributeValue, entityJson);
+            uniqueAttributeName, uniqueAttributeValue, entityJson);
         JSONObject response = callAPIWithRetries(api, entityJson, new ResourceCreator() {
             @Override
             public WebResource createResource() {
@@ -779,6 +778,36 @@ public class AtlasClient {
                 return resource;
             }
         });
+        EntityResult result = extractEntityResult(response);
+        LOG.debug("Update entity returned result: {}", result);
+        return result;
+    }
+
+    /**
+     * Supports Partial updates
+     * Updates properties set in the definition for the entity identified by its unique attribute
+     * @param entityType Type of the entity being updated
+     * @param primaryKeys a map of primary key attributes vs values used to identify the entity uniquely
+     * @param entity entity definition
+     */
+    public EntityResult updateEntity(final String entityType, final Map<String, String> primaryKeys
+        ,Referenceable entity) throws AtlasServiceException {
+        LOG.debug("Updating entity type: {}, attributeName: {}, attributeValue: {}, entity: {}", entityType,
+            primaryKeys, entity);
+        final API api = API.UPDATE_ENTITY_PARTIAL;
+        String entityJson = InstanceSerialization.toJson(entity, true);
+        JSONObject response = callAPIWithRetries(api, entityJson, new ResourceCreator() {
+            @Override
+            public WebResource createResource() {
+                WebResource resource = getResource(api, "qualifiedName");
+                resource = resource.queryParam(TYPE, entityType);
+                for (String pk : primaryKeys.keySet()) {
+                    resource = resource.queryParam(pk, primaryKeys.get(pk));
+                }
+                return resource;
+            }
+        });
+
         EntityResult result = extractEntityResult(response);
         LOG.debug("Update entity returned result: {}", result);
         return result;
@@ -839,6 +868,28 @@ public class AtlasClient {
     }
 
     /**
+     * Supports Deletion of an entity identified by its unique attribute value
+     * @param entityType Type of the entity being deleted
+     * @param uniqueAttributeName Attribute Name that uniquely identifies the entity
+     * @param uniqueAttributeValue Attribute Value that uniquely identifies the entity
+     * @return List of entity ids updated/deleted(including composite references from that entity)
+     */
+    public EntityResult deleteEntity(String entityType, String uniqueAttributeName, String uniqueAttributeValue)
+        throws AtlasServiceException {
+        LOG.debug("Deleting entity type: {}, attributeName: {}, attributeValue: {}", entityType, uniqueAttributeName,
+            uniqueAttributeValue);
+        API api = API.DELETE_ENTITY;
+        WebResource resource = getResource(api);
+        resource = resource.queryParam(TYPE, entityType);
+        resource = resource.queryParam(ATTRIBUTE_NAME, uniqueAttributeName);
+        resource = resource.queryParam(ATTRIBUTE_VALUE, uniqueAttributeValue);
+        JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource, null);
+        EntityResult results = extractEntityResult(jsonResponse);
+        LOG.debug("Delete entities returned results: {}", results);
+        return results;
+    }
+
+    /**
      * Get an entity given the entity id
      * @param guid entity id
      * @return result object
@@ -863,18 +914,47 @@ public class AtlasClient {
     }
 
     /**
-     * Get an entity given the entity id
+     * Get an entity given the entity type and its unique attribute
+     * @param entityType entity type name
+     * @param attribute qualified name of the entity
+     * @param value
+     * @return result object
+     * @throws AtlasServiceException
+     */
+    public Referenceable getEntity(final String entityType, final String attribute, final String value)
+        throws AtlasServiceException {
+        JSONObject jsonResponse = callAPIWithRetries(API.GET_ENTITY, null, new ResourceCreator() {
+            @Override
+            public WebResource createResource() {
+                WebResource resource = getResource(API.GET_ENTITY);
+                resource = resource.queryParam(TYPE, entityType);
+                resource = resource.queryParam(ATTRIBUTE_NAME, attribute);
+                resource = resource.queryParam(ATTRIBUTE_VALUE, value);
+                return resource;
+            }
+        });
+        try {
+            String entityInstanceDefinition = jsonResponse.getString(AtlasClient.DEFINITION);
+            return InstanceSerialization.fromJsonReferenceable(entityInstanceDefinition, true);
+        } catch (JSONException e) {
+            throw new AtlasServiceException(API.GET_ENTITY, e);
+        }
+    }
+
+    /**
+     * Get an entity given the entity type and its primary key values
      * @param entityType entity type name
      * @param primaryKeys the primary key by which to identify the entity
      * @return result object
      * @throws AtlasServiceException
      */
-    public Referenceable getEntity(final String entityType, final Map<String, String> primaryKeys)
+    public Referenceable getEntityByPrimaryKey(final String entityType, final Map<String, String> primaryKeys)
             throws AtlasServiceException {
-        JSONObject jsonResponse = callAPIWithRetries(API.GET_ENTITY, null, new ResourceCreator() {
+        final API api = API.GET_ENTITY;
+        JSONObject jsonResponse = callAPIWithRetries(api, null, new ResourceCreator() {
             @Override
             public WebResource createResource() {
-                WebResource resource = getResource(API.GET_ENTITY);
+                WebResource resource = getResource(api, "qualifiedName");
                 resource = resource.queryParam(TYPE, entityType);
                 for (String pk : primaryKeys.keySet()) {
                     resource = resource.queryParam(ATTRIBUTE_NAME, pk);

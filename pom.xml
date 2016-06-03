@@ -1694,6 +1694,9 @@
                         <exclude>**/${sys:atlas.data}/**</exclude>
                         <exclude>**/policy-store.txt</exclude>
                         <exclude>**/*bak</exclude>
+                        <exclude>**/*.new</exclude>
+                        <exclude>**/*.key</exclude>
+                        <exclude>**/*.key2</exclude>
                     </excludes>
                 </configuration>
                 <executions>
