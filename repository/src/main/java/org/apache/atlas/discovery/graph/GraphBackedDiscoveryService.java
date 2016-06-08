@@ -196,7 +196,6 @@ public class GraphBackedDiscoveryService implements DiscoveryService {
 
     private String constructDSLPredicates(ClassType classType, Map<String, String> attributes) {
         StringBuilder filters = new StringBuilder();
-        int index = 0;
         for (String attr : attributes.keySet()) {
             IDataType attrType = getDataType(classType, attr);
             final String typeName = attrType.getName();

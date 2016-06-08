@@ -215,7 +215,7 @@ public final class TestUtils {
         HierarchicalTypeDefinition<ClassType> databaseTypeDefinition =
                 createClassTypeDef(DATABASE_TYPE, DATABASE_TYPE + _description,ImmutableSet.of(SUPER_TYPE_NAME),
                         PrimaryKeyConstraint.of (new ArrayList<String>() {{ add(NAME); add("cluster"); }},
-                            true, "${name}@${cluster}"),
+                            true, "%s@%s"),
                         TypesUtil.createRequiredAttrDef(NAME, DataTypes.STRING_TYPE),
                         createOptionalAttrDef("created", DataTypes.DATE_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE));
@@ -285,7 +285,7 @@ public final class TestUtils {
         HierarchicalTypeDefinition<ClassType> tableTypeDefinition =
                 createClassTypeDef(TABLE_TYPE, TABLE_TYPE + _description, ImmutableSet.of(SUPER_TYPE_NAME),
                         PrimaryKeyConstraint.of (new ArrayList<String>() {{ add(NAME); add("database"); }},
-                                                     true, "${name}.${database.name}@${database.cluster}"),
+                                                     true, "%s.%s@%s"),
                         TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE),
                         createRequiredAttrDef("type", DataTypes.STRING_TYPE),

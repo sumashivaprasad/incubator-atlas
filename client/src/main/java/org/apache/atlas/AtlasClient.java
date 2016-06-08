@@ -802,7 +802,8 @@ public class AtlasClient {
                 WebResource resource = getResource(api, "qualifiedName");
                 resource = resource.queryParam(TYPE, entityType);
                 for (String pk : primaryKeys.keySet()) {
-                    resource = resource.queryParam(pk, primaryKeys.get(pk));
+                    resource = resource.queryParam(ATTRIBUTE_NAME, pk);
+                    resource = resource.queryParam(ATTRIBUTE_VALUE, primaryKeys.get(pk));
                 }
                 return resource;
             }
@@ -859,7 +860,8 @@ public class AtlasClient {
         WebResource resource = getResource(api);
         resource = resource.queryParam(TYPE, entityType);
         for (String pk : primaryKeys.keySet()) {
-            resource = resource.queryParam(pk, primaryKeys.get(pk));
+            resource = resource.queryParam(ATTRIBUTE_NAME, pk);
+            resource = resource.queryParam(ATTRIBUTE_VALUE, primaryKeys.get(pk));
         }
         JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource, null);
         EntityResult results = extractEntityResult(jsonResponse);
@@ -954,7 +956,7 @@ public class AtlasClient {
         JSONObject jsonResponse = callAPIWithRetries(api, null, new ResourceCreator() {
             @Override
             public WebResource createResource() {
-                WebResource resource = getResource(api, "qualifiedName");
+                WebResource resource = getResource(api);
                 resource = resource.queryParam(TYPE, entityType);
                 for (String pk : primaryKeys.keySet()) {
                     resource = resource.queryParam(ATTRIBUTE_NAME, pk);

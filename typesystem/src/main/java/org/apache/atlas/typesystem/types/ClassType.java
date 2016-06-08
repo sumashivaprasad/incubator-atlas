@@ -39,6 +39,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -52,11 +53,13 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
 
     public final Map<AttributeInfo, List<String>> infoToNameMap;
     public final PrimaryKeyConstraint primaryKey;
+    public final List<AttributeInfo> primaryKeyAttributes;
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, PrimaryKeyConstraint pkc, int numFields) {
         super(typeSystem, ClassType.class, name, description, superTypes, pkc != null && pkc.isVisible() ? numFields + 1 : numFields);
         infoToNameMap = null;
         primaryKey = pkc;
+        primaryKeyAttributes = null;
     }
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo... fields)
@@ -64,6 +67,7 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
         super(typeSystem, ClassType.class, name, description, superTypes, fields);
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
         primaryKey = null;
+        primaryKeyAttributes = null;
     }
 
     ClassType(TypeSystem typeSystem, String name, String description, ImmutableSet<String> superTypes, AttributeInfo[] fields, PrimaryKeyConstraint pkc)
@@ -71,6 +75,11 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
         super(typeSystem, ClassType.class, name, description, superTypes, validateAndAddPKAttribute(typeSystem, pkc, fields));
         infoToNameMap = TypeUtils.buildAttrInfoToNameMap(fieldMapping);
         this.primaryKey = pkc;
+        this.primaryKeyAttributes = hasPrimaryKey() ? new ArrayList<AttributeInfo>(getPrimaryKey().columns().size()) {{
+            for (String col : getPrimaryKey().columns()) {
+                add(fieldMapping.fields.get(col));
+            }
+        }} : null;
     }
 
     private static AttributeInfo[] validateAndAddPKAttribute(TypeSystem ts, PrimaryKeyConstraint pkc, AttributeInfo[] fields) throws AtlasException {
@@ -307,5 +316,9 @@ public class ClassType extends HierarchicalType<ClassType, IReferenceableInstanc
             return getPrimaryKey().columns().contains(attrName);
         }
         return false;
+    }
+
+    public List<AttributeInfo> getPrimaryKeyAttrs( ) {
+        return primaryKeyAttributes;
     }
 }

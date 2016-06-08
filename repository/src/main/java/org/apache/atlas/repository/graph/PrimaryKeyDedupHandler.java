@@ -109,7 +109,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
             throw new IllegalStateException("Found more than 1 vertex for the primary key " + classType.getName() + ":" + propertyKeys + ":" + vertices);
         }
 
-        return vertices.get(0);
+        return vertices.size() > 0 ? vertices.get(0) : null;
 
 
 //        PrimaryKeyQueryContext ctx = addPrimitiveSearchClauses(propertyKeys, classType, ref);
@@ -133,7 +133,7 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         for(Vertex v : vertices) {
             for (AttributeInfo arrInfo : ctx.getArrReferences()) {
                 String arrEdgeLabel = GraphHelper.getEdgeLabel(clsType, arrInfo);
-                final Iterable<Edge> edges = vertex.getEdges(Direction.OUT, arrEdgeLabel);
+                final Iterable<Edge> edges = v.getEdges(Direction.OUT, arrEdgeLabel);
                 Collection<Id> existingIds = new ArrayList<>();
                 Collection<Id> currElements = (List<Id>) ref.get(arrInfo.name);
 
@@ -162,11 +162,18 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
         List<AttributeInfo> classReferences = ctx.getClassReferences();
         if (classReferences != null) {
             for (AttributeInfo aInfo : classReferences) {
+                LOG.debug("Mapping class attribute for Primary key {} ", aInfo);
                 Vertex classVertex = mapper.getClassVertex((IReferenceableInstance) ref.get(aInfo.name));
+                if (classVertex == null) {
+                    PrimaryKeyQueryContext pkc = new PrimaryKeyQueryContext();
+                    classVertex = getClassVertex((IReferenceableInstance) ref.get(aInfo.name), pkc);
+                }
                 String typeName = classVertex.getProperty(Constants.ENTITY_TYPE_PROPERTY_KEY);
                 String guid = classVertex.getProperty(Constants.GUID_PROPERTY_KEY);
                 if (addBackRef) {
                     ctx.back(getFormattedString(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT));
+                } else {
+                    addBackRef = true;
                 }
 
                 //Take the out edge label and check if the referred class has the following attributes
@@ -174,10 +181,37 @@ public class PrimaryKeyDedupHandler implements DedupHandler<ClassType, IReferenc
                     .has(Constants.GUID_PROPERTY_KEY, guid)
                     .has(Constants.ENTITY_TYPE_PROPERTY_KEY, typeName)
                     .has(Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
-
-                addBackRef = true;
             }
         }
+    }
+
+    //For tests
+    Vertex getClassVertex(final IReferenceableInstance instance, PrimaryKeyQueryContext pkc) throws AtlasException {
+        String typeName = instance.getTypeName();
+        ClassType clsType = typeSystem.getDataType(ClassType.class, typeName);
+
+        for (AttributeInfo aInfo : clsType.getPrimaryKeyAttrs() ) {
+            switch(aInfo.dataType().getTypeCategory()) {
+            case PRIMITIVE:
+            case ENUM:
+                pkc.has(aInfo.name, instance.get(aInfo.name));
+                break;
+            case CLASS:
+                pkc.back(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
+                pkc.out(clsType, aInfo);
+                getClassVertex((IReferenceableInstance) instance.get(aInfo.name), pkc);
+            }
+        }
+
+        pkc.select(PrimaryKeyQueryContext.GREMLIN_STEP_RESULT);
+        String gremlin =  pkc.getGremlinQuery().toString();
+        LOG.debug("gremlin query for class {} ", gremlin);
+
+        List<Vertex> v = pkc.executeQuery(gremlin);
+        if (  v != null &&  v.size() > 0) {
+            return v.get(0);
+        }
+        return null;
     }
 
     PrimaryKeyQueryContext addPrimitiveSearchClauses(List<String> propertyKeys, ClassType classType, IReferenceableInstance ref) throws AtlasException {

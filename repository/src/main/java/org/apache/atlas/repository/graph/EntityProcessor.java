@@ -24,14 +24,18 @@ import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.ObjectGraphWalker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
+    private static final Logger LOG = LoggerFactory.getLogger(TypedInstanceToGraphMapper.class);
 
     private final Map<Id, IReferenceableInstance> idToInstanceMap;
 
@@ -39,9 +43,9 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
         idToInstanceMap = new LinkedHashMap<>();
     }
 
-    public Collection<IReferenceableInstance> getInstances() {
+    public List<IReferenceableInstance> getInstances() {
         ArrayList<IReferenceableInstance> instances = new ArrayList<IReferenceableInstance>(idToInstanceMap.values());
-        Collections.reverse(instances);
+//        Collections.reverse(instances);
         return instances;
     }
 
@@ -53,8 +57,10 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
         if (nd.attributeName == null) {
             ref = (IReferenceableInstance) nd.instance;
             id = ref.getId();
+            LOG.debug("node Id {} {}", id, ref.getTypeName());
         } else if (nd.aInfo.dataType().getTypeCategory() == DataTypes.TypeCategory.CLASS) {
             if (nd.value != null && (nd.value instanceof Id)) {
+                LOG.debug("Class Id {} {}", nd.aInfo, nd.value);
                 id = (Id) nd.value;
             }
         }
@@ -66,9 +72,12 @@ public final class EntityProcessor implements ObjectGraphWalker.NodeProcessor {
                         throw new RepositoryException(
                             String.format("Unexpected internal error: Id %s processed again", id));
                     }
-
                     idToInstanceMap.put(id, ref);
+                } else {
+                    LOG.debug("Id unassigned but ref null {}", id);
                 }
+            } else {
+                LOG.debug("Id assigned . Hence not creating vertex {} {}", id, ref != null ? ref.getTypeName(): null);
             }
         }
     }

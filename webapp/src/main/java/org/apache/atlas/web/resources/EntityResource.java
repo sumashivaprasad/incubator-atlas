@@ -486,10 +486,10 @@ public class EntityResource {
                 LOG.error("An entity with type and primary key {}-{}-{} does not exist", entityType, attributes, values, e);
                 throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.NOT_FOUND));
             } catch (AtlasException | IllegalArgumentException e) {
-                LOG.error("Unable to delete entities with primary key(s) {} {} ", attributes, values, e);
+                LOG.error("Unable to get entity with primary key(s) {} {} ", attributes, values, e);
                 throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
             } catch (Throwable e) {
-                LOG.error("Unable to delete entities with primary key(s) {} {} ", attributes, values, e);
+                LOG.error("Unable to get entity with primary key(s) {} {} ", attributes, values, e);
                 throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
             }
         }

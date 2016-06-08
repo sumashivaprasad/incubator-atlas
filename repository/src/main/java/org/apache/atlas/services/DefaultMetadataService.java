@@ -199,7 +199,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
 
         HierarchicalTypeDefinition<ClassType> processType = TypesUtil
             .createClassTypeDef(AtlasClient.PROCESS_SUPER_TYPE, ImmutableSet.<String>of(),
-                TypesUtil.createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
+                NAME_ATTRIBUTE,
                 DESCRIPTION_ATTRIBUTE,
                 new AttributeDefinition("inputs", DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
                     Multiplicity.OPTIONAL, false, null),

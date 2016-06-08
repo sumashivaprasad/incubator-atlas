@@ -138,6 +138,18 @@ public final class GraphToTypedInstanceMapper {
         }
     }
 
+    public void mapVertexToInstance(Vertex instanceVertex, ITypedInstance typedInstance,
+        IConstructableType constructableType, List<AttributeInfo> attributes) throws AtlasException {
+
+        if ( attributes != null) {
+            LOG.debug("Mapping vertex {} to instance {} for fields", instanceVertex, typedInstance.getTypeName(),
+                attributes);
+            for (AttributeInfo attributeInfo : attributes) {
+                mapVertexToAttribute(instanceVertex, typedInstance, attributeInfo);
+            }
+        }
+    }
+
     private LinkedHashMap<String, Object> primaryKeyValue(ClassType classType, ITypedInstance typedInstance) throws AtlasException {
         //Map the primary key
         PrimaryKeyConstraint pkc = classType.getPrimaryKey();
@@ -147,7 +159,7 @@ public final class GraphToTypedInstanceMapper {
             for (String pkColumn : pkc.columns()) {
                 AttributeInfo attrInfo = classType.fieldMapping().fields.get(pkColumn);
                 String propertyQFName = attrInfo.name;
-                if (attrInfo == null) {
+                if ( attrInfo == null) {
                     throw new IllegalArgumentException("Could not find property " + propertyQFName + " in type " + classType.name);
                 }
                 final IDataType dataType = attrInfo.dataType();
@@ -166,7 +178,7 @@ public final class GraphToTypedInstanceMapper {
                                 clsType.createInstance(id);
 
                             //TODO - Optimize to load only required fields
-                            mapVertexToInstance(classVertex, clsTypedInstance, clsType);
+                            mapVertexToInstance(classVertex, clsTypedInstance, clsType, clsType.getPrimaryKeyAttrs());
                             Map<String, Object> classPkValues = primaryKeyValue(clsType, clsTypedInstance);
                             pkValues.put(attrInfo.name, classPkValues);
                         }

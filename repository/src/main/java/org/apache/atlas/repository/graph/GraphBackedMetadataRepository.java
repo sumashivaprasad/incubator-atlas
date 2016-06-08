@@ -134,8 +134,10 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             instanceToGraphMapper.mapTypedInstanceToGraph(TypedInstanceToGraphMapper.Operation.CREATE, entities);
             return RequestContext.get().getCreatedEntityIds();
         } catch (EntityExistsException e) {
+            LOG.error("Exception while creating entity definition ", e);
             throw e;
         } catch (AtlasException e) {
+            LOG.error("Exception while creating entity definition ", e);
             throw new RepositoryException(e);
         }
     }
@@ -150,6 +152,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
         try {
             return graphToInstanceMapper.mapGraphToTypedInstance(guid, instanceVertex);
         } catch (AtlasException e) {
+            LOG.error("Exception while retrieving entity definition ", e);
             throw new RepositoryException(e);
         }
     }
@@ -233,8 +236,10 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                     RequestContext.get().getRequestTime());
             
         } catch (RepositoryException e) {
+            LOG.error("Exception while adding traits", e);
             throw e;
         } catch (Exception e) {
+            LOG.error("Exception while adding traits", e);
             throw new RepositoryException(e);
         }
     }
@@ -269,6 +274,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             traitNames.remove(traitNameToBeDeleted);
             updateTraits(instanceVertex, traitNames);
         } catch (Exception e) {
+            LOG.error("Exception while deleting traits ", e);
             throw new RepositoryException(e);
         }
     }
@@ -298,6 +304,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             return new AtlasClient.EntityResult(requestContext.getCreatedEntityIds(),
                     requestContext.getUpdatedEntityIds(), requestContext.getDeletedEntityIds());
         } catch (AtlasException e) {
+            LOG.error("Exception while updating entities", e);
             throw new RepositoryException(e);
         }
     }
@@ -313,6 +320,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
             return new AtlasClient.EntityResult(requestContext.getCreatedEntityIds(),
                     requestContext.getUpdatedEntityIds(), requestContext.getDeletedEntityIds());
         } catch (AtlasException e) {
+            LOG.error("Exception while partially updating entities ", e);
             throw new RepositoryException(e);
         }
     }
@@ -339,6 +347,7 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 LOG.info("Deletion request ignored for non-existent entity with guid " + guid);
                 continue;
             } catch (AtlasException e) {
+                LOG.error("Exception while deleting entities ", e);
                 throw new RepositoryException(e);
             }
         }

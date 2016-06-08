@@ -482,6 +482,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     private void registerProcess(HiveMetaStoreBridge dgiBridge, HiveEventContext event) throws Exception {
+        List<Referenceable> entities = new ArrayList<>();
         Set<ReadEntity> inputs = event.getInputs();
         Set<WriteEntity> outputs = event.getOutputs();
 
@@ -503,11 +504,11 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         // filter out select queries which do not modify data
         if (!isSelectQuery) {
             for (ReadEntity readEntity : event.getInputs()) {
-                processHiveEntity(dgiBridge, event, readEntity, source);
+                processHiveEntity(dgiBridge, event, readEntity, source, entities);
             }
 
             for (WriteEntity writeEntity : event.getOutputs()) {
-                processHiveEntity(dgiBridge, event, writeEntity, target);
+                processHiveEntity(dgiBridge, event, writeEntity, target, entities);
             }
 
             if (source.size() > 0 || target.size() > 0) {
@@ -518,7 +519,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                     new ArrayList<Referenceable>() {{
                         addAll(target.values());
                     }});
-                messages.add(new HookNotification.EntityCreateRequest(event.getUser(), processReferenceable));
+
+                entities.add(processReferenceable);
+                messages.add(new HookNotification.EntityCreateRequest(event.getUser(), entities));
             } else {
                 LOG.info("Skipped query {} since it has no getInputs() or resulting getOutputs()", event.getQueryStr());
             }
@@ -527,18 +530,20 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    private void processHiveEntity(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, Map<String, Referenceable> dataSets) throws Exception {
+    private void processHiveEntity(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, Map<String, Referenceable> dataSets, List<Referenceable> entities) throws Exception {
         if (entity.getType() == Type.TABLE || entity.getType() == Type.PARTITION) {
             final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable());
             if (!dataSets.containsKey(tblQFName)) {
                 Referenceable inTable = createOrUpdateEntities(dgiBridge, event.getUser(), entity, false);
                 dataSets.put(tblQFName, inTable);
+                entities.add(inTable);
             }
         } else if (entity.getType() == Type.DFS_DIR) {
             final String pathUri = lower(new Path(entity.getLocation()).toString());
             LOG.info("Registering DFS Path {} ", pathUri);
             Referenceable hdfsPath = dgiBridge.fillHDFSDataSet(pathUri);
             dataSets.put(pathUri, hdfsPath);
+            entities.add(hdfsPath);
         }
     }
 
@@ -582,16 +587,20 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         final String location = lower(hiveTable.getDataLocation().toString());
         if (hiveTable != null && TableType.EXTERNAL_TABLE.equals(hiveTable.getTableType())) {
             LOG.info("Registering external table process {} ", event.getQueryStr());
+            List<Referenceable> entities = new ArrayList<>();
             List<Referenceable> inputs = new ArrayList<Referenceable>() {{
                 add(dgiBridge.fillHDFSDataSet(location));
             }};
+            entities.addAll(inputs);
 
             List<Referenceable> outputs = new ArrayList<Referenceable>() {{
                 add(tblRef);
             }};
+            entities.addAll(outputs);
 
             Referenceable processReferenceable = getProcessReferenceable(dgiBridge, event, inputs, outputs);
-            messages.add(new HookNotification.EntityCreateRequest(event.getUser(), processReferenceable));
+            entities.add(processReferenceable);
+            messages.add(new HookNotification.EntityCreateRequest(event.getUser(), entities));
         }
     }
 
@@ -605,7 +614,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return false;
     }
 
-    private Referenceable getProcessReferenceable(HiveMetaStoreBridge dgiBridge, HiveEventContext hiveEvent, List<Referenceable> sourceList, List<Referenceable> targetList) {
+    private Referenceable  getProcessReferenceable(HiveMetaStoreBridge dgiBridge, HiveEventContext hiveEvent, List<Referenceable> sourceList, List<Referenceable> targetList) {
         Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
 
         String queryStr = hiveEvent.getQueryStr();

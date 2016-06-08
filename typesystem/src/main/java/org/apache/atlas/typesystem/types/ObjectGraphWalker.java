@@ -217,7 +217,9 @@ public class ObjectGraphWalker {
 
         @Override
         public String toString(){
-            StringBuilder string = new StringBuilder().append(instance).append(aInfo).append(value);
+            StringBuilder string = new StringBuilder().append("instance=").append(instance.getTypeName())
+                .append("attr=").append(attributeName).append("aInfo=").append(aInfo)
+                .append("value=").append(value);
             return string.toString();
         }
     }

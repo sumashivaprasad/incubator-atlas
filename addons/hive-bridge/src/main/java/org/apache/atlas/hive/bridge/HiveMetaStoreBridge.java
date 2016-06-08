@@ -233,9 +233,9 @@ public class HiveMetaStoreBridge {
      * @param dbName Name of the Hive database
      * @return Unique qualified name to identify the Database instance in Atlas.
      */
-    public static String getDBQualifiedName(String clusterName, String dbName) {
-        return String.format("%s@%s", dbName.toLowerCase(), clusterName);
-    }
+//    public static String getDBQualifiedName(String clusterName, String dbName) {
+//        return String.format("%s@%s", dbName.toLowerCase(), clusterName);
+//    }
 
     /**
      * Imports all tables for the given db
@@ -268,8 +268,8 @@ public class HiveMetaStoreBridge {
     }
 
     static String getTableDSLQuery(String clusterName, String dbName, String tableName, String typeName, boolean isTemporary) {
-        String entityName = getTableQualifiedName(clusterName, dbName, tableName, isTemporary);
-        return String.format("%s as t where name = '%s'", typeName, entityName);
+//        String entityName = getTableQualifiedName(clusterName, dbName, tableName, isTemporary);
+        return String.format("%s as t where name = '%s' and db.name = '%s' and db.clusterName = '%s'", typeName, tableName, dbName, clusterName);
     }
 
     /**
@@ -334,9 +334,7 @@ public class HiveMetaStoreBridge {
             tableReference = new Referenceable(HiveDataTypes.HIVE_TABLE.getName());
         }
 
-        String tableQualifiedName = getTableQualifiedName(clusterName, hiveTable);
-        tableReference.set(HiveDataModelGenerator.NAME, tableQualifiedName);
-        tableReference.set(HiveDataModelGenerator.TABLE_NAME, hiveTable.getTableName().toLowerCase());
+        tableReference.set(HiveDataModelGenerator.NAME, hiveTable.getTableName().toLowerCase());
         tableReference.set(HiveDataModelGenerator.OWNER, hiveTable.getOwner());
 
         Date createDate = new Date();
@@ -362,7 +360,7 @@ public class HiveMetaStoreBridge {
         tableReference.set(HiveDataModelGenerator.DB, dbReference);
 
         // add reference to the StorageDescriptor
-        Referenceable sdReferenceable = fillStorageDesc(hiveTable.getSd(), tableQualifiedName, getStorageDescQFName(tableQualifiedName), tableReference.getId());
+        Referenceable sdReferenceable = fillStorageDesc(hiveTable.getSd(), tableReference.getId());
         tableReference.set(HiveDataModelGenerator.STORAGE_DESC, sdReferenceable);
 
         tableReference.set(HiveDataModelGenerator.PARAMETERS, hiveTable.getParameters());
@@ -379,17 +377,17 @@ public class HiveMetaStoreBridge {
         tableReference.set("temporary", hiveTable.isTemporary());
 
         // add reference to the Partition Keys
-        List<Referenceable> partKeys = getColumns(hiveTable.getPartitionKeys(), tableQualifiedName, tableReference.getId());
+        List<Referenceable> partKeys = getColumns(hiveTable.getPartitionKeys(), tableReference.getId());
         tableReference.set("partitionKeys", partKeys);
 
-        tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getCols(), tableQualifiedName, tableReference.getId()));
+        tableReference.set(HiveDataModelGenerator.COLUMNS, getColumns(hiveTable.getCols(), tableReference.getId()));
 
         return tableReference;
     }
 
-    public static String getStorageDescQFName(String entityQualifiedName) {
-        return entityQualifiedName + "_storage";
-    }
+//    public static String getStorageDescQFName(String entityQualifiedName) {
+//        return entityQualifiedName + "_storage";
+//    }
 
     private Referenceable registerTable(Referenceable dbReference, Table table) throws Exception {
         String dbName = table.getDbName();
@@ -418,19 +416,18 @@ public class HiveMetaStoreBridge {
         atlasClient.updateEntity(referenceable.getId().id, referenceable);
     }
 
-    private Referenceable getEntityReferenceFromGremlin(String typeName, String gremlinQuery)
-    throws AtlasServiceException, JSONException {
-        AtlasClient client = getAtlasClient();
-        JSONArray results = client.searchByGremlin(gremlinQuery);
-        if (results.length() == 0) {
-            return null;
-        }
-        String guid = results.getJSONObject(0).getString(SEARCH_ENTRY_GUID_ATTR);
-        return new Referenceable(guid, typeName, null);
-    }
+//    private Referenceable getEntityReferenceFromGremlin(String typeName, String gremlinQuery)
+//    throws AtlasServiceException, JSONException {
+//        AtlasClient client = getAtlasClient();
+//        JSONArray results = client.searchByGremlin(gremlinQuery);
+//        if (results.length() == 0) {
+//            return null;
+//        }
+//        String guid = results.getJSONObject(0).getString(SEARCH_ENTRY_GUID_ATTR);
+//        return new Referenceable(guid, typeName, null);
+//    }
 
-    public Referenceable fillStorageDesc(StorageDescriptor storageDesc, String tableQualifiedName,
-        String sdQualifiedName, Id tableId) throws Exception {
+    public Referenceable fillStorageDesc(StorageDescriptor storageDesc, Id tableId) throws Exception {
         LOG.debug("Filling storage descriptor information for " + storageDesc);
 
         Referenceable sdReferenceable = new Referenceable(HiveDataTypes.HIVE_STORAGEDESC.getName());
@@ -490,20 +487,20 @@ public class HiveMetaStoreBridge {
         return ref;
     }
 
-    public static String getColumnQualifiedName(final String tableQualifiedName, final String colName) {
-        final String[] parts = tableQualifiedName.split("@");
-        final String tableName = parts[0];
-        final String clusterName = parts[1];
-        return String.format("%s.%s@%s", tableName, colName.toLowerCase(), clusterName);
-    }
+//    public static String getColumnQualifiedName(final String tableQualifiedName, final String colName) {
+//        final String[] parts = tableQualifiedName.split("@");
+//        final String tableName = parts[0];
+//        final String clusterName = parts[1];
+//        return String.format("%s.%s@%s", tableName, colName.toLowerCase(), clusterName);
+//    }
 
-    public List<Referenceable> getColumns(List<FieldSchema> schemaList, String tableQualifiedName, Id tableReference) throws Exception {
+    public List<Referenceable> getColumns(List<FieldSchema> schemaList, Id tableReference) throws Exception {
         List<Referenceable> colList = new ArrayList<>();
 
         for (FieldSchema fs : schemaList) {
             LOG.debug("Processing field " + fs);
             Referenceable colReferenceable = new Referenceable(HiveDataTypes.HIVE_COLUMN.getName());
-            colReferenceable.set(HiveDataModelGenerator.NAME, fs.getName());
+            colReferenceable.set(HiveDataModelGenerator.NAME, fs.getName().toLowerCase());
             colReferenceable.set("type", fs.getType());
             colReferenceable.set(HiveDataModelGenerator.COMMENT, fs.getComment());
             colReferenceable.set(HiveDataModelGenerator.TABLE, tableReference);

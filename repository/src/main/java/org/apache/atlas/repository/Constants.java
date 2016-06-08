@@ -70,11 +70,14 @@ public final class Constants {
         switch (field) {
         case STATE_PROPERTY_KEY:
         case GUID_PROPERTY_KEY:
+        case ENTITY_TYPE_PROPERTY_KEY:
             return TypesUtil.newAttributeInfo(field, DataTypes.STRING_TYPE);
 
         case TIMESTAMP_PROPERTY_KEY:
         case MODIFICATION_TIMESTAMP_PROPERTY_KEY:
             return TypesUtil.newAttributeInfo(field, DataTypes.LONG_TYPE);
+
+
         }
         return null;
     }

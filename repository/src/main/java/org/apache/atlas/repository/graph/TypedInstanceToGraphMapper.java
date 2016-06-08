@@ -100,7 +100,7 @@ public final class TypedInstanceToGraphMapper {
         RequestContext requestContext = RequestContext.get();
         for (ITypedReferenceableInstance typedInstance : typedInstances) {
             LOG.debug("Adding/updating entity {}", typedInstance);
-            Collection<IReferenceableInstance> newInstances = walkClassInstances(typedInstance);
+            List<IReferenceableInstance> newInstances = walkClassInstances(typedInstance);
             TypeUtils.Pair<List<ITypedReferenceableInstance>, List<ITypedReferenceableInstance>> instancesPair =
                     createVerticesAndDiscoverInstances(newInstances);
             List<ITypedReferenceableInstance> entitiesToCreate = instancesPair.left;
@@ -130,7 +130,7 @@ public final class TypedInstanceToGraphMapper {
         }
     }
 
-    private Collection<IReferenceableInstance> walkClassInstances(ITypedReferenceableInstance typedInstance)
+    private List<IReferenceableInstance> walkClassInstances(ITypedReferenceableInstance typedInstance)
             throws RepositoryException {
 
         EntityProcessor entityProcessor = new EntityProcessor();
@@ -243,7 +243,7 @@ public final class TypedInstanceToGraphMapper {
     }
 
     private TypeUtils.Pair<List<ITypedReferenceableInstance>, List<ITypedReferenceableInstance>> createVerticesAndDiscoverInstances(
-            Collection<IReferenceableInstance> instances) throws AtlasException {
+            List<IReferenceableInstance> instances) throws AtlasException {
 
         List<ITypedReferenceableInstance> instancesToCreate = new ArrayList<>();
         List<ITypedReferenceableInstance> instancesToUpdate = new ArrayList<>();
@@ -293,6 +293,9 @@ public final class TypedInstanceToGraphMapper {
                 idToVertexMap.put(id, instanceVertex);
             }
         }
+
+        Collections.reverse(instancesToCreate);
+        Collections.reverse(instancesToUpdate);
         return TypeUtils.Pair.of(instancesToCreate, instancesToUpdate);
     }
 
@@ -614,6 +617,8 @@ public final class TypedInstanceToGraphMapper {
             if (id.isAssigned()) {
                 referenceVertex = graphHelper.getVertexForGUID(id.id);
             } else {
+                LOG.debug("Referring id {} ", id);
+                LOG.debug("Id to vertex map {} ", idToVertexMap);
                 referenceVertex = idToVertexMap.get(id);
             }
         }

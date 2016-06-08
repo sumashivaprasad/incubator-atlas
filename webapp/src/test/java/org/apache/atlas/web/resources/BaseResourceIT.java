@@ -173,7 +173,8 @@ public abstract class BaseResourceIT {
         EnumTypeDefinition enumTypeDefinition = new EnumTypeDefinition("tableType", values);
 
         HierarchicalTypeDefinition<ClassType> tblClsDef = TypesUtil
-                .createClassTypeDef(HIVE_TABLE_TYPE, ImmutableSet.of("DataSet"),
+                .createClassTypeDef(HIVE_TABLE_TYPE, null, ImmutableSet.of("DataSet"),
+                    PrimaryKeyConstraint.of(AtlasClient.NAME),
                     attrDef("owner", DataTypes.STRING_TYPE), attrDef("createTime", DataTypes.LONG_TYPE),
                     attrDef("lastAccessTime", DataTypes.DATE_TYPE),
                     attrDef("temporary", DataTypes.BOOLEAN_TYPE),

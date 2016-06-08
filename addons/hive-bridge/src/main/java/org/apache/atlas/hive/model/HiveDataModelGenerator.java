@@ -44,8 +44,6 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.UniqueConstraint;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -200,7 +198,7 @@ public class HiveDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_STORAGEDESC.getName(), null,
-                        ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions,
+                        ImmutableSet.<String>of(), attributeDefinitions,
                     PrimaryKeyConstraint.of(TABLE));
         classTypeDefinitions.put(HiveDataTypes.HIVE_STORAGEDESC.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_STORAGEDESC.getName());
@@ -225,7 +223,7 @@ public class HiveDataModelGenerator {
 
         HierarchicalTypeDefinition<ClassType> definition =
                 new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_DB.getName(), null,
-                    ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions,
+                    ImmutableSet.<String>of(), attributeDefinitions,
                     PrimaryKeyConstraint.of(NAME, AtlasConstants.CLUSTER_NAME_ATTRIBUTE));
         classTypeDefinitions.put(HiveDataTypes.HIVE_DB.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_DB.getName());
@@ -241,8 +239,8 @@ public class HiveDataModelGenerator {
                 new AttributeDefinition(TABLE, HiveDataTypes.HIVE_TABLE.getName(), Multiplicity.OPTIONAL, false, COLUMNS),};
 
         HierarchicalTypeDefinition<ClassType> definition =
-                new HierarchicalTypeDefinition<>(ClassType.class, HiveDataTypes.HIVE_COLUMN.getName(), null,
-                    ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE), attributeDefinitions,
+                new HierarchicalTypeDefinition<ClassType>(ClassType.class, HiveDataTypes.HIVE_COLUMN.getName(), null,
+                    ImmutableSet.<String>of(), attributeDefinitions,
                     PrimaryKeyConstraint.of(NAME, TABLE));
         classTypeDefinitions.put(HiveDataTypes.HIVE_COLUMN.getName(), definition);
         LOG.debug("Created definition for " + HiveDataTypes.HIVE_COLUMN.getName());
@@ -250,8 +248,6 @@ public class HiveDataModelGenerator {
 
     private void createTableClass() throws AtlasException {
         AttributeDefinition[] attributeDefinitions = new AttributeDefinition[]{
-                new AttributeDefinition(TABLE_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false,
-                        null),
                 new AttributeDefinition(DB, HiveDataTypes.HIVE_DB.getName(), Multiplicity.REQUIRED, false, null),
                 new AttributeDefinition(OWNER, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, null),
                 new AttributeDefinition(CREATE_TIME, DataTypes.DATE_TYPE.getName(), Multiplicity.OPTIONAL, false,
