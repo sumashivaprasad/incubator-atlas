@@ -220,10 +220,8 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                 dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, hdfsPathStr);
                 dataSetReferenceable.set("path", hdfsPathStr);
                 dataSetReferenceable.set("owner", stormConf.get("hdfs.kerberos.principal"));
-                //Fix after ATLAS-542
-//                final Path hdfsPath = new Path(hdfsPathStr);
-//                dataSetReferenceable.set(AtlasClient.NAME, hdfsPath.getName());
-                dataSetReferenceable.set(AtlasClient.NAME, hdfsPathStr);
+                final Path hdfsPath = new Path(hdfsPathStr);
+                dataSetReferenceable.set(AtlasClient.NAME, hdfsPath.getName());
                 break;
 
             case "HiveBolt":
@@ -240,9 +238,9 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                 dataSetReferenceable = new Referenceable("hive_table");
                 final String tableQualifiedName = HiveMetaStoreBridge.getTableQualifiedName(clusterName,
                         databaseName, hiveTableName);
-                dataSetReferenceable.set(HiveDataModelGenerator.NAME, tableQualifiedName);
+                dataSetReferenceable.set(HiveDataModelGenerator.NAME, hiveTableName);
                 dataSetReferenceable.set(HiveDataModelGenerator.DB, dbReferenceable);
-                dataSetReferenceable.set(HiveDataModelGenerator.TABLE_NAME, hiveTableName);
+                dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, hiveTableName);
                 break;
 
             default:
