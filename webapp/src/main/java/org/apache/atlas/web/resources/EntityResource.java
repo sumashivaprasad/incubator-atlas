@@ -18,10 +18,8 @@
 
 package org.apache.atlas.web.resources;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import org.apache.atlas.AtlasClient;
-import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.services.MetadataService;
@@ -61,8 +59,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -123,7 +119,9 @@ public class EntityResource {
             final List<String> guids = metadataService.createEntities(entities);
             JSONObject response = getResponse(new AtlasClient.EntityResult(guids, null, null));
 
-            URI locationURI = getLocationURI(guids);
+            UriBuilder ub = uriInfo.getAbsolutePathBuilder();
+            URI locationURI = guids.isEmpty() ? null : ub.path(guids.get(0)).build();
+
             return Response.created(locationURI).entity(response).build();
 
         } catch(EntityExistsException e) {
@@ -139,24 +137,6 @@ public class EntityResource {
             LOG.error("Unable to persist entity instance", e);
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));
         }
-    }
-
-    URI getLocationURI(List<String> guids) {
-        URI locationURI = null;
-        String uriPath = AtlasClient.API.GET_ENTITY.getPath();
-        if (uriInfo != null) {
-            UriBuilder ub = uriInfo.getAbsolutePathBuilder();
-            locationURI = guids.isEmpty() ? null : ub.path(guids.get(0)).build();
-        } else {
-            UriBuilder builder = UriBuilder
-                .fromPath(AtlasConstants.DEFAULT_ATLAS_REST_ADDRESS)
-                .scheme("http")
-                .path(uriPath).path(guids.get(0));
-
-            locationURI = guids.isEmpty() ? null : builder.build();
-
-        }
-        return locationURI;
     }
 
     private JSONObject getResponse(AtlasClient.EntityResult entityResult) throws AtlasException, JSONException {
@@ -569,7 +549,8 @@ public class EntityResource {
             LOG.debug("Adding trait={} for entity={} ", traitDefinition, guid);
             metadataService.addTrait(guid, traitDefinition);
 
-            URI locationURI = getLocationURI(new ArrayList<String>() {{ add(guid); }});
+            UriBuilder ub = uriInfo.getAbsolutePathBuilder();
+            URI locationURI = ub.path(guid).build();
 
             JSONObject response = new JSONObject();
             response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
