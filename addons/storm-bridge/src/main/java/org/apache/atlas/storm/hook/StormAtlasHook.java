@@ -240,7 +240,7 @@ public class StormAtlasHook extends AtlasHook implements ISubmitterHook {
                         databaseName, hiveTableName);
                 dataSetReferenceable.set(HiveDataModelGenerator.NAME, hiveTableName);
                 dataSetReferenceable.set(HiveDataModelGenerator.DB, dbReferenceable);
-                dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, hiveTableName);
+                dataSetReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
                 break;
 
             default:

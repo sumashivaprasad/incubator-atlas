@@ -165,7 +165,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     private static final AttributeDefinition NAME_ATTRIBUTE =
-            TypesUtil.createRequiredAttrDef("name", DataTypes.STRING_TYPE);
+            TypesUtil.createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE);
     private static final AttributeDefinition DESCRIPTION_ATTRIBUTE =
             TypesUtil.createOptionalAttrDef("description", DataTypes.STRING_TYPE);
 
