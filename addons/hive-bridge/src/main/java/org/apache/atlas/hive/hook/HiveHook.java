@@ -236,6 +236,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         case ALTERTABLE_ADDCOLS:
         case ALTERTABLE_REPLACECOLS:
         case ALTERTABLE_PARTCOLTYPE:
+        case ALTERTABLE_TOUCH:
+        case ALTERTABLE_PROTECTMODE:
             handleEventOutputs(dgiBridge, event, Type.TABLE);
             break;
         case ALTERTABLE_RENAMECOL:

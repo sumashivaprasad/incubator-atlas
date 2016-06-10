@@ -641,6 +641,31 @@ public class HiveHookIT {
     }
 
     @Test
+    public void testAlterTableProtectMode() throws Exception{
+        String tableName = createTable(false);
+        String tableGuid = assertTableIsRegistered(DEFAULT_DB, tableName);
+
+        String query = String.format("alter table %s enable no_drop cascade", tableName);
+        runCommand(query);
+
+        Map<String, Object> valueMap = atlasClient.getEntity(tableGuid).getValuesMap();
+        Map<String, String> props = (Map<String, String>) valueMap.get("properties");
+        Assert.assertEquals(props.get("PROTECT_MODE"), "NO_DROP_CASCADE");
+    }
+
+    @Test
+    public void testAlterTableTouch() throws Exception{
+        String tableName = createTable(false);
+        String tableGuid = assertTableIsRegistered(DEFAULT_DB, tableName);
+
+        String query = String.format("alter table %s touch", tableName);
+        runCommand(query);
+
+        //Nothing to assert here as there is no update on metadata
+        atlasClient.getEntity(tableGuid);
+    }
+
+    @Test
     public void testAlterTableRename() throws Exception {
         String tableName = createTable(true);
         final String newDBName = createDatabase();
