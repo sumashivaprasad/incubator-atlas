@@ -230,7 +230,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
                 }
             } catch (Exception e) {
                 //todo handle failures
-                LOG.warn("Error handling message {}", message, e);
+                LOG.warn("Error handling message {} ", message, e);
             }
             consumer.commit();
         }
