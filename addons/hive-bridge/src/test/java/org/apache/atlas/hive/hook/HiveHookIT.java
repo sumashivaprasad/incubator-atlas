@@ -301,6 +301,35 @@ public class HiveHookIT {
     }
 
     @Test
+    public void testDropAndRecreateCTASOutput() throws Exception {
+        String tableName = createTable();
+        String ctasTableName = "table" + random();
+        String query = "create table " + ctasTableName + " as select * from " + tableName;
+        runCommand(query);
+
+        assertTableIsRegistered(DEFAULT_DB, ctasTableName);
+        String processId = assertProcessIsRegistered(query);
+
+        final String drpquery = String.format("drop table %s ", ctasTableName);
+        runCommand(drpquery);
+        assertTableIsNotRegistered(DEFAULT_DB, ctasTableName);
+
+        //Fix after ATLAS-876
+        runCommand(query);
+        assertTableIsRegistered(DEFAULT_DB, ctasTableName);
+        String process2Id = assertProcessIsRegistered(query);
+
+        Assert.assertEquals(process2Id, processId);
+
+        Referenceable processRef = atlasClient.getEntity(processId);
+        String tblQlfdname = getQualifiedTblName(tableName);
+        String ctasQlfdname = getQualifiedTblName(ctasTableName);
+
+        validateInputTables(processRef, tblQlfdname);
+        validateOutputTables(processRef, ctasQlfdname, ctasQlfdname);
+    }
+
+    @Test
     public void testCreateView() throws Exception {
         String tableName = createTable();
         String viewName = tableName();
@@ -429,7 +458,7 @@ public class HiveHookIT {
         if (outputTable == null) {
             Assert.assertNull(process.get(OUTPUTS));
         } else {
-            Assert.assertEquals(((List<Id>) process.get(OUTPUTS)).size(), 1 );
+            Assert.assertEquals(((List<Id>) process.get(OUTPUTS)).size(), 1);
             validateOutputTables(process, outputTable);
         }
 
@@ -469,6 +498,32 @@ public class HiveHookIT {
         validateProcess(query, getQualifiedTblName(tableName), null);
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
+    }
+
+    @Test
+    public void testUpdateProcess() throws Exception {
+        String tableName = createTable();
+        String pFile1 = createTestDFSPath("somedfspath1");
+        String testPathNormed = lower(new Path(pFile1).toString());
+        String query =
+            "insert overwrite DIRECTORY '" + pFile1  + "' select id, name from " + tableName;
+
+        runCommand(query);
+        String tblQlfdname = getQualifiedTblName(tableName);
+        Referenceable processReference = validateProcess(query, tblQlfdname, testPathNormed);
+        validateHDFSPaths(processReference, pFile1, OUTPUTS);
+
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+
+        validateInputTables(processReference, tblQlfdname);
+
+        //Rerun same query with same HDFS path
+
+        runCommand(query);
+        Referenceable process2Reference = validateProcess(query, tblQlfdname, testPathNormed);
+        validateHDFSPaths(process2Reference, pFile1, OUTPUTS);
+
+        Assert.assertEquals(process2Reference.getId()._getId(), processReference.getId()._getId());
     }
 
     @Test
