@@ -248,7 +248,7 @@ public class HiveHookIT {
         verifyTimestamps(processReference, "startTime");
         verifyTimestamps(processReference, "endTime");
 
-        validateHDFSPaths(processReference, pFile, INPUTS);
+        validateHDFSPaths(processReference, INPUTS, pFile);
     }
 
     private void validateOutputTables(Referenceable processReference, String... expectedTableNames) throws Exception {
@@ -431,7 +431,7 @@ public class HiveHookIT {
         final String tblQlfdName = getQualifiedTblName(tableName);
         Referenceable processReference = validateProcess(query, testPathNormed, tblQlfdName);
 
-        validateHDFSPaths(processReference, loadFile, INPUTS);
+        validateHDFSPaths(processReference, INPUTS, loadFile);
 
         validateOutputTables(processReference, tblQlfdName);
     }
@@ -511,7 +511,7 @@ public class HiveHookIT {
         runCommand(query);
         String tblQlfdname = getQualifiedTblName(tableName);
         Referenceable processReference = validateProcess(query, tblQlfdname, testPathNormed);
-        validateHDFSPaths(processReference, pFile1, OUTPUTS);
+        validateHDFSPaths(processReference, OUTPUTS, pFile1);
 
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
 
@@ -521,21 +521,20 @@ public class HiveHookIT {
 
         runCommand(query);
         Referenceable process2Reference = validateProcess(query, tblQlfdname, testPathNormed);
-        validateHDFSPaths(process2Reference, pFile1, OUTPUTS);
+        validateHDFSPaths(process2Reference, OUTPUTS, pFile1);
 
         Assert.assertEquals(process2Reference.getId()._getId(), processReference.getId()._getId());
 
         //Rerun same query with a new HDFS path. Should create a new process
         String pFile2 = createTestDFSPath("somedfspath2");
         query = "insert overwrite DIRECTORY '" + pFile2  + "' select id, name from " + tableName;
-        final String testPathNormed2 = lower(new Path(pFile1).toString());
+        final String testPathNormed2 = lower(new Path(pFile2).toString());
         runCommand(query);
 
+        Referenceable process3Reference = validateProcess(query, tblQlfdname, testPathNormed2);
+        validateHDFSPaths(process3Reference, OUTPUTS, pFile2);
 
-        Referenceable process3Reference = validateProcess(query, tblQlfdname, testPathNormed, testPathNormed2);
-        validateHDFSPaths(process3Reference, pFile2, OUTPUTS);
-
-        Assert.assertEquals(process3Reference.getId()._getId(), processReference.getId()._getId());
+        Assert.assertNotEquals(process3Reference.getId()._getId(), processReference.getId()._getId());
     }
 
     @Test
@@ -549,7 +548,7 @@ public class HiveHookIT {
         runCommand(query);
         String tblQlfdname = getQualifiedTblName(tableName);
         Referenceable processReference = validateProcess(query, tblQlfdname, testPathNormed);
-        validateHDFSPaths(processReference, pFile1, OUTPUTS);
+        validateHDFSPaths(processReference, OUTPUTS, pFile1);
 
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
 
@@ -565,7 +564,7 @@ public class HiveHookIT {
         runCommand(query);
         tblQlfdname = getQualifiedTblName(tableName);
         Referenceable process2Reference = validateProcess(query, tblQlfdname, testPathNormed);
-        validateHDFSPaths(process2Reference, pFile2, OUTPUTS);
+        validateHDFSPaths(process2Reference, OUTPUTS, pFile2);
 
         Assert.assertNotEquals(process2Reference.getId()._getId(), processReference.getId()._getId());
     }
@@ -631,7 +630,7 @@ public class HiveHookIT {
         runCommand(query);
         String tblQlfName = getQualifiedTblName(tableName);
         Referenceable processReference = validateProcess(query, tblQlfName, testPathNormed);
-        validateHDFSPaths(processReference, filename, OUTPUTS);
+        validateHDFSPaths(processReference, OUTPUTS, filename);
         validateInputTables(processReference, tblQlfName);
 
         //Import
@@ -642,7 +641,7 @@ public class HiveHookIT {
         runCommand(query);
         tblQlfName = getQualifiedTblName(tableName);
         processReference = validateProcess(query, testPathNormed, tblQlfName);
-        validateHDFSPaths(processReference, filename, INPUTS);
+        validateHDFSPaths(processReference, INPUTS, filename);
 
         validateOutputTables(processReference, tblQlfName);
     }
@@ -663,7 +662,7 @@ public class HiveHookIT {
         runCommand(query);
         String tblQlfdName = getQualifiedTblName(tableName);
         Referenceable processReference = validateProcess(query, tblQlfdName, testPathNormed);
-        validateHDFSPaths(processReference, filename, OUTPUTS);
+        validateHDFSPaths(processReference, OUTPUTS, filename);
 
         validateInputTables(processReference, tblQlfdName);
 
@@ -675,7 +674,7 @@ public class HiveHookIT {
         runCommand(query);
         tblQlfdName = getQualifiedTblName(tableName);
         processReference = validateProcess(query, testPathNormed, tblQlfdName);
-        validateHDFSPaths(processReference, filename, INPUTS);
+        validateHDFSPaths(processReference, INPUTS, filename);
 
         validateOutputTables(processReference, tblQlfdName);
     }
@@ -1064,7 +1063,7 @@ public class HiveHookIT {
 
         final String testPathNormed = lower(new Path(testPath).toString());
         Referenceable processReference = validateProcess(query, testPathNormed, tblQlfdName);
-        validateHDFSPaths(processReference, testPath, INPUTS);
+        validateHDFSPaths(processReference, INPUTS, testPath);
     }
 
     private void validateHDFSPaths(Referenceable processReference, String attributeName, String... testPaths) throws Exception {
