@@ -146,17 +146,14 @@ public class EntityResource {
     @VisibleForTesting
     public URI getLocationURI(List<String> guids) {
         URI locationURI = null;
-
         if (uriInfo != null) {
             UriBuilder ub = uriInfo.getAbsolutePathBuilder();
             locationURI = guids.isEmpty() ? null : ub.path(guids.get(0)).build();
         } else {
             String uriPath = AtlasClient.API.GET_ENTITY.getPath();
-            UriBuilder builder = UriBuilder
+            locationURI = guids.isEmpty() ? null : UriBuilder
                 .fromPath(AtlasConstants.DEFAULT_ATLAS_REST_ADDRESS)
-                .path(uriPath).path(guids.get(0));
-
-            locationURI = guids.isEmpty() ? null : builder.build();
+                .path(uriPath).path(guids.get(0)).build();
 
         }
         return locationURI;
