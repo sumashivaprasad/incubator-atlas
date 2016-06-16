@@ -26,7 +26,6 @@ import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.hive.bridge.HiveMetaStoreBridge;
 import org.apache.atlas.hive.model.HiveDataModelGenerator;
 import org.apache.atlas.hive.model.HiveDataTypes;
-import org.apache.atlas.hive.rewrite.HiveASTRewriter;
 import org.apache.atlas.hook.AtlasHook;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.typesystem.Referenceable;
@@ -51,11 +50,9 @@ import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.log4j.LogManager;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.tools.cmd.gen.AnyVals;
 
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -348,7 +345,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         for(WriteEntity writeEntity : event.getOutputs()){
             if (writeEntity.getType() == Type.TABLE){
                 Table newTable = writeEntity.getTable();
-                createOrUpdateEntities(dgiBridge, event.getUser(), writeEntity, true, oldTable);
+                createOrUpdateEntities(dgiBridge, event, writeEntity, true, oldTable);
                 final String newQualifiedTableName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(),
                         newTable);
                 String oldColumnQFName = HiveMetaStoreBridge.getColumnQualifiedName(newQualifiedTableName, oldColName);
@@ -385,7 +382,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
                     //Create/update old table entity - create entity with oldQFNme and old tableName if it doesnt exist. If exists, will update
                     //We always use the new entity while creating the table since some flags, attributes of the table are not set in inputEntity and Hive.getTable(oldTableName) also fails since the table doesnt exist in hive anymore
-                    final LinkedHashMap<Type, Referenceable> tables = createOrUpdateEntities(dgiBridge, event.getUser(), writeEntity, true);
+                    final LinkedHashMap<Type, Referenceable> tables = createOrUpdateEntities(dgiBridge, event, writeEntity, true);
                     Referenceable tableEntity = tables.get(Type.TABLE);
 
                     //Reset regular column QF Name to old Name and create a new partial notification request to replace old column QFName to newName to retain any existing traits
@@ -460,7 +457,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return newSDEntity;
     }
 
-    private LinkedHashMap<Type, Referenceable> createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, String user, Entity entity, boolean skipTempTables, Table existTable) throws Exception {
+    private LinkedHashMap<Type, Referenceable> createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, boolean skipTempTables, Table existTable) throws Exception {
         Database db = null;
         Table table = null;
         Partition partition = null;
@@ -513,18 +510,18 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
 
 
-        messages.add(new HookNotification.EntityUpdateRequest(user, entities));
+        messages.add(new HookNotification.EntityUpdateRequest(event.getUser(), entities));
         return result;
     }
 
-    private LinkedHashMap<Type, Referenceable> createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, String user, Entity entity, boolean skipTempTables) throws Exception{
-        return createOrUpdateEntities(dgiBridge, user, entity, skipTempTables, null);
+    private LinkedHashMap<Type, Referenceable> createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, boolean skipTempTables) throws Exception{
+        return createOrUpdateEntities(dgiBridge, event, entity, skipTempTables, null);
     }
 
     private LinkedHashMap<Type, Referenceable> handleEventOutputs(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Type entityType) throws Exception {
         for (Entity entity : event.getOutputs()) {
             if (entity.getType() == entityType) {
-                return createOrUpdateEntities(dgiBridge, event.getUser(), entity, true);
+                return createOrUpdateEntities(dgiBridge, event, entity, true);
             }
         }
         return null;
@@ -548,18 +545,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     public static String normalize(String queryStr) {
-        String result = null;
-        if (queryStr != null) {
-            try {
-                HiveASTRewriter rewriter = new HiveASTRewriter(hiveConf);
-                result = rewriter.rewrite(queryStr);
-            } catch (Exception e) {
-                LOG.warn("Could not rewrite query due to error. Proceeding with original query {}", queryStr, e);
-            }
-        }
-
-        result = lower(result);
-        return result;
+        return lower(queryStr);
     }
 
     private void registerProcess(HiveMetaStoreBridge dgiBridge, HiveEventContext event) throws Exception {
@@ -615,7 +601,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (entity.getType() == Type.TABLE || entity.getType() == Type.PARTITION) {
             final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable());
             if (!dataSets.containsKey(tblQFName)) {
-                LinkedHashMap<Type, Referenceable> result = createOrUpdateEntities(dgiBridge, event.getUser(), entity, false);
+                LinkedHashMap<Type, Referenceable> result = createOrUpdateEntities(dgiBridge, event, entity, false);
                 dataSets.put(tblQFName, result.get(Type.TABLE));
                 entities.addAll(result.values());
             }
@@ -698,13 +684,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
 
         String queryStr = hiveEvent.getQueryStr();
-        if (!isCreateOp(hiveEvent)) {
-            queryStr = normalize(queryStr);
-            processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getProcessQualifiedName(queryStr, sourceList, targetList));
-        } else {
-            queryStr = lower(queryStr);
-            processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, queryStr);
-        }
+        queryStr = lower(queryStr);
+        processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, queryStr);
 
         LOG.debug("Registering query: {}", queryStr);
 
@@ -725,31 +706,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         processReferenceable.set("queryPlan", hiveEvent.getJsonPlan());
         processReferenceable.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, dgiBridge.getClusterName());
 
-        List<String> recentQueries = new ArrayList<>(1);
-        recentQueries.add(hiveEvent.getQueryStr());
-        processReferenceable.set("recentQueries", recentQueries);
         processReferenceable.set("endTime", new Date(System.currentTimeMillis()));
         //TODO set queryGraph
         return processReferenceable;
-    }
-
-    @VisibleForTesting
-    static String getProcessQualifiedName(String normalizedQuery, List<Referenceable> inputs, List<Referenceable> outputs) {
-        StringBuilder buffer = new StringBuilder(normalizedQuery);
-        addDatasets(buffer, inputs);
-        addDatasets(buffer, outputs);
-        return buffer.toString();
-    }
-
-    private static void addDatasets(StringBuilder buffer, List<Referenceable> refs) {
-        if (refs != null) {
-            for (Referenceable input : refs) {
-                //TODO - Change to qualifiedName later
-                buffer.append(":");
-                String dataSetQlfdName = (String) input.get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME);
-                buffer.append(dataSetQlfdName.toLowerCase().replaceAll("/", ""));
-            }
-        }
     }
 
     public static class HiveEventContext {

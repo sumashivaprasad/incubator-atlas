@@ -95,6 +95,7 @@ public class HiveHookIT {
         driver = new Driver(conf);
         ss = new SessionState(conf);
         ss = SessionState.start(ss);
+
         SessionState.setCurrentSessionState(ss);
 
         Configuration configuration = ApplicationProperties.get();
@@ -711,7 +712,11 @@ public class HiveHookIT {
         String tableName = createTable(true);
         final String newDBName = createDatabase();
 
-        assertTableIsRegistered(DEFAULT_DB, tableName);
+        String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
+        Referenceable tableEntity = atlasClient.getEntity(tableId);
+        final String createTime = (String)tableEntity.get(HiveDataModelGenerator.CREATE_TIME);
+        Assert.assertNotNull(createTime);
+
         String columnGuid = assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName), NAME));
         String sdGuid = assertSDIsRegistered(HiveMetaStoreBridge.getStorageDescQFName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName)), null);
         assertDatabaseIsRegistered(newDBName);
@@ -728,7 +733,7 @@ public class HiveHookIT {
 
         final String newTableName = tableName();
         String query = String.format("alter table %s rename to %s", DEFAULT_DB + "." + tableName, newDBName + "." + newTableName);
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
 
         String newColGuid = assertColumnIsRegistered(HiveMetaStoreBridge.getColumnQualifiedName(HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, newDBName, newTableName), NAME));
         Assert.assertEquals(newColGuid, columnGuid);
@@ -750,6 +755,7 @@ public class HiveHookIT {
                 Referenceable sd = ((Referenceable) entity.get(HiveDataModelGenerator.STORAGE_DESC));
                 String location = (String) sd.get(HiveDataModelGenerator.LOCATION);
                 assertTrue(location.contains(newTableName));
+                Assert.assertEquals(entity.get(HiveDataModelGenerator.CREATE_TIME), createTime);
             }
         });
     }
@@ -938,7 +944,7 @@ public class HiveHookIT {
     }
 
     private void runCommandWithDelay(String cmd, int sleepMs) throws CommandNeedRetryException, InterruptedException {
-        LOG.debug("Running command '{}'", cmd);
+        LOG.debug("Running command {} '{}'", driver, cmd);
         ss.setCommandType(null);
         CommandProcessorResponse response = driver.run(cmd);
         assertEquals(response.getResponseCode(), 0);
@@ -1461,9 +1467,7 @@ public class HiveHookIT {
 
     private String assertProcessIsRegistered(final String queryStr, final String inputTblName, final String... outputTblNames) throws Exception {
 
-        HiveASTRewriter astRewriter = new HiveASTRewriter(conf);
-        String normalizedQuery = normalize(astRewriter.rewrite(queryStr));
-
+        String normalizedQuery = normalize(queryStr);
         List<Referenceable> inputs = null;
         if (inputTblName != null) {
             Referenceable inputTableRef = new Referenceable(HiveDataTypes.HIVE_TABLE.name(), new HashMap<String, Object>() {{
@@ -1483,27 +1487,15 @@ public class HiveHookIT {
                 outputs.add(outputTableRef);
             }
         }
-        String processQFName = HiveHook.getProcessQualifiedName(normalizedQuery, inputs, outputs);
+        String processQFName = normalizedQuery;
         LOG.debug("Searching for process with query {}", processQFName);
-        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, processQFName, new AssertPredicate() {
-            @Override
-            public void assertOnEntity(final Referenceable entity) throws Exception {
-                List<String> recentQueries = (List<String>) entity.get("recentQueries");
-                Assert.assertEquals(recentQueries.get(0), queryStr);
-            }
-        });
+        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, processQFName, null);
     }
 
     private String assertProcessIsRegistered(final String queryStr) throws Exception {
         String lowerQryStr = lower(queryStr);
         LOG.debug("Searching for process with query {}", lowerQryStr);
-        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, lowerQryStr, new AssertPredicate() {
-            @Override
-            public void assertOnEntity(final Referenceable entity) throws Exception {
-                List<String> recentQueries = (List<String>) entity.get("recentQueries");
-                Assert.assertEquals(recentQueries.get(0), queryStr);
-            }
-        });
+        return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, lowerQryStr, null);
     }
 
     private void assertProcessIsNotRegistered(String queryStr) throws Exception {
