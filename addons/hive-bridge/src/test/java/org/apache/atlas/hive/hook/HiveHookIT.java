@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static org.apache.atlas.hive.hook.HiveHook.entityComparator;
 import static org.apache.atlas.hive.hook.HiveHook.getProcessQualifiedName;
 import static org.apache.atlas.hive.hook.HiveHook.lower;
 import static org.apache.atlas.hive.hook.HiveHook.normalize;
@@ -278,9 +279,9 @@ public class HiveHookIT {
     private List<Entity> getOutputs(String inputName, Entity.Type entityType) {
         final WriteEntity entity = new WriteEntity();
 
-        if ( Entity.Type.DFS_DIR.equals(entityType)) {
+        if ( Entity.Type.DFS_DIR.equals(entityType) || Entity.Type.LOCAL_DIR.equals(entityType)) {
             entity.setName(lower(new Path(inputName).toString()));
-            entity.setTyp(Entity.Type.DFS_DIR);
+            entity.setTyp(entityType);
         } else {
             entity.setName(getQualifiedTblName(inputName));
             entity.setTyp(Entity.Type.TABLE);
@@ -528,7 +529,7 @@ public class HiveHookIT {
         String opTableId = assertTableIsRegistered(DEFAULT_DB, insertTableName);
 
         List<Entity> inputs = getInputs(tableName, Entity.Type.TABLE);
-        List<Entity> outputs = getInputs(insertTableName, Entity.Type.TABLE);
+        List<Entity> outputs = getOutputs(insertTableName, Entity.Type.TABLE);
         ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.INSERT);
 
         Referenceable processRef1 = validateProcess(query, HiveOperation.QUERY, inputs, outputs);
@@ -550,7 +551,7 @@ public class HiveHookIT {
 
         runCommand(query);
         List<Entity> outputs = getOutputs(randomLocalPath.getAbsolutePath(), Entity.Type.LOCAL_DIR);
-        ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.INSERT_OVERWRITE);
+//        ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.PATH_WRITE);
         validateProcess(query, HiveOperation.QUERY, getInputs(tableName, Entity.Type.TABLE), outputs);
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
@@ -606,7 +607,7 @@ public class HiveHookIT {
 
         List<Entity> inputs = getInputs(tableName, Entity.Type.TABLE);
         List<Entity> outputs = getOutputs(pFile1, Entity.Type.DFS_DIR);
-        ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.INSERT_OVERWRITE);
+        ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.PATH_WRITE);
 
         Referenceable processReference = validateProcess(query,  HiveOperation.QUERY, inputs, outputs);
         validateHDFSPaths(processReference, OUTPUTS, pFile1);
@@ -625,7 +626,7 @@ public class HiveHookIT {
         runCommand(query);
 //        tblQlfdname = getQualifiedTblName(tableName);
         outputs = getOutputs(pFile1, Entity.Type.DFS_DIR);
-        ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.INSERT_OVERWRITE);
+        ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.PATH_WRITE);
 
         Referenceable process2Reference = validateProcess(query, HiveOperation.QUERY, inputs, outputs);
         validateHDFSPaths(process2Reference, OUTPUTS, pFile2);
@@ -1142,8 +1143,9 @@ public class HiveHookIT {
             }
         });
 
-        List<Entity> outputs = getOutputs(tableName, Entity.Type.TABLE);
+
         List<Entity> inputs = getInputs(testPath, Entity.Type.DFS_DIR);
+        List<Entity> outputs = getOutputs(tableName, Entity.Type.TABLE);
 
         Referenceable processReference = validateProcess(query, HiveOperation.ALTERTABLE_LOCATION, inputs, outputs);
         validateHDFSPaths(processReference, INPUTS, testPath);
@@ -1541,6 +1543,7 @@ public class HiveHookIT {
     }
 
     private String assertProcessIsRegistered(final String queryStr, HiveOperation op, final List<Entity> inputTbls, final List<Entity> outputTbls) throws Exception {
+        LOG.info("whats null {} {} {} {} ", queryStr, op, inputTbls, outputTbls);
         String processQFName = getProcessQualifiedName(op, getSortedProcessDataSets(inputTbls), getSortedProcessDataSets(outputTbls));
         LOG.debug("Searching for process with query {}", processQFName);
         return assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, processQFName,  new AssertPredicate() {
@@ -1557,7 +1560,7 @@ public class HiveHookIT {
     }
 
     private SortedMap<Entity, Referenceable> getSortedProcessDataSets(List<Entity> inputTbls) {
-        SortedMap<Entity, Referenceable> inputs = new TreeMap<>();;
+        SortedMap<Entity, Referenceable> inputs = new TreeMap<Entity, Referenceable>(entityComparator);
         if (inputTbls != null) {
             for (final Entity tbl : inputTbls) {
                 Referenceable inputTableRef = new Referenceable(getDSTypeName(tbl), new HashMap<String, Object>() {{
