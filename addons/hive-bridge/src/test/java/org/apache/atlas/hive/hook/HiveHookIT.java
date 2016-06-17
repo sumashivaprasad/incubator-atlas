@@ -249,9 +249,8 @@ public class HiveHookIT {
         final String query = String.format("create TEMPORARY EXTERNAL table %s.%s( %s, %s) location '%s'", DEFAULT_DB , tableName , colName + " int", "name string",  pFile);
         runCommand(query);
         assertTableIsRegistered(DEFAULT_DB, tableName, null, true);
-
-        String processId = assertProcessIsRegistered(query, HiveOperation.CREATETABLE,getInputs(tableName, Entity.Type.DFS_DIR), getOutputs(tableName, Entity.Type.TABLE));
-
+        String processId = assertEntityIsRegistered(HiveDataTypes.HIVE_PROCESS.getName(), AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+                HiveMetaStoreBridge.getTableQualifiedName(CLUSTER_NAME, DEFAULT_DB, tableName, true), null);
         Referenceable processReference = atlasClient.getEntity(processId);
         assertEquals(processReference.get("userName"), UserGroupInformation.getCurrentUser().getShortUserName());
 

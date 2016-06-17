@@ -668,6 +668,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             }};
 
             Referenceable processReferenceable = getProcessReferenceable(dgiBridge, event, inputs, outputs);
+            String tableQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), hiveTable);
+            processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
             entities.addAll(tables.values());
             entities.add(processReferenceable);
             event.addMessage(new HookNotification.EntityUpdateRequest(event.getUser(), entities));
