@@ -78,7 +78,6 @@ import java.util.concurrent.TimeUnit;
 public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private static final Logger LOG = LoggerFactory.getLogger(HiveHook.class);
 
-
     public static final String CONF_PREFIX = "atlas.hook.hive.";
     private static final String MIN_THREADS = CONF_PREFIX + "minThreads";
     private static final String MAX_THREADS = CONF_PREFIX + "maxThreads";
@@ -563,8 +562,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             LOG.info("Query id/plan is missing for {}", event.getQueryStr());
         }
 
-        final SortedMap<Entity, Referenceable> source = new TreeMap<Entity, Referenceable>(entityComparator);
-        final SortedMap<Entity, Referenceable> target = new TreeMap<Entity, Referenceable>(entityComparator);
+        final SortedMap<Entity, Referenceable> source = new TreeMap<>(entityComparator);
+        final SortedMap<Entity, Referenceable> target = new TreeMap<>(entityComparator);
 
         final Set<String> dataSets = new HashSet<>();
         final Set<Referenceable> entities = new LinkedHashSet<>();
@@ -585,7 +584,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                 Referenceable processReferenceable = getProcessReferenceable(dgiBridge, event, source, target);
 
                 entities.add(processReferenceable);
-                event.addMessage(new HookNotification.EntityUpdateRequest(event.getUser(), new ArrayList<Referenceable>(entities)));
+                event.addMessage(new HookNotification.EntityUpdateRequest(event.getUser(), new ArrayList<>(entities)));
             } else {
                 LOG.info("Skipped query {} since it has no getInputs() or resulting getOutputs()", event.getQueryStr());
             }
@@ -669,11 +668,24 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
             Referenceable processReferenceable = getProcessReferenceable(dgiBridge, event, inputs, outputs);
             String tableQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), hiveTable);
-            processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
+
+            if (isCreateOp(event)){
+                processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
+            }
             entities.addAll(tables.values());
             entities.add(processReferenceable);
             event.addMessage(new HookNotification.EntityUpdateRequest(event.getUser(), entities));
         }
+    }
+
+    private boolean isCreateOp(HiveEventContext hiveEvent) {
+        if (HiveOperation.CREATETABLE.equals(hiveEvent.getOperation())
+            || HiveOperation.CREATEVIEW.equals(hiveEvent.getOperation())
+            || HiveOperation.ALTERVIEW_AS.equals(hiveEvent.getOperation())
+            || HiveOperation.CREATETABLE_AS_SELECT.equals(hiveEvent.getOperation())) {
+            return true;
+        }
+        return false;
     }
 
     private Referenceable getProcessReferenceable(HiveMetaStoreBridge dgiBridge, HiveEventContext hiveEvent,
@@ -716,26 +728,25 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     @VisibleForTesting
     static String getProcessQualifiedName(HiveOperation op, SortedMap<Entity, Referenceable> inputs, SortedMap<Entity, Referenceable> outputs) {
         StringBuilder buffer = new StringBuilder(op.getOperationName());
-        addDatasets(buffer, inputs);
-        addDatasets(buffer, outputs);
+        addDatasets(op, buffer, inputs);
+        addDatasets(op, buffer, outputs);
         LOG.info("Setting process qualified name to {}", buffer);
         return buffer.toString();
     }
 
-    private static void addDatasets(StringBuilder buffer, final Map<Entity, Referenceable> refs) {
-        final String SEP = ":";
+    private static void addDatasets(HiveOperation op, StringBuilder buffer, final Map<Entity, Referenceable> refs) {
+        final String SEP = ":".intern();
         if (refs != null) {
             for (Entity input : refs.keySet()) {
                 final Entity entity = input;
-                if (WriteEntity.class.isAssignableFrom(entity.getClass())) {
-                    //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE operations
-                    if ( addQueryType(entity) ) {
-                        buffer.append(SEP);
-                        buffer.append(((WriteEntity) entity).getWriteType().name());
-                    }
+
+                //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
+                if (addQueryType(op, entity)) {
+                    buffer.append(SEP);
+                    buffer.append(((WriteEntity) entity).getWriteType().name());
                 }
-                if ( Type.DFS_DIR.equals(entity.getType()) ||
-                    Type.LOCAL_DIR.equals(entity.getType() )) {
+                if (Type.DFS_DIR.equals(entity.getType()) ||
+                    Type.LOCAL_DIR.equals(entity.getType())) {
                     LOG.debug("Skipping dfs dir addition into process qualified name {} ", refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
                 } else {
                     buffer.append(SEP);
@@ -747,15 +758,20 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    private static boolean addQueryType(Entity entity) {
-        switch(((WriteEntity) entity).getWriteType()) {
-        case INSERT:
-        case INSERT_OVERWRITE:
-        case UPDATE:
-        case DELETE:
-        case PATH_WRITE:
-            return true;
-        default:
+    private static boolean addQueryType(HiveOperation op, Entity entity) {
+        if (WriteEntity.class.isAssignableFrom(entity.getClass())) {
+            if (((WriteEntity) entity).getWriteType() != null &&
+                op.equals(HiveOperation.QUERY)) {
+                switch (((WriteEntity) entity).getWriteType()) {
+                case INSERT:
+                case INSERT_OVERWRITE:
+                case UPDATE:
+                case DELETE:
+                case PATH_WRITE:
+                    return true;
+                default:
+                }
+            }
         }
         return false;
     }
