@@ -1555,7 +1555,7 @@ public class HiveHookIT {
             @Override
             public void assertOnEntity(final Referenceable entity) throws Exception {
                 List<String> recentQueries = (List<String>) entity.get("recentQueries");
-                Assert.assertEquals(recentQueries.get(0), queryStr);
+                Assert.assertEquals(recentQueries.get(0), lower(queryStr));
             }
         });
     }
