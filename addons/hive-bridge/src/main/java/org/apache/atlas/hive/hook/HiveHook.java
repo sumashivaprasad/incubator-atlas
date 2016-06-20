@@ -86,6 +86,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     public static final String QUEUE_SIZE = CONF_PREFIX + "queueSize";
 
     public static final String HOOK_NUM_RETRIES = CONF_PREFIX + "numRetries";
+    private static final String SEP = ":".intern();
 
     private static final Map<String, HiveOperation> OPERATION_MAP = new HashMap<>();
 
@@ -582,7 +583,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
             if (source.size() > 0 || target.size() > 0) {
                 Referenceable processReferenceable = getProcessReferenceable(dgiBridge, event, source, target);
-
                 entities.add(processReferenceable);
                 event.addMessage(new HookNotification.EntityUpdateRequest(event.getUser(), new ArrayList<>(entities)));
             } else {
@@ -606,9 +606,12 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         } else if (entity.getType() == Type.DFS_DIR) {
             final String pathUri = lower(new Path(entity.getLocation()).toString());
             LOG.info("Registering DFS Path {} ", pathUri);
-            Referenceable hdfsPath = dgiBridge.fillHDFSDataSet(pathUri);
-            dataSets.put(entity, hdfsPath);
-            entities.add(hdfsPath);
+            if (!dataSetsProcessed.contains(pathUri)) {
+                Referenceable hdfsPath = dgiBridge.fillHDFSDataSet(pathUri);
+                dataSets.put(entity, hdfsPath);
+                dataSetsProcessed.add(pathUri);
+                entities.add(hdfsPath);
+            }
         }
     }
 
@@ -692,7 +695,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         SortedMap<Entity, Referenceable> source, SortedMap<Entity, Referenceable> target) {
         Referenceable processReferenceable = new Referenceable(HiveDataTypes.HIVE_PROCESS.getName());
 
-        String queryStr = hiveEvent.getQueryStr();
+        String queryStr = lower(hiveEvent.getQueryStr());
         processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getProcessQualifiedName(hiveEvent.getOperation(), source, target));
 
         LOG.debug("Registering query: {}", queryStr);
@@ -700,10 +703,10 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         List<Referenceable> targetList = new ArrayList<>(target.values());
 
         //The serialization code expected a list
-        if (sourceList != null || !sourceList.isEmpty()) {
+        if (sourceList != null && !sourceList.isEmpty()) {
             processReferenceable.set("inputs", sourceList);
         }
-        if (targetList != null || !targetList.isEmpty()) {
+        if (targetList != null && !targetList.isEmpty()) {
             processReferenceable.set("outputs", targetList);
         }
         processReferenceable.set(AtlasClient.NAME, queryStr);
@@ -735,7 +738,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     }
 
     private static void addDatasets(HiveOperation op, StringBuilder buffer, final Map<Entity, Referenceable> refs) {
-        final String SEP = ":".intern();
         if (refs != null) {
             for (Entity input : refs.keySet()) {
                 final Entity entity = input;
@@ -890,13 +892,14 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    public static final class EntityComparator implements Comparator<Entity> {
-
+    @VisibleForTesting
+    static final class EntityComparator implements Comparator<Entity> {
         @Override
         public int compare(Entity o1, Entity o2) {
-            return o1.getName().compareTo(o2.getName());
+            return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
         }
     }
 
-    public static final Comparator<Entity> entityComparator = new EntityComparator();
+    @VisibleForTesting
+    static final Comparator<Entity> entityComparator = new EntityComparator();
 }
