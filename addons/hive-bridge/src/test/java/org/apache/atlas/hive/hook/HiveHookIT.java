@@ -1605,9 +1605,6 @@ public class HiveHookIT {
         return assertTableIsRegistered(dbName, tableName, null, false);
     }
 
-    private String assertTableIsRegistered(String dbName, String tableName, boolean isTemporary) throws Exception {
-        return assertTableIsRegistered(dbName, tableName, null, isTemporary);
-    }
 
     private String assertTableIsRegistered(String dbName, String tableName, AssertPredicate assertPredicate, boolean isTemporary) throws Exception {
         LOG.debug("Searching for table {}.{}", dbName, tableName);

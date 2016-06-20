@@ -398,14 +398,14 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                     replaceSDQFName(event, tableEntity, oldQualifiedName, newQualifiedName);
 
                     //Reset Table QF Name to old Name and create a new partial notification request to replace old Table QFName to newName
-                    replaceTableQFName(dgiBridge, event, oldTable, newTable, tableEntity, oldQualifiedName, newQualifiedName);
+                    replaceTableQFName(event, oldTable, newTable, tableEntity, oldQualifiedName, newQualifiedName);
                 }
             }
         }
     }
 
-    private Referenceable replaceTableQFName(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Table oldTable, Table newTable, final Referenceable tableEntity, final String oldTableQFName, final String newTableQFName) throws HiveException {
-        tableEntity.set(HiveDataModelGenerator.NAME, oldTable.getTableName().toLowerCase());
+    private Referenceable replaceTableQFName(HiveEventContext event, Table oldTable, Table newTable, final Referenceable tableEntity, final String oldTableQFName, final String newTableQFName) throws HiveException {
+        tableEntity.set(HiveDataModelGenerator.NAME,  oldTable.getTableName().toLowerCase());
         tableEntity.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, oldTableQFName);
 
         //Replace table entity with new name
@@ -516,7 +516,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         return result;
     }
 
-    private LinkedHashMap<Type, Referenceable> createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, boolean skipTempTables) throws Exception {
+    private LinkedHashMap<Type, Referenceable> createOrUpdateEntities(HiveMetaStoreBridge dgiBridge, HiveEventContext event, Entity entity, boolean skipTempTables) throws Exception{
         return createOrUpdateEntities(dgiBridge, event, entity, skipTempTables, null);
     }
 
