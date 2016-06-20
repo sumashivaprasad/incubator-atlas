@@ -87,6 +87,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
     public static final String HOOK_NUM_RETRIES = CONF_PREFIX + "numRetries";
     private static final String SEP = ":".intern();
+    private static final String IO_SEP = "->".intern();
 
     private static final Map<String, HiveOperation> OPERATION_MAP = new HashMap<>();
 
@@ -732,6 +733,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     static String getProcessQualifiedName(HiveOperation op, SortedMap<Entity, Referenceable> inputs, SortedMap<Entity, Referenceable> outputs) {
         StringBuilder buffer = new StringBuilder(op.getOperationName());
         addDatasets(op, buffer, inputs);
+        buffer.append(IO_SEP);
         addDatasets(op, buffer, outputs);
         LOG.info("Setting process qualified name to {}", buffer);
         return buffer.toString();
