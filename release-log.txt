@@ -6,6 +6,8 @@ INCOMPATIBLE CHANGES:
 
 
 ALL CHANGES:
+ATLAS-920 Lineage graph is broken when there are multiple paths from same source table (kevalbhatt18 via sumasai)
+ATLAS-940 Type cache implementation property name in atlas-application.properties is incorrect ( dkantor via sumasai)
 ATLAS-925 Change master version to 0.8-incubating (shwethags)
 
 
@@ -40,6 +42,13 @@ ATLAS-409 Atlas will not import avro tables with schema read from a file (dosset
 ATLAS-379 Create sqoop and falcon metadata addons (venkatnrangan,bvellanki,sowmyaramesh via shwethags)
 
 ALL CHANGES:
+ATLAS-934 Exclude temp files in source package (shwethags)
+ATLAS-933 Test failure: HiveHookIT.testInsertIntoTable (shwethags)
+ATLAS-856 Lazy-load type cache provider (dkantor via shwethags)
+ATLAS-931 Delete entities fails when hard delete is configured (dkantor via sumasai)
+ATLAS-932 UI: 'create tag' button does not work (mneethiraj via sumasai)
+ATLAS-928 UI is not showing the name column for hive tables in the schema tab (yhemanth via sumasai)
+ATLAS-922 remove test atlas-application.properties embedded in atlas-typesystem.jar ( mneethiraj via sumasai)
 ATLAS-765 Need documentation for Authentication and Authorization features of Atlas (nixonrodrigues via yhemanth)
 ATLAS-930 QuickStart is failing when run after a specific sequence of operations (yhemanth via shwethags)
 ATLAS-904 Hive hook fails due to session state not being set (sumasai via yhemanth)
