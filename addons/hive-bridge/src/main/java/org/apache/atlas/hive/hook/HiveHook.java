@@ -735,49 +735,114 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     @VisibleForTesting
     static String getProcessQualifiedName(HiveOperation op, SortedMap<Entity, Referenceable> inputs, SortedMap<Entity, Referenceable> outputs) {
         StringBuilder buffer = new StringBuilder(op.getOperationName());
-        addDatasets(op, buffer, inputs);
+
+        boolean useHDFSPathsinQFName = ignoreHDFSPathsinQFName(op, inputs.keySet(), outputs.keySet());
+        addInputs(op, buffer, inputs, useHDFSPathsinQFName);
         buffer.append(IO_SEP);
-        addDatasets(op, buffer, outputs);
+        addOutputs(op, buffer, outputs, useHDFSPathsinQFName);
         LOG.info("Setting process qualified name to {}", buffer);
         return buffer.toString();
     }
 
-    private static void addDatasets(HiveOperation op, StringBuilder buffer, final Map<Entity, Referenceable> refs) {
+    private static boolean ignoreHDFSPathsinQFName(final HiveOperation op, final Set<Entity> inputs, final Set<Entity> outputs) {
+        switch (op) {
+        case LOAD:
+        case IMPORT:
+            return isPartitionBasedQuery(outputs);
+        case EXPORT:
+            return isPartitionBasedQuery(inputs);
+        }
+        return false;
+    }
+
+    private static boolean isPartitionBasedQuery(Set<Entity> entities) {
+        for (Entity entity : entities) {
+            if (entity.getType() == Type.PARTITION) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void addInputs(HiveOperation op, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean ignoreHDFSPathsInQFName) {
         if (refs != null) {
             for (Entity input : refs.keySet()) {
-                final Entity entity = input;
-
                 //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
-                if (addQueryType(op, entity)) {
-                    buffer.append(SEP);
-                    buffer.append(((WriteEntity) entity).getWriteType().name());
-                }
-                if (Type.DFS_DIR.equals(entity.getType()) ||
-                    Type.LOCAL_DIR.equals(entity.getType())) {
-                    LOG.debug("Skipping dfs dir addition into process qualified name {} ", refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
-                } else {
-                    buffer.append(SEP);
-                    String dataSetQlfdName = (String) refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME);
-                    // '/' breaks query parsing on ATLAS
-                    buffer.append(dataSetQlfdName.toLowerCase().replaceAll("/", ""));
+                if (ignoreHDFSPathsInQFName &&
+                    (Type.DFS_DIR.equals(input.getType()) || Type.LOCAL_DIR.equals(input.getType()))) {
+                    LOG.debug("Skipping dfs dir input addition to process qualified name {} ", refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
+                } else if (shouldAddType(input.getType())){
+                   addDataset(buffer, refs.get(input));
                 }
             }
         }
     }
 
-    private static boolean addQueryType(HiveOperation op, Entity entity) {
-        if (WriteEntity.class.isAssignableFrom(entity.getClass())) {
-            if (((WriteEntity) entity).getWriteType() != null &&
-                op.equals(HiveOperation.QUERY)) {
-                switch (((WriteEntity) entity).getWriteType()) {
-                case INSERT:
-                case INSERT_OVERWRITE:
-                case UPDATE:
-                case DELETE:
-                case PATH_WRITE:
-                    return true;
-                default:
+    private static boolean shouldAddType(Type type) {
+        switch(type) {
+        case DFS_DIR:
+        case TABLE:
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void addDataset(StringBuilder buffer, Referenceable ref) {
+        buffer.append(SEP);
+        String dataSetQlfdName = (String) ref.get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME);
+        // '/' breaks query parsing on ATLAS
+        buffer.append(dataSetQlfdName.toLowerCase().replaceAll("/", ""));
+    }
+
+    private static void addOutputs(HiveOperation op, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean useHDFSPathsInQFName) {
+        if (refs != null) {
+            for (Entity output : refs.keySet()) {
+                final Entity entity = output;
+
+                //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
+                if (addQueryType(op, (WriteEntity) entity)) {
+                    buffer.append(SEP);
+                    buffer.append(((WriteEntity) entity).getWriteType().name());
                 }
+                if (ignoreHDFSPaths(op, refs.keySet(), (WriteEntity) output, useHDFSPathsInQFName)) {
+                    LOG.debug("Skipping dfs dir output addition to process qualified name {} ", refs.get(output).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
+                } else if (shouldAddType(output.getType())) {
+                    addDataset(buffer, refs.get(output));
+                }
+            }
+        }
+    }
+
+    private static boolean ignoreHDFSPaths(HiveOperation op, Set<Entity> inputs, WriteEntity entity, boolean ignoreHDSFPathsInQFName) {
+        if (Type.DFS_DIR.equals(entity.getType()) ||
+            Type.LOCAL_DIR.equals(entity.getType())) {
+            if (ignoreHDSFPathsInQFName || isInsertOverwritePartitionDFSPathOp(op, inputs, entity)) {
+                return true;
+            }
+        }
+        //add in unknown case
+        return false;
+    }
+
+    private static boolean isInsertOverwritePartitionDFSPathOp(HiveOperation op, Set<Entity> inputEntities, WriteEntity entity) {
+        if  (HiveOperation.QUERY.equals(op) && WriteEntity.WriteType.PATH_WRITE.equals(entity.getWriteType())) {
+            return isPartitionBasedQuery(inputEntities);
+        }
+        return false;
+    }
+
+    private static boolean addQueryType(HiveOperation op, WriteEntity entity) {
+        if (((WriteEntity) entity).getWriteType() != null &&
+            op.equals(HiveOperation.QUERY)) {
+            switch (((WriteEntity) entity).getWriteType()) {
+            case INSERT:
+            case INSERT_OVERWRITE:
+            case UPDATE:
+            case DELETE:
+            case PATH_WRITE:
+                return true;
+            default:
             }
         }
         return false;

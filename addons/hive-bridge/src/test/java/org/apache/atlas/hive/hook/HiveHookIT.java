@@ -85,6 +85,8 @@ public class HiveHookIT {
     private static final String DGI_URL = "http://localhost:21000/";
     private static final String CLUSTER_NAME = "test";
     public static final String DEFAULT_DB = "default";
+    
+    private static final String PART_FILE = "'2015-01-01'";
     private Driver driver;
     private AtlasClient atlasClient;
     private HiveMetaStoreBridge hiveMetaStoreBridge;
@@ -279,6 +281,19 @@ public class HiveHookIT {
         return new ArrayList<Entity>() {{ add(entity); }};
     }
 
+    private List<Entity> getInputs(String inputName, Entity.Type entityType, boolean isPartitioned) {
+        List<Entity> inputs = getInputs(inputName, entityType);
+
+        if (isPartitioned) {
+            ReadEntity partEntity = new ReadEntity();
+            partEntity.setName(PART_FILE);
+            partEntity.setTyp(Entity.Type.PARTITION);
+            inputs.add(partEntity);
+        }
+
+        return inputs;
+    }
+
 
     private List<Entity> getOutputs(String inputName, Entity.Type entityType) {
         final WriteEntity entity = new WriteEntity();
@@ -292,6 +307,19 @@ public class HiveHookIT {
         }
 
         return new ArrayList<Entity>() {{ add(entity); }};
+    }
+
+    private List<Entity> getOutputs(String inputName, Entity.Type entityType, boolean isPartitioned) {
+        List<Entity> outputs = getOutputs(inputName, entityType);
+
+        if (isPartitioned) {
+            WriteEntity partEntity = new WriteEntity();
+            partEntity.setName(PART_FILE);
+            partEntity.setTyp(Entity.Type.PARTITION);
+            outputs.add(partEntity);
+        }
+
+        return outputs;
     }
 
 
@@ -469,7 +497,7 @@ public class HiveHookIT {
         String tableName = createTable(true);
 
         String loadFile = file("load");
-        String query = "load data local inpath 'file://" + loadFile + "' into table " + tableName +  " partition(dt = '2015-01-01')";
+        String query = "load data local inpath 'file://" + loadFile + "' into table " + tableName +  " partition(dt = "+ PART_FILE + ")";
         runCommand(query);
 
         validateProcess(query, HiveOperation.LOAD, null, getOutputs(tableName, Entity.Type.TABLE));
@@ -482,7 +510,7 @@ public class HiveHookIT {
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
 
         String loadFile = createTestDFSFile("loadDFSFile");
-        String query = "load data inpath '" + loadFile + "' into table " + tableName + " partition(dt = '2015-01-01')";
+        String query = "load data inpath '" + loadFile + "' into table " + tableName + " partition(dt = "+ PART_FILE + ")";
         runCommand(query);
 
         final List<Entity> outputs = getOutputs(tableName, Entity.Type.TABLE);
@@ -666,15 +694,16 @@ public class HiveHookIT {
 
     @Test
     public void testInsertIntoPartition() throws Exception {
-        String tableName = createTable(true);
-        String insertTableName = createTable(true);
+        final boolean isPartitionedTable = true;
+        String tableName = createTable(isPartitionedTable);
+        String insertTableName = createTable(isPartitionedTable);
         String query =
-            "insert into " + insertTableName + " partition(dt = '2015-01-01') select id, name from " + tableName
-                + " where dt = '2015-01-01'";
+            "insert into " + insertTableName + " partition(dt = "+ PART_FILE + ") select id, name from " + tableName
+                + " where dt = "+ PART_FILE + "";
         runCommand(query);
 
-        List<Entity> inputs = getInputs(tableName, Entity.Type.TABLE);
-        List<Entity> outputs = getOutputs(insertTableName, Entity.Type.TABLE);
+        List<Entity> inputs = getInputs(tableName, Entity.Type.TABLE, isPartitionedTable);
+        List<Entity> outputs = getOutputs(insertTableName, Entity.Type.TABLE, isPartitionedTable);
         ((WriteEntity)outputs.get(0)).setWriteType(WriteEntity.WriteType.INSERT);
 
         validateProcess(query,  HiveOperation.QUERY, inputs, outputs);
@@ -734,19 +763,20 @@ public class HiveHookIT {
 
     @Test
     public void testExportImportPartitionedTable() throws Exception {
+        boolean isPartitionedTable = true;
         String tableName = createTable(true);
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
 
         //Add a partition
         String partFile = "pfile://" + mkdir("partition");
-        String query = "alter table " + tableName + " add partition (dt='2015-01-01') location '" + partFile + "'";
+        String query = "alter table " + tableName + " add partition (dt="+ PART_FILE + ") location '" + partFile + "'";
         runCommand(query);
 
         String filename = "pfile://" + mkdir("export");
         query = "export table " + tableName + " to \"" + filename + "\"";
         runCommand(query);
 
-        List<Entity> inputs = getInputs(tableName, Entity.Type.TABLE);
+        List<Entity> inputs = getInputs(tableName, Entity.Type.TABLE, isPartitionedTable);
         List<Entity> outputs = getOutputs(filename, Entity.Type.DFS_DIR);
 
         Referenceable processReference = validateProcess(query, HiveOperation.EXPORT, inputs, outputs);
@@ -761,7 +791,7 @@ public class HiveHookIT {
         query = "import table " + tableName + " from '" + filename + "'";
         runCommand(query);
 
-        outputs = getOutputs(tableName, Entity.Type.TABLE);
+        outputs = getOutputs(tableName, Entity.Type.TABLE, isPartitionedTable);
         processReference = validateProcess(query, HiveOperation.IMPORT, getInputs(filename, Entity.Type.DFS_DIR), outputs);
         validateHDFSPaths(processReference, INPUTS, filename);
 
@@ -1048,7 +1078,7 @@ public class HiveHookIT {
         String query = String.format("truncate table %s", tableName);
         runCommand(query);
 
-        List<Entity> outputs = getInputs(tableName, Entity.Type.TABLE);
+        List<Entity> outputs = getOutputs(tableName, Entity.Type.TABLE);
 
         String tableId = assertTableIsRegistered(DEFAULT_DB, tableName);
         validateProcess(query, HiveOperation.TRUNCATETABLE, null, outputs);
