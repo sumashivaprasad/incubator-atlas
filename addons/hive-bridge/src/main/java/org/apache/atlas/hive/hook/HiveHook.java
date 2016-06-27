@@ -603,6 +603,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable());
             if (!dataSetsProcessed.contains(tblQFName)) {
                 LinkedHashMap<Type, Referenceable> result = createOrUpdateEntities(dgiBridge, event, entity, false);
+                LOG.debug("Adding entity to ref {} {} ", entity, result.get(Type.TABLE));
                 dataSets.put(entity, result.get(Type.TABLE));
                 dataSetsProcessed.add(tblQFName);
                 entities.addAll(result.values());
@@ -677,6 +678,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             String tableQualifiedName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), hiveTable);
 
             if (isCreateOp(event)){
+                LOG.info("Overriding process qualified name to {}", tableQualifiedName);
                 processReferenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
             }
             entities.addAll(tables.values());
@@ -689,6 +691,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         if (HiveOperation.CREATETABLE.equals(hiveEvent.getOperation())
             || HiveOperation.CREATEVIEW.equals(hiveEvent.getOperation())
             || HiveOperation.ALTERVIEW_AS.equals(hiveEvent.getOperation())
+            || HiveOperation.ALTERTABLE_LOCATION.equals(hiveEvent.getOperation())
             || HiveOperation.CREATETABLE_AS_SELECT.equals(hiveEvent.getOperation())) {
             return true;
         }
@@ -737,10 +740,11 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         HiveOperation op = eventContext.getOperation();
         StringBuilder buffer = new StringBuilder(op.getOperationName());
 
-        boolean useHDFSPathsinQFName = ignoreHDFSPathsinQFName(op, eventContext.getInputs(), eventContext.getOutputs());
-        addInputs(eventContext, buffer, inputs, useHDFSPathsinQFName);
+        boolean ignoreHDFSPathsinQFName = ignoreHDFSPathsinQFName(op, eventContext.getInputs(), eventContext.getOutputs());
+        LOG.info("ignoreHDFSPathsinQFName {} {} {}", ignoreHDFSPathsinQFName, eventContext.getInputs(), eventContext.getOutputs());
+        addInputs(eventContext, buffer, inputs, ignoreHDFSPathsinQFName);
         buffer.append(IO_SEP);
-        addOutputs(eventContext, buffer, outputs, useHDFSPathsinQFName);
+        addOutputs(eventContext, buffer, outputs, ignoreHDFSPathsinQFName);
         LOG.info("Setting process qualified name to {}", buffer);
         return buffer.toString();
     }
@@ -767,26 +771,27 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
     private static void addInputs(HiveEventContext eventContext, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean ignoreHDFSPathsInQFName) {
         if (refs != null) {
-            for (Entity input : eventContext.getInputs()) {
-                //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
-                if (ignoreHDFSPathsInQFName &&
-                    (Type.DFS_DIR.equals(input.getType()) || Type.LOCAL_DIR.equals(input.getType()))) {
-                    LOG.debug("Skipping dfs dir input addition to process qualified name {} ", refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
-                } else if ( refs.containsKey(input)){
-                   addDataset(buffer, refs.get(input));
+            LOG.debug("Processing inputs ref {} ", refs);
+
+            if ( eventContext.getInputs() != null) {
+                Set<String> dataSetsProcessed = new LinkedHashSet<>();
+                for (Entity input : eventContext.getInputs()) {
+
+                    LOG.debug("Processing input {} ", input);
+                    if (!dataSetsProcessed.contains(input.getName().toLowerCase())) {
+                        //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
+                        if (ignoreHDFSPathsInQFName &&
+                            (Type.DFS_DIR.equals(input.getType()) || Type.LOCAL_DIR.equals(input.getType()))) {
+                            LOG.debug("Skipping dfs dir input addition to process qualified name {} ", refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
+                        } else if (refs.containsKey(input)) {
+                            addDataset(buffer, refs.get(input));
+                        }
+                        dataSetsProcessed.add(input.getName().toLowerCase());
+                    }
                 }
+
             }
         }
-    }
-
-    private static boolean shouldAddType(Type type) {
-        switch(type) {
-        case DFS_DIR:
-        case TABLE:
-            return true;
-        }
-
-        return false;
     }
 
     private static void addDataset(StringBuilder buffer, Referenceable ref) {
@@ -798,19 +803,27 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
     private static void addOutputs(HiveEventContext eventContext, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean useHDFSPathsInQFName) {
         if (refs != null) {
+            LOG.debug("Processing outputs ref {} ", refs);
+            Set<String> dataSetsProcessed = new LinkedHashSet<>();
             HiveOperation op = eventContext.getOperation();
-            for (Entity output : eventContext.getOutputs()) {
-                final Entity entity = output;
+            if (eventContext.getOutputs() != null) {
+                for (Entity output : eventContext.getOutputs()) {
+                    final Entity entity = output;
 
-                //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
-                if (addQueryType(op, (WriteEntity) entity)) {
-                    buffer.append(SEP);
-                    buffer.append(((WriteEntity) entity).getWriteType().name());
-                }
-                if (ignoreHDFSPaths(op, refs.keySet(), (WriteEntity) output, useHDFSPathsInQFName)) {
-                    LOG.debug("Skipping dfs dir output addition to process qualified name {} ", refs.get(output).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
-                } else if ( refs.containsKey(output)){
-                    addDataset(buffer, refs.get(output));
+                    LOG.debug("Processing output {} ", output);
+                    if (!dataSetsProcessed.contains(output.getName().toLowerCase())) {
+                        //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
+                        if (addQueryType(op, (WriteEntity) entity)) {
+                            buffer.append(SEP);
+                            buffer.append(((WriteEntity) entity).getWriteType().name());
+                        }
+                        if (ignoreHDFSPaths(op, refs.keySet(), (WriteEntity) output, useHDFSPathsInQFName)) {
+                            LOG.debug("Skipping dfs dir output addition to process qualified name {} ", refs.get(output).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
+                        } else if (refs.containsKey(output)) {
+                            addDataset(buffer, refs.get(output));
+                        }
+                        dataSetsProcessed.add(output.getName().toLowerCase());
+                    }
                 }
             }
         }
