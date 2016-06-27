@@ -124,7 +124,6 @@ public class HiveMetaStoreBridge {
         List<String> databases = hiveClient.getAllDatabases();
         for (String databaseName : databases) {
             Referenceable dbReference = registerDatabase(databaseName);
-
             importTables(dbReference, databaseName, failOnError);
         }
     }
@@ -263,13 +262,15 @@ public class HiveMetaStoreBridge {
      * @param failOnError
      * @throws Exception
      */
-    private void importTables(Referenceable databaseReferenceable, String databaseName, final boolean failOnError) throws Exception {
+    private int importTables(Referenceable databaseReferenceable, String databaseName, final boolean failOnError) throws Exception {
+        int tablesImported = 0;
         List<String> hiveTables = hiveClient.getAllTables(databaseName);
         LOG.info("Importing tables {} for db {}", hiveTables.toString(), databaseName);
         for (String tableName : hiveTables) {
             try {
                 Table table = hiveClient.getTable(databaseName, tableName);
                 Referenceable tableReferenceable = registerTable(databaseReferenceable, table);
+                tablesImported++;
                 if (table.getTableType() == TableType.EXTERNAL_TABLE) {
                     String tableQualifiedName = getTableQualifiedName(clusterName, table);
                     Referenceable process = getProcessReference(tableQualifiedName);
@@ -299,7 +300,6 @@ public class HiveMetaStoreBridge {
                         lineageProcess.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableQualifiedName);
                         lineageProcess.set(AtlasClient.NAME, query);
                         registerInstance(lineageProcess);
-
                     } else {
                         LOG.info("Process {} is already registered", process.toString());
                     }
@@ -311,6 +311,14 @@ public class HiveMetaStoreBridge {
                 }
             }
         }
+
+        if ( tablesImported == hiveTables.size()) {
+            LOG.info("Successfully imported all {} tables from {} ", tablesImported, databaseName);
+        } else {
+            LOG.error("Unable to import {} tables out of {} tables from {}", tablesImported, hiveTables.size(), databaseName);
+        }
+
+        return tablesImported;
     }
 
     /**
@@ -649,7 +657,6 @@ public class HiveMetaStoreBridge {
 
         boolean failOnError = false;
         if (cmd.hasOption("failOnError")) {
-            LOG.info("Option failOnError set to true. Will abort if any failures");
             failOnError = true;
         }
 
