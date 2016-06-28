@@ -603,7 +603,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             final String tblQFName = dgiBridge.getTableQualifiedName(dgiBridge.getClusterName(), entity.getTable());
             if (!dataSetsProcessed.contains(tblQFName)) {
                 LinkedHashMap<Type, Referenceable> result = createOrUpdateEntities(dgiBridge, event, entity, false);
-                LOG.debug("Adding entity to ref {} {} ", entity, result.get(Type.TABLE));
                 dataSets.put(entity, result.get(Type.TABLE));
                 dataSetsProcessed.add(tblQFName);
                 entities.addAll(result.values());
