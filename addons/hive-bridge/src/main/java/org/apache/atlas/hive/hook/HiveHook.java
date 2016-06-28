@@ -741,7 +741,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         StringBuilder buffer = new StringBuilder(op.getOperationName());
 
         boolean ignoreHDFSPathsinQFName = ignoreHDFSPathsinQFName(op, eventContext.getInputs(), eventContext.getOutputs());
-        LOG.info("ignoreHDFSPathsinQFName {} {} {}", ignoreHDFSPathsinQFName, eventContext.getInputs(), eventContext.getOutputs());
         addInputs(eventContext, buffer, inputs, ignoreHDFSPathsinQFName);
         buffer.append(IO_SEP);
         addOutputs(eventContext, buffer, outputs, ignoreHDFSPathsinQFName);
@@ -756,13 +755,15 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             return isPartitionBasedQuery(outputs);
         case EXPORT:
             return isPartitionBasedQuery(inputs);
+        case QUERY:
+            return true;
         }
         return false;
     }
 
     private static boolean isPartitionBasedQuery(Set<? extends Entity> entities) {
         for (Entity entity : entities) {
-            if (entity.getType() == Type.PARTITION) {
+            if (Type.PARTITION.equals(entity.getType())) {
                 return true;
             }
         }
@@ -771,18 +772,15 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
     private static void addInputs(HiveEventContext eventContext, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean ignoreHDFSPathsInQFName) {
         if (refs != null) {
-            LOG.debug("Processing inputs ref {} ", refs);
-
             if ( eventContext.getInputs() != null) {
                 Set<String> dataSetsProcessed = new LinkedHashSet<>();
                 for (Entity input : eventContext.getInputs()) {
 
-                    LOG.debug("Processing input {} ", input);
                     if (!dataSetsProcessed.contains(input.getName().toLowerCase())) {
                         //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
                         if (ignoreHDFSPathsInQFName &&
                             (Type.DFS_DIR.equals(input.getType()) || Type.LOCAL_DIR.equals(input.getType()))) {
-                            LOG.debug("Skipping dfs dir input addition to process qualified name {} ", refs.get(input).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
+                            LOG.debug("Skipping dfs dir input addition to process qualified name {} ", input.getName());
                         } else if (refs.containsKey(input)) {
                             addDataset(buffer, refs.get(input));
                         }
@@ -801,24 +799,22 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         buffer.append(dataSetQlfdName.toLowerCase().replaceAll("/", ""));
     }
 
-    private static void addOutputs(HiveEventContext eventContext, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean useHDFSPathsInQFName) {
+    private static void addOutputs(HiveEventContext eventContext, StringBuilder buffer, final Map<Entity, Referenceable> refs, final boolean ignoreHDFSPathsInQFName) {
         if (refs != null) {
-            LOG.debug("Processing outputs ref {} ", refs);
             Set<String> dataSetsProcessed = new LinkedHashSet<>();
             HiveOperation op = eventContext.getOperation();
             if (eventContext.getOutputs() != null) {
                 for (Entity output : eventContext.getOutputs()) {
                     final Entity entity = output;
-
-                    LOG.debug("Processing output {} ", output);
                     if (!dataSetsProcessed.contains(output.getName().toLowerCase())) {
                         //HiveOperation.QUERY type encompasses INSERT, INSERT_OVERWRITE, UPDATE, DELETE, PATH_WRITE operations
                         if (addQueryType(op, (WriteEntity) entity)) {
                             buffer.append(SEP);
                             buffer.append(((WriteEntity) entity).getWriteType().name());
                         }
-                        if (ignoreHDFSPaths(op, refs.keySet(), (WriteEntity) output, useHDFSPathsInQFName)) {
-                            LOG.debug("Skipping dfs dir output addition to process qualified name {} ", refs.get(output).get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME));
+                        if (ignoreHDFSPathsInQFName &&
+                            (Type.DFS_DIR.equals(output.getType()) || Type.LOCAL_DIR.equals(output.getType()))) {
+                            LOG.debug("Skipping dfs dir output addition to process qualified name {} ", output.getName());
                         } else if (refs.containsKey(output)) {
                             addDataset(buffer, refs.get(output));
                         }
@@ -829,34 +825,20 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    private static boolean ignoreHDFSPaths(HiveOperation op, Set<Entity> inputs, WriteEntity entity, boolean ignoreHDSFPathsInQFName) {
-        if (Type.DFS_DIR.equals(entity.getType()) ||
-            Type.LOCAL_DIR.equals(entity.getType())) {
-            if (ignoreHDSFPathsInQFName || isInsertOverwritePartitionDFSPathOp(op, inputs, entity)) {
-                return true;
-            }
-        }
-        //add in unknown case
-        return false;
-    }
-
-    private static boolean isInsertOverwritePartitionDFSPathOp(HiveOperation op, Set<Entity> inputEntities, WriteEntity entity) {
-        if  (HiveOperation.QUERY.equals(op) && WriteEntity.WriteType.PATH_WRITE.equals(entity.getWriteType())) {
-            return isPartitionBasedQuery(inputEntities);
-        }
-        return false;
-    }
-
     private static boolean addQueryType(HiveOperation op, WriteEntity entity) {
-        if (((WriteEntity) entity).getWriteType() != null &&
-            op.equals(HiveOperation.QUERY)) {
+        if (((WriteEntity) entity).getWriteType() != null && HiveOperation.QUERY.equals(op)) {
             switch (((WriteEntity) entity).getWriteType()) {
             case INSERT:
             case INSERT_OVERWRITE:
             case UPDATE:
             case DELETE:
-            case PATH_WRITE:
                 return true;
+            case PATH_WRITE:
+                //Add query type only for DFS paths and ignore local paths since they are not added as outputs
+                if ( !Type.LOCAL_DIR.equals(entity.getType())) {
+                    return true;
+                }
+                break;
             default:
             }
         }
