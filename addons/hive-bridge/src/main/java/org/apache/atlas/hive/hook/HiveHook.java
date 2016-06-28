@@ -291,6 +291,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     private void deleteDatabase(HiveMetaStoreBridge dgiBridge, HiveEventContext event) {
         if (event.getOutputs().size() > 1) {
             LOG.info("Starting deletion of tables and databases with cascade {} ", event.getQueryStr());
+        } else {
+            LOG.info("Starting deletion of database {} ", event.getQueryStr());
         }
 
         for (WriteEntity output : event.getOutputs()) {
@@ -609,7 +611,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             }
         } else if (entity.getType() == Type.DFS_DIR) {
             final String pathUri = lower(new Path(entity.getLocation()).toString());
-            LOG.info("Registering DFS Path {} ", pathUri);
+            LOG.debug("Registering DFS Path {} ", pathUri);
             if (!dataSetsProcessed.contains(pathUri)) {
                 Referenceable hdfsPath = dgiBridge.fillHDFSDataSet(pathUri);
                 dataSets.put(entity, hdfsPath);
@@ -740,6 +742,10 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         StringBuilder buffer = new StringBuilder(op.getOperationName());
 
         boolean ignoreHDFSPathsinQFName = ignoreHDFSPathsinQFName(op, eventContext.getInputs(), eventContext.getOutputs());
+        if ( ignoreHDFSPathsinQFName && LOG.isDebugEnabled()) {
+            LOG.debug("Ignoring HDFS paths in qualifiedName for {} ", op, eventContext.getQueryStr());
+        }
+
         addInputs(eventContext, buffer, inputs, ignoreHDFSPathsinQFName);
         buffer.append(IO_SEP);
         addOutputs(eventContext, buffer, outputs, ignoreHDFSPathsinQFName);
