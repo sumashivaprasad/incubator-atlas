@@ -744,7 +744,7 @@ public class HiveHookIT {
 
         assertTableIsRegistered(DEFAULT_DB, tableName);
 
-        String filename = "pfile://" + mkdir("export");
+        String filename = "pfile://" + mkdir("exportUnPartitioned");
         String query = "export table " + tableName + " to \"" + filename + "\"";
         runCommand(query);
 
@@ -757,22 +757,35 @@ public class HiveHookIT {
         validateInputTables(processReference, inputs);
 
         //Import
-        tableName = createTable(false);
-        assertTableIsRegistered(DEFAULT_DB, tableName);
+        String importTableName = createTable(false);
+        assertTableIsRegistered(DEFAULT_DB, importTableName);
 
-        query = "import table " + tableName + " from '" + filename + "'";
+        query = "import table " + importTableName + " from '" + filename + "'";
         runCommand(query);
-        outputs = getOutputs(tableName, Entity.Type.TABLE);
-        processReference = validateProcess(constructEvent(query, HiveOperation.IMPORT, getInputs(filename, Entity.Type.DFS_DIR), outputs));
-        validateHDFSPaths(processReference, INPUTS, filename);
+        outputs = getOutputs(importTableName, Entity.Type.TABLE);
+        validateProcess(constructEvent(query, HiveOperation.IMPORT, getInputs(filename, Entity.Type.DFS_DIR), outputs));
 
-        validateOutputTables(processReference, outputs);
+        //Should create another process
+        filename = "pfile://" + mkdir("export2UnPartitioned");
+        query = "export table " + tableName + " to \"" + filename + "\"";
+        runCommand(query);
+
+        inputs = getInputs(tableName, Entity.Type.TABLE);
+        outputs = getOutputs(filename, Entity.Type.DFS_DIR);
+
+        validateProcess(constructEvent(query, HiveOperation.EXPORT, inputs, outputs));
+
+        //import again shouyld create another process
+        query = "import table " + importTableName + " from '" + filename + "'";
+        runCommand(query);
+        outputs = getOutputs(importTableName, Entity.Type.TABLE);
+        validateProcess(constructEvent(query, HiveOperation.IMPORT, getInputs(filename, Entity.Type.DFS_DIR), outputs));
     }
 
     @Test
     public void testExportImportPartitionedTable() throws Exception {
         boolean isPartitionedTable = true;
-        String tableName = createTable(isPartitionedTable);
+        final String tableName = createTable(isPartitionedTable);
         assertTableIsRegistered(DEFAULT_DB, tableName);
 
         //Add a partition
@@ -784,31 +797,59 @@ public class HiveHookIT {
         query = "export table " + tableName + " to \"" + filename + "\"";
         runCommand(query);
 
-        Set<ReadEntity> expectedInputs = getInputs(tableName, Entity.Type.TABLE);
-        Set<WriteEntity> outputs = getOutputs(filename, Entity.Type.DFS_DIR);
+        final Set<ReadEntity> expectedExportInputs = getInputs(tableName, Entity.Type.TABLE);
+        final Set<WriteEntity> outputs = getOutputs(filename, Entity.Type.DFS_DIR);
 
         //Note that export has only partition as input in this case
         final Set<ReadEntity> partitionIps = getInputs(DEFAULT_DB + "@" + tableName + "@dt=" + PART_FILE, Entity.Type.PARTITION);
-        partitionIps.addAll(expectedInputs);
+        partitionIps.addAll(expectedExportInputs);
 
-        Referenceable processReference = validateProcess(constructEvent(query, HiveOperation.EXPORT, partitionIps, outputs), expectedInputs, outputs);
+        Referenceable processReference = validateProcess(constructEvent(query, HiveOperation.EXPORT, partitionIps, outputs), expectedExportInputs, outputs);
         validateHDFSPaths(processReference, OUTPUTS, filename);
 
         //Import
-        tableName = createTable(true);
+        String importTableName = createTable(true);
         assertTableIsRegistered(DEFAULT_DB, tableName);
 
-        query = "import table " + tableName + " from '" + filename + "'";
+        query = "import table " + importTableName + " from '" + filename + "'";
         runCommand(query);
 
-        expectedInputs = getInputs(filename, Entity.Type.DFS_DIR);
-        outputs = getOutputs(tableName, Entity.Type.TABLE);
+        final Set<ReadEntity> expectedImportInputs = getInputs(filename, Entity.Type.DFS_DIR);
+        final Set<WriteEntity> importOutputs = getOutputs(importTableName, Entity.Type.TABLE);
 
-        final Set<WriteEntity> partitionOps = getOutputs(DEFAULT_DB + "@" + tableName + "@dt=" + PART_FILE, Entity.Type.PARTITION);
-        partitionOps.addAll(outputs);
+        final Set<WriteEntity> partitionOps = getOutputs(DEFAULT_DB + "@" + importTableName + "@dt=" + PART_FILE, Entity.Type.PARTITION);
+        partitionOps.addAll(importOutputs);
 
-        processReference = validateProcess(constructEvent(query, HiveOperation.IMPORT, expectedInputs , partitionOps), expectedInputs, outputs);
-        validateHDFSPaths(processReference, INPUTS, filename);
+        validateProcess(constructEvent(query, HiveOperation.IMPORT, expectedImportInputs , partitionOps), expectedImportInputs, importOutputs);
+
+        //Export should update same process
+        filename = "pfile://" + mkdir("export2");
+        query = "export table " + tableName + " to \"" + filename + "\"";
+        runCommand(query);
+
+        final Set<WriteEntity> outputs2 = getOutputs(filename, Entity.Type.DFS_DIR);
+        Set<WriteEntity> p3Outputs = new LinkedHashSet<WriteEntity>() {{
+            addAll(outputs2);
+            addAll(outputs);
+        }};
+
+        validateProcess(constructEvent(query, HiveOperation.EXPORT, partitionIps, outputs2), expectedExportInputs, p3Outputs);
+
+
+        query = "alter table " + importTableName + " drop partition (dt='"+ PART_FILE + "')";
+        runCommand(query);
+
+        //Import should update same process
+        query = "import table " + importTableName + " from '" + filename + "'";
+        runCommandWithDelay(query, 1000);
+
+        final Set<ReadEntity> importInputs = getInputs(filename, Entity.Type.DFS_DIR);
+        final Set<ReadEntity> expectedImport2Inputs  = new LinkedHashSet<ReadEntity>() {{
+            addAll(importInputs);
+            addAll(expectedImportInputs);
+        }};
+
+        validateProcess(constructEvent(query, HiveOperation.IMPORT, importInputs, partitionOps), expectedImport2Inputs, importOutputs);
     }
 
     @Test
