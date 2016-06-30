@@ -1338,8 +1338,8 @@
                 <directory>..</directory>
                 <targetPath>META-INF</targetPath>
                 <includes>
-                    <include>LICENSE.txt</include>
-                    <include>NOTICE.txt</include>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
                 </includes>
             </resource>
         </resources>
@@ -1662,6 +1662,7 @@
                     <useEclipseDefaultExcludes>true</useEclipseDefaultExcludes>
                     <excludeSubProjects>true</excludeSubProjects>
                     <excludes>
+                        <exclude>3party-licenses/**</exclude>
                         <exclude>*.txt</exclude>
                         <exclude>**/*.json</exclude>
                         <exclude>.pc/**</exclude>
@@ -1694,11 +1695,9 @@
                         <exclude>dev-support/**</exclude>
                         <exclude>**/users-credentials.properties</exclude>
                         <exclude>**/public/css/animate.min.css</exclude>
-                        <exclude>**/public/css/fonts/**</exclude>
-                        <exclude>**/public/css/font-awesome.min.css</exclude>
+                        <exclude>**/public/css/bootstrap-sidebar.css</exclude>
                         <exclude>**/public/js/require-handlebars-plugin/**</exclude>
                         <exclude>**/node_modules/**</exclude>
-                        <exclude>**/public/css/scss/**</exclude>
                         <!-- All the npm plugins are copied here, so exclude it -->
                         <exclude>**/public/js/libs/**</exclude>
 
