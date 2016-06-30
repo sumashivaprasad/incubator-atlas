@@ -21,7 +21,6 @@ package org.apache.atlas.hive.hook;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.ClientResponse;
-import kafka.security.auth.Write;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
