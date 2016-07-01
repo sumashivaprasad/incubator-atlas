@@ -18,6 +18,8 @@
 
 package org.apache.atlas.catalog;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.catalog.definition.ResourceDefinition;
 import org.apache.atlas.catalog.exception.CatalogRuntimeException;
@@ -115,6 +117,9 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
             for (Map.Entry<String, Object> propEntry : properties.entrySet()) {
                 struct.set(propEntry.getKey(), propEntry.getValue());
             }
+
+            //add Taxonmoy Namespace
+            struct.set(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, AtlasConstants.TAXONOMY_NS);
             metadataService.addTrait(guid, metadataService.createTraitInstance(struct));
         } catch (IllegalArgumentException e) {
             //todo: unfortunately, IllegalArgumentException can be thrown for other reasons
@@ -151,8 +156,8 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
                                                          throws ResourceAlreadyExistsException {
 
         try {
-            HierarchicalTypeDefinition<T> definition = new HierarchicalTypeDefinition<>(type, name, description, null,
-                    attributes.toArray(new AttributeDefinition[attributes.size()]));
+            HierarchicalTypeDefinition<T> definition = new HierarchicalTypeDefinition<T>(type, name, description,
+                ImmutableSet.of(AtlasConstants.TAXONOMY_TERM_TYPE), attributes.toArray(new AttributeDefinition[attributes.size()]));
 
             metadataService.createType(TypesSerialization.toJson(definition, isTrait));
         } catch (TypeExistsException e) {

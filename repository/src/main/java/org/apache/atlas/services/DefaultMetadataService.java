@@ -25,6 +25,7 @@ import com.google.inject.Provider;
 
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.RequestContext;
@@ -188,6 +189,12 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
                         TypesUtil.createUniqueRequiredAttrDef(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                                 DataTypes.STRING_TYPE));
         createType(referenceableType);
+
+        HierarchicalTypeDefinition<ClassType> namespaceType = TypesUtil
+            .createClassTypeDef(AtlasConstants.NAMESPACE_SUPER_TYPE, ImmutableSet.<String>of(),
+                new AttributeDefinition(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, DataTypes.STRING_TYPE.getName(),
+                    Multiplicity.OPTIONAL, false, null));
+        createType(namespaceType);
 
         HierarchicalTypeDefinition<ClassType> assetType = TypesUtil
                 .createClassTypeDef(AtlasClient.ASSET_TYPE, ImmutableSet.<String>of(),
@@ -630,9 +637,18 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
             .checkArgument(!getTraitNames(guid).contains(traitName), "trait=%s is already defined for entity=%s",
                     traitName, guid);
 
+        //Set to default namespace if not defined
+        checkAndSetNameSpace(traitInstance);
         repository.addTrait(guid, traitInstance);
 
         onTraitAddedToEntity(repository.getEntityDefinition(guid), traitInstance);
+    }
+
+    void checkAndSetNameSpace(ITypedStruct traitInstance) throws AtlasException {
+        String nameSpace = (String) traitInstance.get(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME);
+        if ( nameSpace == null || nameSpace.isEmpty()) {
+            traitInstance.set(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, AtlasConstants.DEFAULT_NS);
+        }
     }
 
     private ITypedStruct deserializeTraitInstance(String traitInstanceDefinition)
@@ -654,6 +670,15 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         } catch (Exception e) {
             throw new AtlasException("Error deserializing trait instance", e);
         }
+    }
+
+    @Override
+    public String getTraitDefinition(final String guid, final String traitName) throws AtlasException {
+        ParamChecker.notEmpty(guid, "entity id");
+
+        final ITypedReferenceableInstance instance = repository.getEntityDefinition(guid);
+        IStruct struct = instance.getTrait(traitName);
+        return InstanceSerialization.toJson(struct, true);
     }
 
     /**

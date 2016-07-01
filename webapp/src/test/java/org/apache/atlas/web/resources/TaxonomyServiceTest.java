@@ -18,6 +18,7 @@
 
 package org.apache.atlas.web.resources;
 
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.catalog.*;
 import org.apache.atlas.services.MetadataService;
 import org.easymock.Capture;
@@ -521,7 +522,7 @@ public class TaxonomyServiceTest {
         public TestTaxonomyService(MetadataService metadataService,
                                    ResourceProvider taxonomyProvider,
                                    ResourceProvider termResourceProvider,
-                                   JsonSerializer serializer) {
+                                   JsonSerializer serializer) throws AtlasException {
 
             testTaxonomyResourceProvider = taxonomyProvider;
             testTermResourceProvider = termResourceProvider;

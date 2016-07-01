@@ -20,6 +20,7 @@ package org.apache.atlas.typesystem.types;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.typesystem.TypesDef;
@@ -106,7 +107,6 @@ public class TypeSystem {
     }
 
     private void registerPrimitiveTypes() {
-
         coreTypes.put(DataTypes.BOOLEAN_TYPE.getName(), DataTypes.BOOLEAN_TYPE);
         coreTypes.put(DataTypes.BYTE_TYPE.getName(), DataTypes.BYTE_TYPE);
         coreTypes.put(DataTypes.SHORT_TYPE.getName(), DataTypes.SHORT_TYPE);
@@ -124,7 +124,6 @@ public class TypeSystem {
      * The only core OOB type we will define is the Struct to represent the Identity of an Instance.
      */
     private void registerCoreTypes() {
-
         idType = new IdType();
         coreTypes.put(idType.getStructType().getName(), idType.getStructType());
     }
@@ -418,6 +417,13 @@ public class TypeSystem {
                         (transientTypes.containsKey(traitDef.typeName) || isRegistered(traitDef.typeName))) {
                     throw new TypeExistsException(String.format("Cannot redefine type %s", traitDef.typeName));
                 }
+
+                //Add namespace supertype to all traits
+                List<String> traitSuperTypes = new ArrayList<>(traitDef.superTypes);
+                if ( !traitDef.superTypes.contains(AtlasConstants.NAMESPACE_SUPER_TYPE)) {
+                    traitSuperTypes.add(AtlasConstants.NAMESPACE_SUPER_TYPE);
+                }
+
                 TraitType tT = new TraitType(this, traitDef.typeName, traitDef.typeDescription, traitDef.superTypes,
                         traitDef.attributeDefinitions.length);
                 traitNameToDefMap.put(traitDef.typeName, traitDef);
