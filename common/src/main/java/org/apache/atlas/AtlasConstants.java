@@ -34,10 +34,8 @@ public final class AtlasConstants {
     public static final String DEFAULT_ATLAS_REST_ADDRESS = "http://localhost:21000";
 
     public static final String DEFAULT_NS = "atlas.default";
-    public static final String NAMESPACE_SUPER_TYPE = "Namespace";
     public static final String NAMESPACE_ATTRIBUTE_NAME = "namespace";
-
-    public final static String TAXONOMY_TERM_TYPE = "TaxonomyTerm";
-    public final static String TAXONOMY_NS = "atlas.taxonomy";
+    public static final String TAXONOMY_TERM_TYPE = "TaxonomyTerm";
+    public static final String TAXONOMY_NS = "atlas.taxonomy";
 
 }

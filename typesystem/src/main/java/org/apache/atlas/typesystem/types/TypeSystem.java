@@ -418,12 +418,6 @@ public class TypeSystem {
                     throw new TypeExistsException(String.format("Cannot redefine type %s", traitDef.typeName));
                 }
 
-                //Add namespace supertype to all traits
-                List<String> traitSuperTypes = new ArrayList<>(traitDef.superTypes);
-                if ( !traitDef.superTypes.contains(AtlasConstants.NAMESPACE_SUPER_TYPE)) {
-                    traitSuperTypes.add(AtlasConstants.NAMESPACE_SUPER_TYPE);
-                }
-
                 TraitType tT = new TraitType(this, traitDef.typeName, traitDef.typeDescription, traitDef.superTypes,
                         traitDef.attributeDefinitions.length);
                 traitNameToDefMap.put(traitDef.typeName, traitDef);

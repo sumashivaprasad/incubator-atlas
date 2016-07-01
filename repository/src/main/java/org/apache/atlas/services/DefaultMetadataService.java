@@ -190,12 +190,6 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
                                 DataTypes.STRING_TYPE));
         createType(referenceableType);
 
-        HierarchicalTypeDefinition<ClassType> namespaceType = TypesUtil
-            .createClassTypeDef(AtlasConstants.NAMESPACE_SUPER_TYPE, ImmutableSet.<String>of(),
-                new AttributeDefinition(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, DataTypes.STRING_TYPE.getName(),
-                    Multiplicity.OPTIONAL, false, null));
-        createType(namespaceType);
-
         HierarchicalTypeDefinition<ClassType> assetType = TypesUtil
                 .createClassTypeDef(AtlasClient.ASSET_TYPE, ImmutableSet.<String>of(),
                         TypesUtil.createRequiredAttrDef(AtlasClient.NAME, DataTypes.STRING_TYPE),
@@ -637,23 +631,13 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
             .checkArgument(!getTraitNames(guid).contains(traitName), "trait=%s is already defined for entity=%s",
                     traitName, guid);
 
-        //Set to default namespace if not defined
-        checkAndSetNameSpace(traitInstance);
         repository.addTrait(guid, traitInstance);
 
         onTraitAddedToEntity(repository.getEntityDefinition(guid), traitInstance);
     }
 
-    void checkAndSetNameSpace(ITypedStruct traitInstance) throws AtlasException {
-        String nameSpace = (String) traitInstance.get(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME);
-        if ( nameSpace == null || nameSpace.isEmpty()) {
-            traitInstance.set(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, AtlasConstants.DEFAULT_NS);
-        }
-    }
-
     private ITypedStruct deserializeTraitInstance(String traitInstanceDefinition)
     throws AtlasException {
-
         return createTraitInstance(InstanceSerialization.fromJsonStruct(traitInstanceDefinition, true));
     }
 

@@ -18,23 +18,29 @@
 
 package org.apache.atlas.catalog;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.catalog.definition.ResourceDefinition;
 import org.apache.atlas.catalog.exception.CatalogRuntimeException;
 import org.apache.atlas.catalog.exception.ResourceAlreadyExistsException;
 import org.apache.atlas.catalog.exception.ResourceNotFoundException;
+import org.apache.atlas.classification.InterfaceAudience;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.exception.EntityExistsException;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.exception.TraitNotFoundException;
 import org.apache.atlas.typesystem.exception.TypeExistsException;
+import org.apache.atlas.typesystem.exception.TypeNotFoundException;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.types.*;
+import org.apache.atlas.typesystem.types.utils.TypesUtil;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -51,8 +57,31 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
      *
      * @param metadataService  atlas metadata service
      */
-    public DefaultTypeSystem(MetadataService metadataService) {
+    public DefaultTypeSystem(MetadataService metadataService) throws AtlasException {
         this.metadataService = metadataService;
+        //Create namespace
+        createSuperTypes();
+    }
+
+    @InterfaceAudience.Private
+    private void createSuperTypes() throws AtlasException {
+        HierarchicalTypeDefinition<ClassType> termType = TypesUtil
+            .createClassTypeDef(AtlasConstants.TAXONOMY_TERM_TYPE, ImmutableSet.<String>of(),
+                TypesUtil.createRequiredAttrDef(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME,
+                    DataTypes.STRING_TYPE));
+        createType(termType);
+    }
+
+    private void createType(HierarchicalTypeDefinition<ClassType> type) throws AtlasException {
+        try {
+            metadataService.getTypeDefinition(type.typeName);
+        } catch(TypeNotFoundException tne) {
+            //Type not found . Create
+            TypesDef typesDef = TypesUtil.getTypesDef(ImmutableList.<EnumTypeDefinition>of(), ImmutableList.<StructTypeDefinition>of(),
+                ImmutableList.<HierarchicalTypeDefinition<TraitType>>of(),
+                ImmutableList.of(type));
+            metadataService.createType(TypesSerialization.toJson(typesDef));
+        }
     }
 
     @Override
@@ -118,7 +147,7 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
                 struct.set(propEntry.getKey(), propEntry.getValue());
             }
 
-            //add Taxonmoy Namespace
+            //add Taxonomy Namespace
             struct.set(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, AtlasConstants.TAXONOMY_NS);
             metadataService.addTrait(guid, metadataService.createTraitInstance(struct));
         } catch (IllegalArgumentException e) {
