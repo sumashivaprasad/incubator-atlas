@@ -386,7 +386,7 @@ public class HiveHookIT {
         runCommand(drpquery);
         assertTableIsNotRegistered(DEFAULT_DB, ctasTableName);
 
-        //Fix after ATLAS-876
+        //TODO : Fix after ATLAS-876
         runCommand(query);
         assertTableIsRegistered(DEFAULT_DB, ctasTableName);
         String process2Id = assertProcessIsRegistered(hiveEventContext, inputs, outputs);
