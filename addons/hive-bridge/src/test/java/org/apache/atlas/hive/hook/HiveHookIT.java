@@ -563,7 +563,7 @@ public class HiveHookIT {
 
         String query = "insert into " + insertTableName + " select t1.id, t1.name from " + inputTable2Name + " as t2, " + inputTable1Name + " as t1 where t1.id=t2.id";
 
-        runCommandWithDelay(query, 1000);
+        runCommand(query);
         final Set<ReadEntity> inputs = getInputs(inputTable1Name, Entity.Type.TABLE);
         inputs.addAll(getInputs(inputTable2Name, Entity.Type.TABLE));
 
@@ -575,7 +575,6 @@ public class HiveHookIT {
         Set<ReadEntity> expectedInputs = new TreeSet<ReadEntity>(entityComparator) {{
             addAll(inputs);
         }};
-
         assertTableIsRegistered(DEFAULT_DB, insertTableName);
         Referenceable processRef1 = validateProcess(event, expectedInputs, outputs);
 
@@ -752,7 +751,7 @@ public class HiveHookIT {
         assertTableIsRegistered(DEFAULT_DB, tableName);
         assertTableIsRegistered(DEFAULT_DB, insertTableName);
 
-        //TODO - update
+        //TODO -Add update test case
     }
 
     private String random() {
