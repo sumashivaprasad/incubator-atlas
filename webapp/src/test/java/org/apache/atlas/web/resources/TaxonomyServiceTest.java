@@ -18,6 +18,7 @@
 
 package org.apache.atlas.web.resources;
 
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.catalog.*;
 import org.apache.atlas.services.MetadataService;
@@ -56,6 +57,7 @@ public class TaxonomyServiceTest {
         Result result = new Result(resultPropertyMaps);
 
         expect(taxonomyResourceProvider.getResourceById(capture(requestCapture))).andReturn(result);
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         expect(serializer.serialize(result, uriInfo)).andReturn("Taxonomy Get Response");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider, serializer);
 
@@ -96,6 +98,7 @@ public class TaxonomyServiceTest {
         expect(uriInfo.getRequestUri()).andReturn(uri);
         expect(taxonomyResourceProvider.getResources(capture(requestCapture))).andReturn(result);
         expect(serializer.serialize(result, uriInfo)).andReturn("Taxonomy Get Response");
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider, serializer);
 
         // instantiate service and invoke method being tested
@@ -127,6 +130,7 @@ public class TaxonomyServiceTest {
         String body = "{ \"description\" : \"test description\" } ";
         // set mock expectations
         expect(uriInfo.getRequestUri()).andReturn(uri);
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         taxonomyResourceProvider.createResource(capture(requestCapture));
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider);
 
@@ -163,6 +167,7 @@ public class TaxonomyServiceTest {
         // set mock expectations
         expect(uriInfo.getRequestUri()).andReturn(uri);
         taxonomyResourceProvider.deleteResourceById(capture(requestCapture));
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider);
 
         // instantiate service and invoke method being tested
@@ -204,6 +209,7 @@ public class TaxonomyServiceTest {
 
         expect(termResourceProvider.getResourceById(capture(requestCapture))).andReturn(result);
         expect(serializer.serialize(result, uriInfo)).andReturn("Taxonomy Term Get Response");
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider, serializer);
 
         TestTaxonomyService service = new TestTaxonomyService(
@@ -244,6 +250,7 @@ public class TaxonomyServiceTest {
         expect(uriInfo.getRequestUri()).andReturn(uri);
         expect(termResourceProvider.getResources(capture(requestCapture))).andReturn(result);
         expect(serializer.serialize(result, uriInfo)).andReturn("Taxonomy Term Get Response");
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider, serializer);
 
         // instantiate service and invoke method being tested
@@ -291,6 +298,7 @@ public class TaxonomyServiceTest {
         expect(segment3.getPath()).andReturn("testTerm2");
         expect(termResourceProvider.getResourceById(capture(requestCapture))).andReturn(result);
         expect(serializer.serialize(result, uriInfo)).andReturn("Taxonomy Term Get Response");
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider, serializer,
                 segment1, segment2, segment3);
 
@@ -342,6 +350,7 @@ public class TaxonomyServiceTest {
 
         expect(termResourceProvider.getResources(capture(requestCapture))).andReturn(result);
         expect(serializer.serialize(result, uriInfo)).andReturn("Taxonomy Term Get Response");
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider, serializer,
                 segment1, segment2, segment3);
 
@@ -379,6 +388,7 @@ public class TaxonomyServiceTest {
         String body = "{ \"description\" : \"test description\" } ";
         // set mock expectations
         expect(uriInfo.getRequestUri()).andReturn(uri);
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         termResourceProvider.createResource(capture(requestCapture));
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider);
 
@@ -418,6 +428,7 @@ public class TaxonomyServiceTest {
         String body = "{ \"description\" : \"test description\" } ";
         // set mock expectations
         expect(uriInfo.getRequestUri()).andReturn(uri);
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         termResourceProvider.createResource(capture(requestCapture));
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider);
 
@@ -455,6 +466,7 @@ public class TaxonomyServiceTest {
         // set mock expectations
         expect(uriInfo.getRequestUri()).andReturn(uri);
         termResourceProvider.deleteResourceById(capture(requestCapture));
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider);
 
         // instantiate service and invoke method being tested
@@ -490,6 +502,7 @@ public class TaxonomyServiceTest {
         // set mock expectations
         expect(uriInfo.getRequestUri()).andReturn(uri);
         termResourceProvider.deleteResourceById(capture(requestCapture));
+        expect(metadataService.getTypeDefinition(AtlasConstants.TAXONOMY_TERM_TYPE)).andReturn(AtlasConstants.TAXONOMY_TERM_TYPE + "-definition");
         replay(uriInfo, metadataService, taxonomyResourceProvider, termResourceProvider);
 
         // instantiate service and invoke method being tested
