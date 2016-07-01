@@ -37,6 +37,7 @@ public final class AtlasConstants {
 
     // Taxonomy Term type
     public static final String TAXONOMY_TERM_TYPE = "TaxonomyTerm";
+    public static final String TAXONOMY_SUPER_TYPE = "TaxonomySuperType";
 
     // Taxonomy Namespace
     public static final String TAXONOMY_NS = "atlas.taxonomy";

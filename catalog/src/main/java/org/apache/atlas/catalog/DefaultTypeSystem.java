@@ -20,9 +20,9 @@ package org.apache.atlas.catalog;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.RequestContext;
 import org.apache.atlas.catalog.definition.ResourceDefinition;
 import org.apache.atlas.catalog.exception.CatalogRuntimeException;
 import org.apache.atlas.catalog.exception.ResourceAlreadyExistsException;
@@ -44,6 +44,7 @@ import org.apache.atlas.typesystem.types.utils.TypesUtil;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -67,13 +68,13 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
     private void createSuperTypes() throws AtlasException {
         HierarchicalTypeDefinition<TraitType> termType = TypesUtil
             .createTraitTypeDef(AtlasConstants.TAXONOMY_TERM_TYPE, ImmutableSet.<String>of(),
-                TypesUtil.createRequiredAttrDef(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME,
+                TypesUtil.createOptionalAttrDef(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME,
                     DataTypes.STRING_TYPE));
 
-        createType(termType);
+        createTraitType(termType);
     }
 
-    private void createType(HierarchicalTypeDefinition<TraitType> type) throws AtlasException {
+    private void createTraitType(HierarchicalTypeDefinition<TraitType> type) throws AtlasException {
         try {
             metadataService.getTypeDefinition(type.typeName);
         } catch(TypeNotFoundException tne) {
@@ -85,8 +86,20 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
         }
     }
 
+    private void createClassType(HierarchicalTypeDefinition<ClassType> type) throws AtlasException {
+        try {
+            metadataService.getTypeDefinition(type.typeName);
+        } catch(TypeNotFoundException tne) {
+            //Type not found . Create
+            TypesDef typesDef = TypesUtil.getTypesDef(ImmutableList.<EnumTypeDefinition>of(), ImmutableList.<StructTypeDefinition>of(),
+                ImmutableList.<HierarchicalTypeDefinition<TraitType>>of(),
+                ImmutableList.<HierarchicalTypeDefinition<ClassType>>of(type));
+            metadataService.createType(TypesSerialization.toJson(typesDef));
+        }
+    }
+
     @Override
-    public void createEntity(ResourceDefinition definition, Request request) throws ResourceAlreadyExistsException {
+    public String createEntity(ResourceDefinition definition, Request request) throws ResourceAlreadyExistsException {
         String typeName = definition.getTypeName();
         try {
             createClassType(definition, typeName, typeName + " Definition");
@@ -95,8 +108,12 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
         }
         try {
             Referenceable entity = new Referenceable(typeName, request.getQueryProperties());
+            //add Taxonomy Namespace
+            entity.set(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME, AtlasConstants.TAXONOMY_NS);
+
             ITypedReferenceableInstance typedInstance = metadataService.getTypedReferenceableInstance(entity);
-            metadataService.createEntities(Collections.singletonList(typedInstance).toArray(new ITypedReferenceableInstance[1]));
+            final List<String> entities = metadataService.createEntities(Collections.singletonList(typedInstance).toArray(new ITypedReferenceableInstance[1]));
+            return entities != null && entities.size() > 0 ? entities.get(0) : null;
         } catch (EntityExistsException e) {
             throw new ResourceAlreadyExistsException(
                     "Attempted to create an entity which already exists: " + request.getQueryProperties());
