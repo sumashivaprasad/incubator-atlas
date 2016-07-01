@@ -210,7 +210,7 @@ public interface MetadataService {
     ITypedStruct createTraitInstance(Struct traitInstance) throws AtlasException;
 
     /**
-     * Return the definition given type and attribute. The attribute has to be unique attribute for the type
+     * Return trait definition of a single trait for a given entity
      * @param guid - Guid of the entity to which the trait is tagged
      * @param traitName - Name of the trait
      * @return
