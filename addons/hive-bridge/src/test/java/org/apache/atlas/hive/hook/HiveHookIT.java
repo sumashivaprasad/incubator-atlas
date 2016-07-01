@@ -563,7 +563,7 @@ public class HiveHookIT {
 
         String query = "insert into " + insertTableName + " select t1.id, t1.name from " + inputTable2Name + " as t2, " + inputTable1Name + " as t1 where t1.id=t2.id";
 
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
         final Set<ReadEntity> inputs = getInputs(inputTable1Name, Entity.Type.TABLE);
         inputs.addAll(getInputs(inputTable2Name, Entity.Type.TABLE));
 
@@ -575,6 +575,8 @@ public class HiveHookIT {
         Set<ReadEntity> expectedInputs = new TreeSet<ReadEntity>(entityComparator) {{
             addAll(inputs);
         }};
+
+        assertTableIsRegistered(DEFAULT_DB, insertTableName);
         Referenceable processRef1 = validateProcess(event, expectedInputs, outputs);
 
         //Test sorting of tbl names
@@ -627,7 +629,8 @@ public class HiveHookIT {
         validateInputTables(processReference, inputs);
 
         //Rerun same query with same HDFS path
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
+        assertTableIsRegistered(DEFAULT_DB, tableName);
         Referenceable process2Reference = validateProcess(hiveEventContext);
         validateHDFSPaths(process2Reference, OUTPUTS, pFile1);
 
@@ -636,7 +639,8 @@ public class HiveHookIT {
         //Rerun same query with a new HDFS path. Will result in same process since HDFS paths is not part of qualified name for QUERY operations
         final String pFile2 = createTestDFSPath("somedfspath2");
         query = "insert overwrite DIRECTORY '" + pFile2  + "' select id, name from " + tableName;
-        runCommand(query);
+        runCommandWithDelay(query, 1000);
+        assertTableIsRegistered(DEFAULT_DB, tableName);
         Set<WriteEntity> p3Outputs = new LinkedHashSet<WriteEntity>() {{
             addAll(getOutputs(pFile2, Entity.Type.DFS_DIR));
             addAll(outputs);

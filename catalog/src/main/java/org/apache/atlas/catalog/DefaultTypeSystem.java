@@ -65,21 +65,22 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
 
     @InterfaceAudience.Private
     private void createSuperTypes() throws AtlasException {
-        HierarchicalTypeDefinition<ClassType> termType = TypesUtil
-            .createClassTypeDef(AtlasConstants.TAXONOMY_TERM_TYPE, ImmutableSet.<String>of(),
+        HierarchicalTypeDefinition<TraitType> termType = TypesUtil
+            .createTraitTypeDef(AtlasConstants.TAXONOMY_TERM_TYPE, ImmutableSet.<String>of(),
                 TypesUtil.createRequiredAttrDef(AtlasConstants.NAMESPACE_ATTRIBUTE_NAME,
                     DataTypes.STRING_TYPE));
+
         createType(termType);
     }
 
-    private void createType(HierarchicalTypeDefinition<ClassType> type) throws AtlasException {
+    private void createType(HierarchicalTypeDefinition<TraitType> type) throws AtlasException {
         try {
             metadataService.getTypeDefinition(type.typeName);
         } catch(TypeNotFoundException tne) {
             //Type not found . Create
             TypesDef typesDef = TypesUtil.getTypesDef(ImmutableList.<EnumTypeDefinition>of(), ImmutableList.<StructTypeDefinition>of(),
-                ImmutableList.<HierarchicalTypeDefinition<TraitType>>of(),
-                ImmutableList.of(type));
+                ImmutableList.<HierarchicalTypeDefinition<TraitType>>of(type),
+                ImmutableList.<HierarchicalTypeDefinition<ClassType>>of());
             metadataService.createType(TypesSerialization.toJson(typesDef));
         }
     }
@@ -185,8 +186,14 @@ public class DefaultTypeSystem implements AtlasTypeSystem {
                                                          throws ResourceAlreadyExistsException {
 
         try {
-            HierarchicalTypeDefinition<T> definition = new HierarchicalTypeDefinition<T>(type, name, description,
-                ImmutableSet.of(AtlasConstants.TAXONOMY_TERM_TYPE), attributes.toArray(new AttributeDefinition[attributes.size()]));
+            HierarchicalTypeDefinition<T> definition = null;
+            if ( isTrait) {
+                definition = new HierarchicalTypeDefinition<T>(type, name, description,
+                    ImmutableSet.<String>of(AtlasConstants.TAXONOMY_TERM_TYPE), attributes.toArray(new AttributeDefinition[attributes.size()]));
+            } else {
+                definition = new HierarchicalTypeDefinition<T>(type, name, description,
+                    ImmutableSet.<String>of(), attributes.toArray(new AttributeDefinition[attributes.size()]));
+            }
 
             metadataService.createType(TypesSerialization.toJson(definition, isTrait));
         } catch (TypeExistsException e) {
