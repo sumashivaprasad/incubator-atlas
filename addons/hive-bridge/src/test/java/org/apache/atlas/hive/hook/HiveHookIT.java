@@ -115,7 +115,7 @@ public class HiveHookIT {
         Configuration configuration = ApplicationProperties.get();
         atlasClient = new AtlasClient(configuration.getString(HiveMetaStoreBridge.ATLAS_ENDPOINT, DGI_URL));
 
-        hiveMetaStoreBridge = new HiveMetaStoreBridge(conf, atlasClient);
+        hiveMetaStoreBridge = new HiveMetaStoreBridge(configuration, conf, atlasClient);
         hiveMetaStoreBridge.registerHiveDataModel();
     }
 
