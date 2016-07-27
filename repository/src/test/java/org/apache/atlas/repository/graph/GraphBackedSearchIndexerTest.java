@@ -146,13 +146,13 @@ public class GraphBackedSearchIndexerTest {
     }
 
     private void verifySystemCompositeIndex(TitanManagement managementSystem, String indexName, boolean isUnique) {
-        TitanGraphIndex guidIndex = managementSystem.getGraphIndex(indexName);
-        assertNotNull(guidIndex);
-        assertTrue(guidIndex.isCompositeIndex());
+        TitanGraphIndex systemIndex = managementSystem.getGraphIndex(indexName);
+        assertNotNull(systemIndex);
+        assertTrue(systemIndex.isCompositeIndex());
         if (isUnique) {
-            assertTrue(guidIndex.isUnique());
+            assertTrue(systemIndex.isUnique());
         } else {
-            assertFalse(guidIndex.isUnique());
+            assertFalse(systemIndex.isUnique());
         }
     }
 }

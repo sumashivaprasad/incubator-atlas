@@ -46,6 +46,7 @@ object TypesBuilder {
   val composite = new AttrOption()
   val unique = new AttrOption()
   val indexed = new AttrOption()
+  val isIndexExactMatch = new AttrOption()
   def reverseAttributeName(rNm : String) = new ReverseAttributeName(rNm)
   def multiplicty(lower: Int, upper: Int, isUnique: Boolean) = new MultiplicityOption(lower, upper, isUnique)
 
@@ -78,12 +79,13 @@ object TypesBuilder {
     private var reverseAttributeName: String = null
     private var isUnique: Boolean = false
     private var isIndexable: Boolean = false
+    private var indexExactMatch: Boolean = false
 
     ctx.currentTypeAttrs += this
 
     def getDef : AttributeDefinition =
       new AttributeDefinition(name, dataTypeName,
-        multiplicity, isComposite, isUnique, isIndexable, reverseAttributeName)
+        multiplicity, isComposite, isUnique, isIndexable, indexExactMatch, reverseAttributeName)
 
     def `~`(dT : String, options : AttrOption*) : Attr = {
       dataTypeName = dT
@@ -96,6 +98,7 @@ object TypesBuilder {
           case `composite` => {isComposite = true}
           case `unique` => {isUnique = true}
           case `indexed` => {isIndexable = true}
+          case `isIndexExactMatch` => {indexExactMatch = true}
           case m : MultiplicityOption => {multiplicity = new Multiplicity(m.lower, m.upper, m.isUnique)}
           case r : ReverseAttributeName => {reverseAttributeName = r.rNm}
           case _ => ()
@@ -119,6 +122,7 @@ class TypesBuilder {
   val composite = TypesBuilder.composite
   val unique = TypesBuilder.unique
   val indexed = TypesBuilder.indexed
+  val indexExactMatch = TypesBuilder.isIndexExactMatch
   def multiplicty = TypesBuilder.multiplicty _
   def reverseAttributeName = TypesBuilder.reverseAttributeName _
 

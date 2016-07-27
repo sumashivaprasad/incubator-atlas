@@ -39,7 +39,7 @@ object FSDataModel extends App {
         // FS DataSet
         _class(FSDataTypes.FS_PATH.toString, List(AtlasClient.DATA_SET_SUPER_TYPE)) {
             //fully qualified path/URI to the filesystem path is stored in 'qualifiedName' and 'path'.
-            "path" ~ (string, required, indexed)
+            "path" ~ (string, required, indexed, indexExactMatch)
             "createTime" ~ (date, optional, indexed)
             "modifiedTime" ~ (date, optional, indexed)
             //Is a regular file or a directory. If true, it is a file else a directory
@@ -48,7 +48,7 @@ object FSDataModel extends App {
             "isSymlink" ~ (boolean, optional, indexed)
             //Optional and may not be set for a directory
             "fileSize" ~ (long, optional, indexed)
-            "group" ~ (string, optional, indexed)
+            "group" ~ (string, optional, indexed, indexExactMatch)
             "posixPermissions" ~ (FSDataTypes.FS_PERMISSIONS.toString, optional, indexed)
         }
 
@@ -64,7 +64,7 @@ object FSDataModel extends App {
         //HDFS DataSet
         _class(FSDataTypes.HDFS_PATH.toString, List(FSDataTypes.FS_PATH.toString)) {
             //Making cluster optional since path is already unique containing the namenode URI
-            AtlasConstants.CLUSTER_NAME_ATTRIBUTE ~ (string, optional, indexed)
+            AtlasConstants.CLUSTER_NAME_ATTRIBUTE ~ (string, optional, indexed, indexExactMatch)
             "numberOfReplicas" ~ (int, optional, indexed)
             "extendedAttributes" ~ (map(string, string), optional, indexed)
         }
