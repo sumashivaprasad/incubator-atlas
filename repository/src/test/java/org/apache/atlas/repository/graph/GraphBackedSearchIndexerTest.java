@@ -136,6 +136,8 @@ public class GraphBackedSearchIndexerTest {
         verifySystemCompositeIndex(managementSystem, "Database.name" + Constants.ENTITY_TYPE_PROPERTY_KEY, false);
         verifyVertexIndexContains(managementSystem, "Database.name" + Constants.ENTITY_TYPE_PROPERTY_KEY);
 
+        verifySystemCompositeIndex(managementSystem, "Database.name" + Constants.SUPER_TYPES_PROPERTY_KEY, false);
+
         verifyVertexIndexContains(managementSystem, "Database.managedType");
     }
 

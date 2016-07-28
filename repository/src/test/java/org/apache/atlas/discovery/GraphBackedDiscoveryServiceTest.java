@@ -243,6 +243,13 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
             object = vertexProps.get(Constants.TIMESTAMP_PROPERTY_KEY);
             assertNotNull(object);
         }
+
+        //Check composite index without typeName
+        r = discoveryService.searchByGremlin("g.V().has(\"Asset.name\", T.eq, \"sales_fact\").toList()");
+        Assert.assertTrue(r instanceof List);
+        resultList = (List<Map<String, Object>>) r;
+        Assert.assertEquals(resultList.size(), 1);
+        System.out.println("search result = " + r);
     }
 
     @DataProvider(name = "comparisonQueriesProvider")
@@ -332,6 +339,8 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
                 {"from hive_table", 10},
                 {"hive_table", 10},
                 {"hive_table isa Dimension", 3},
+                // doesnt work
+//                {"hive_table isa Dimension where db.name =  \"Sales\"", 3},
                 {"hive_column where hive_column isa PII", 8},
                 {"View is Dimension" , 2},
 //                {"hive_column where hive_column isa PII select hive_column.name", 6}, //Not working - ATLAS-175
@@ -385,6 +394,11 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
                 {"hive_table where name='sales_fact', db where name='Reporting'", 0},
                 {"hive_partition as p where values = ['2015-01-01']", 1},
 //              {"StorageDesc select cols", 6} //Not working since loading of lists needs to be fixed yet
+
+                //check supertypeNames
+                {"DataSet where name='sales_fact'", 1},
+                {"Asset where name='sales_fact'", 1}
+
         };
     }
 
