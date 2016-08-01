@@ -34,6 +34,7 @@ public class AttributeInfo {
     public final boolean isComposite;
     public final boolean isUnique;
     public final boolean isIndexable;
+    public final boolean indexExactMatch;
     /**
      * If this is a reference attribute, then the name of the attribute on the Class
      * that this refers to.
@@ -50,6 +51,7 @@ public class AttributeInfo {
         this.isComposite = def.isComposite;
         this.isUnique = def.isUnique;
         this.isIndexable = def.isIndexable;
+        this.indexExactMatch = def.indexExactMatch;
         this.reverseAttributeName = def.reverseAttributeName;
     }
 
@@ -81,6 +83,7 @@ public class AttributeInfo {
             buf.append(", isComposite=").append(Boolean.toString(isComposite));
             buf.append(", isUnique=").append(Boolean.toString(isUnique));
             buf.append(", isIndexable=").append(Boolean.toString(isIndexable));
+            buf.append(", indexExactMatch=").append(Boolean.toString(indexExactMatch));
             buf.append(", reverseAttributeName=").append(reverseAttributeName);
             buf.append('}');
         }
@@ -135,6 +138,7 @@ public class AttributeInfo {
         json.put("isIndexable", isIndexable);
         json.put("dataType", dataType.getName());
         json.put("reverseAttributeName", reverseAttributeName);
+        json.put("indexExactMatch", indexExactMatch);
         return json.toString();
     }
 
@@ -146,6 +150,6 @@ public class AttributeInfo {
         }
         return new AttributeDefinition(json.getString("name"), json.getString("dataType"),
                 Multiplicity.fromJson(json.getString("multiplicity")), json.getBoolean("isComposite"),
-                json.getBoolean("isUnique"), json.getBoolean("isIndexable"), reverseAttr);
+                json.getBoolean("isUnique"), json.getBoolean("isIndexable"), json.getBoolean("indexExactMatch"), reverseAttr);
     }
 }

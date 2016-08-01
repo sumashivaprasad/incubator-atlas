@@ -101,32 +101,32 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             // create a composite index for guid as its unique
             createIndexes(management, Constants.GUID_PROPERTY_KEY, String.class, true,
-                    Cardinality.SINGLE, true);
+                    Cardinality.SINGLE, true, true);
 
             // create a composite index for entity state
-            createIndexes(management, Constants.TIMESTAMP_PROPERTY_KEY, Long.class, false, Cardinality.SINGLE, true);
+            createIndexes(management, Constants.TIMESTAMP_PROPERTY_KEY, Long.class, false, Cardinality.SINGLE, true, true);
 
             // create a mixed index for entity state. Set systemProperty flag deliberately to false
             // so that it doesnt create a composite index which has issues with
             // titan 0.5.4 - Refer https://groups.google.com/forum/#!searchin/aureliusgraphs/hemanth/aureliusgraphs/bx7T843mzXU/fjAsclx7GAAJ
-            createIndexes(management, Constants.STATE_PROPERTY_KEY, String.class, false, Cardinality.SINGLE, false);
+            createStateMixedIndex(management);
 
             // create a composite index for entity state
             createIndexes(management, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, Long.class, false,
-                    Cardinality.SINGLE, true);
+                    Cardinality.SINGLE, false, false);
 
             // create a composite and mixed index for type since it can be combined with other keys
             createIndexes(management, Constants.ENTITY_TYPE_PROPERTY_KEY, String.class, false, Cardinality.SINGLE,
-                    true);
+                    true, true);
 
             // create a composite and mixed index for type since it can be combined with other keys
             createIndexes(management, Constants.SUPER_TYPES_PROPERTY_KEY, String.class, false, Cardinality.SET,
-                    true);
+                    true, true);
 
             // create a composite and mixed index for traitNames since it can be combined with other
             // keys. Traits must be a set and not a list.
             createIndexes(management, Constants.TRAIT_NAMES_PROPERTY_KEY, String.class, false, Cardinality.SET,
-                    true);
+                    true, true);
 
             // Index for full text search
             createFullTextIndex(management);
@@ -142,6 +142,16 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         }
     }
 
+    private void createStateMixedIndex(TitanManagement management) {
+        PropertyKey propertyKey = management.getPropertyKey(Constants.STATE_PROPERTY_KEY);
+        if (propertyKey == null) {
+            propertyKey = management.makePropertyKey(Constants.STATE_PROPERTY_KEY).dataType(String.class).cardinality(Cardinality.SINGLE)
+                .make();
+            }
+        enhanceMixedIndex(management, Constants.STATE_PROPERTY_KEY, String.class, Cardinality.SINGLE, propertyKey);
+    }
+
+
     private void createFullTextIndex(TitanManagement management) {
         PropertyKey fullText =
                 management.makePropertyKey(Constants.ENTITY_TEXT_PROPERTY_KEY).dataType(String.class).make();
@@ -155,11 +165,11 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
     private void createTypeStoreIndexes(TitanManagement management) {
         //Create unique index on typeName
         createIndexes(management, Constants.TYPENAME_PROPERTY_KEY, String.class, true, Cardinality.SINGLE,
-                true);
+                true, true);
 
         //create index on vertex type
         createIndexes(management, Constants.VERTEX_TYPE_PROPERTY_KEY, String.class, false, Cardinality.SINGLE,
-                true);
+                true, true);
     }
 
     /**
@@ -237,12 +247,12 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         case PRIMITIVE:
             Cardinality cardinality = getCardinality(field.multiplicity);
             createIndexes(management, propertyName, getPrimitiveClass(field.dataType()), field.isUnique,
-                    cardinality, false);
+                    cardinality, false, field.indexExactMatch);
             break;
 
         case ENUM:
             cardinality = getCardinality(field.multiplicity);
-            createIndexes(management, propertyName, String.class, field.isUnique, cardinality, false);
+            createIndexes(management, propertyName, String.class, field.isUnique, cardinality, false, field.indexExactMatch);
             break;
 
         case ARRAY:
@@ -317,7 +327,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
     private PropertyKey createIndexes(TitanManagement management, String propertyName,
                                       Class propertyClass, boolean isUnique, Cardinality cardinality,
-                                      boolean isSystemProperty) {
+                                      boolean isSystemProperty, boolean indexExactMatch) {
         PropertyKey propertyKey = management.getPropertyKey(propertyName);
         if (propertyKey == null) {
             propertyKey = management.makePropertyKey(propertyName).dataType(propertyClass).cardinality(cardinality)
@@ -325,45 +335,67 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             enhanceMixedIndex(management, propertyName, propertyClass, cardinality, propertyKey);
 
-            if (isSystemProperty) {
-                createCompositeIndex(management, propertyName, propertyClass, propertyKey, isUnique);
-            } else if (isUnique) {
-                // send uniqueness as false because there can be many vertexes with the same property value
-                // but state can be active / deleted.
-                createCompositeIndexWithTypeName(management, propertyName, propertyClass, propertyKey);
-            }
+        }
+
+        if (isSystemProperty) {
+            createCompositeIndex(management, propertyName, propertyClass, propertyKey, isUnique);
+        } else if (indexExactMatch) {
+            //Index with typename since typename+property key queries need to speed up
+            createCompositeIndexWithTypeName(management, propertyName, propertyClass, propertyKey);
+            createCompositeIndexWithSuperTypeName(management, propertyName, propertyClass, propertyKey);
         }
         return propertyKey;
     }
 
     private void createCompositeIndex(TitanManagement management, String propertyName, Class propertyClass,
-                                      PropertyKey propertyKey, boolean enforceUniqueness) {
-        LOG.info("Creating composite index for property {} of type {} ", propertyName,
-                propertyClass.getName());
-        TitanManagement.IndexBuilder indexBuilder =
+        PropertyKey propertyKey, boolean enforceUniqueness) {
+        LOG.debug("Creating composite index for property {} of type {} ", propertyName,
+            propertyClass.getName());
+
+        TitanGraphIndex existingIndex = management.getGraphIndex(propertyName);
+        if ( existingIndex == null) {
+            TitanManagement.IndexBuilder indexBuilder =
                 management.buildIndex(propertyName, Vertex.class).addKey(propertyKey);
-        if (enforceUniqueness) {
-            indexBuilder.unique();
+            if (enforceUniqueness) {
+                LOG.info("Enabling unique index for property {} of type {} ", propertyName,
+                    propertyClass.getName());
+                indexBuilder.unique();
+            }
+            indexBuilder.buildCompositeIndex();
         }
-        indexBuilder.buildCompositeIndex();
         LOG.info("Created composite index for property {} of type {} ", propertyName, propertyClass.getName());
     }
 
     private void createCompositeIndexWithTypeName(TitanManagement management, String propertyName, Class propertyClass,
         PropertyKey propertyKey) {
+        createCompositeIndexWithSystemProperty(management, propertyName, propertyClass, propertyKey, Constants.ENTITY_TYPE_PROPERTY_KEY, Cardinality.SINGLE);
+    }
+
+    private void createCompositeIndexWithSuperTypeName(TitanManagement management, String propertyName, Class propertyClass,
+        PropertyKey propertyKey) {
+        createCompositeIndexWithSystemProperty(management, propertyName, propertyClass, propertyKey, Constants.SUPER_TYPES_PROPERTY_KEY, Cardinality.SINGLE);
+    }
+
+    private void createCompositeIndexWithSystemProperty(TitanManagement management, String propertyName, Class propertyClass,
+        PropertyKey propertyKey, final String systemPropertyKey, Cardinality cardinality) {
         LOG.info("Creating composite index for property {} of type {} and {}", propertyName,
-            propertyClass.getName(), Constants.ENTITY_TYPE_PROPERTY_KEY);
-        PropertyKey typePropertyKey = management.getPropertyKey(Constants.ENTITY_TYPE_PROPERTY_KEY);
+            propertyClass.getName(), systemPropertyKey);
+        PropertyKey typePropertyKey = management.getPropertyKey(systemPropertyKey);
         if (typePropertyKey == null) {
-            typePropertyKey = management.makePropertyKey(Constants.ENTITY_TYPE_PROPERTY_KEY).
-                dataType(String.class).cardinality(Cardinality.SINGLE)
+            typePropertyKey = management.makePropertyKey(systemPropertyKey).
+                dataType(String.class).cardinality(cardinality)
                 .make();
         }
-        TitanManagement.IndexBuilder indexBuilder =
-            management.buildIndex(propertyName + Constants.ENTITY_TYPE_PROPERTY_KEY, Vertex.class).
-                addKey(propertyKey).addKey(typePropertyKey);
-        indexBuilder.buildCompositeIndex();
-        LOG.info("Created composite index for property {} of type {} and {}", propertyName, propertyClass.getName(), Constants.ENTITY_TYPE_PROPERTY_KEY);
+        final String indexName = propertyName + systemPropertyKey;
+        TitanGraphIndex existingIndex = management.getGraphIndex(indexName);
+
+        if ( existingIndex == null) {
+            TitanManagement.IndexBuilder indexBuilder =
+                management.buildIndex(indexName, Vertex.class).
+                    addKey(propertyKey).addKey(typePropertyKey);
+            indexBuilder.buildCompositeIndex();
+            LOG.info("Created composite index for property {} of type {} and {}", propertyName, propertyClass.getName(), systemPropertyKey);
+        }
     }
 
     private void enhanceMixedIndex(TitanManagement management, String propertyName, Class propertyClass,

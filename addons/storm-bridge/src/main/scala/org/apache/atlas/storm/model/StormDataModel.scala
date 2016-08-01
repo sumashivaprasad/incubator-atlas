@@ -44,11 +44,11 @@ object StormDataModel extends App {
          * Topology => Node(s) -> Spouts/Bolts
          */
         _class(StormDataTypes.STORM_TOPOLOGY.getName, List(AtlasClient.PROCESS_SUPER_TYPE)) {
-            "id" ~ (string, required, indexed, unique)
+            "id" ~ (string, required, indexed, unique, indexExactMatch)
             "startTime" ~ long
             "endTime" ~ long
             "conf" ~ (map(string, string), optional)
-            "clusterName" ~ (string, optional, indexed)
+            "clusterName" ~ (string, optional, indexed, indexExactMatch)
 
             // Nodes in the Graph
             "nodes" ~ (array(StormDataTypes.STORM_NODE.getName), collection, composite)
@@ -57,7 +57,7 @@ object StormDataModel extends App {
         // Base class for DataProducer aka Spouts and
         // DataProcessor aka Bolts, also links from Topology
         _class(StormDataTypes.STORM_NODE.getName) {
-            "name" ~ (string, required, indexed)
+            "name" ~ (string, required, indexed, indexExactMatch)
             "description" ~ (string, optional, indexed)
             // fully qualified driver java class name
             "driverClass" ~ (string, required, indexed)
@@ -80,13 +80,13 @@ object StormDataModel extends App {
 
         // Kafka Data Set
         _class(StormDataTypes.KAFKA_TOPIC.getName, List(AtlasClient.DATA_SET_SUPER_TYPE)) {
-            "topic" ~ (string, required, unique, indexed)
+            "topic" ~ (string, required, unique, indexed, indexExactMatch)
             "uri" ~ (string, required)
         }
 
         // JMS Data Set
         _class(StormDataTypes.JMS_TOPIC.getName, List(AtlasClient.DATA_SET_SUPER_TYPE)) {
-            "topic" ~ (string, required, unique, indexed)
+            "topic" ~ (string, required, unique, indexed, indexExactMatch)
             "uri" ~ (string, required)
         }
 
