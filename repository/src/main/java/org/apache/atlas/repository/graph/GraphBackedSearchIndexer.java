@@ -327,7 +327,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
     private PropertyKey createIndexes(TitanManagement management, String propertyName,
                                       Class propertyClass, boolean isUnique, Cardinality cardinality,
-                                      boolean isSystemProperty, boolean indexExactMatch) {
+                                      boolean createCompositeForAttribute, boolean createCompositeWithTypeandSuperTypes) {
         PropertyKey propertyKey = management.getPropertyKey(propertyName);
         if (propertyKey == null) {
             propertyKey = management.makePropertyKey(propertyName).dataType(propertyClass).cardinality(cardinality)
@@ -337,9 +337,9 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
         }
 
-        if (isSystemProperty) {
+        if (createCompositeForAttribute) {
             createCompositeIndex(management, propertyName, propertyClass, propertyKey, isUnique);
-        } else if (indexExactMatch) {
+        } else if (createCompositeWithTypeandSuperTypes) {
             //Index with typename since typename+property key queries need to speed up
             createCompositeIndexWithTypeName(management, propertyName, propertyClass, propertyKey);
             createCompositeIndexWithSuperTypeName(management, propertyName, propertyClass, propertyKey);
