@@ -6,6 +6,14 @@ INCOMPATIBLE CHANGES:
 
 
 ALL CHANGES:
+ATLAS-762 Assertion in NegativeSSLAndKerberosTest.testUnsecuredClient needs to be hardened (nixonrodrigues via sumasai)
+ATLAS-1071 Regression - UI - Details Button under Audits Tab is not working.(kevalbhatt18 via sumasai)
+ATLAS-965 Old lineage still exists after dropping tables and re-creating tables with same name. (shwethags via sumasai)
+ATLAS-1048 TestMetadata.py test in distro project fails on Windows (jnhagelb via shwethags)
+ATLAS-1026 StoreBackedTypeCache issues (dkantor via shwethags)
+ATLAS-861 1 table out of 50,000 tables is left unimported throwing exception during deserialization (sumasai via shwethags)
+ATLAS-1065 UI: Full text search view same as DSL's (kevalbhat18 via shwethags)
+ATLAS-1066 Falcon fails to post entity to Atlas due to kafka exception (mneethiraj via shwethags)
 ATLAS-1064 UI: Pagination for full text search results (Kalyanikashikar via shwethags)
 ATLAS-1006 Paginate full text search results (shwethags)
 ATLAS-1046 UI: Search pagination refinements (Kalyanikashikar via sumasai)

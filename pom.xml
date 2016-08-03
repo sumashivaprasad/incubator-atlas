@@ -80,7 +80,7 @@
     </mailingLists>
 
     <scm>
-        <connection>scm:git:https://github.com/apache/incubator-atlas.git</connection>
+        <connection>scm:git:git://git.apache.org/incubator-atlas.git</connection>
         <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-atlas.git</developerConnection>
         <tag>HEAD</tag>
         <url>https://github.com/apache/incubator-atlas.git</url>
@@ -350,6 +350,28 @@
             </roles>
             <organization>Hortonworks Inc.</organization>
             <!--<organizationUrl>http://www.hortonworks.com</organizationUrl>-->
+        </developer>
+        <developer>
+            <id>kbhatt</id>
+            <name>Keval Bhatt</name>
+            <email>kbhatt@apache.org</email>
+            <timezone>+05:30</timezone>
+            <roles>
+                <role>committer</role>
+            </roles>
+            <organization>Freestone Infotech</organization>
+            <!--<organizationUrl>http://www.hortonworks.com</organizationUrl>-->
+        </developer>
+        <developer>
+            <id>dkantor</id>
+            <name>Dave Kantor</name>
+            <email>dkantor@apache.org</email>
+            <timezone>-5</timezone>
+            <roles>
+                <role>committer</role>
+            </roles>
+            <organization>IBM Corporation</organization>
+            <!--<organizationUrl>http://www.ibm.com</organizationUrl>-->
         </developer>
     </developers>
 
