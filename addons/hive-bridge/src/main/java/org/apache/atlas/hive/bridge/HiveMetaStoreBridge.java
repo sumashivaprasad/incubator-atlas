@@ -314,7 +314,7 @@ public class HiveMetaStoreBridge {
         if ( tablesImported == hiveTables.size()) {
             LOG.info("Successfully imported all {} tables from {} ", tablesImported, databaseName);
         } else {
-            LOG.error("Unable to import {} tables out of {} tables from {}", tablesImported, hiveTables.size(), databaseName);
+            LOG.error("Able to import {} tables out of {} tables from {}", tablesImported, hiveTables.size(), databaseName);
         }
 
         return tablesImported;

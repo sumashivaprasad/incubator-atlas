@@ -255,7 +255,8 @@ class GremlinTranslator(expr: Expression,
             s"${genQuery(child, inSelect)}.${genQuery(condExpr, inSelect)}"
         }
         case l@LogicalExpression(symb, children) => {
-            s"""$symb${children.map("_()." + genQuery(_, inSelect)).mkString("(", ",", ")")}"""
+//            s"""$symb${children.map("_()." + genQuery(_, inSelect)).mkString("(", ",", ")")}"""
+          s"""${children.map(genQuery(_, inSelect)).mkString(".")}"""
         }
         case sel@SelectExpression(child, selList) => {
             val m = groupSelectExpressionsBySrc(sel)

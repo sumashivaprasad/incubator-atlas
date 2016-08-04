@@ -284,4 +284,9 @@ public class TypeSystemTest extends BaseTest {
             //expected
         }
     }
+
+    @Test
+    public void testParseDate() throws Exception {
+        DataTypes.DATE_TYPE.convert("", Multiplicity.OPTIONAL);
+    }
 }

@@ -27,6 +27,9 @@ import org.apache.atlas.AtlasException;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.commons.lang3.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -405,6 +408,8 @@ public class DataTypes {
             super(name, null);
         }
 
+        private final DateTimeFormatter utcDateFormat = ISODateTimeFormat.dateTime();
+
         @Override
         public Date convert(Object val, Multiplicity m) throws AtlasException {
             if (val != null) {
@@ -412,8 +417,8 @@ public class DataTypes {
                     return (Date) val;
                 } else if (val instanceof String) {
                     try {
-                        return TypeSystem.getInstance().getDateFormat().parse((String) val);
-                    } catch (ParseException ne) {
+                        utcDateFormat.parseDateTime((String)val).toDate();
+                    } catch (Exception ne) {
                         throw new ValueConversionException(this, val, ne);
                     }
                 } else if (val instanceof Number) {
@@ -427,7 +432,7 @@ public class DataTypes {
 
         @Override
         public void output(Date val, Appendable buf, String prefix, Set<Date> inProcess) throws AtlasException {
-            TypeUtils.outputVal(val == null ? "<null>" : TypeSystem.getInstance().getDateFormat().format(val), buf,
+            TypeUtils.outputVal(val == null ? "<null>" : new DateTime(val).toString(utcDateFormat), buf,
                     prefix);
         }
 

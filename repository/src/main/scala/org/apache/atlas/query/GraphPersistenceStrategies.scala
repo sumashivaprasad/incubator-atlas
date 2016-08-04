@@ -173,21 +173,15 @@ trait GraphPersistenceStrategies {
 
         val varName = s"_var_${intSeq.next}"
         Seq(
-            newSetVar(varName),
-            fillVarWithTypeInstances(typeName, varName),
-            fillVarWithSubTypeInstances(typeName, varName),
-            s"$varName._()"
+            fillVarWithTypeInstances(typeName, varName)
         )
     }
 
     private def newSetVar(varName : String) = s"$varName = [] as Set"
 
     private def fillVarWithTypeInstances(typeName : String, fillVar : String) = {
-        s"""g.V().has("${typeAttributeName}", "${typeName}").fill($fillVar)"""
-    }
-
-    private def fillVarWithSubTypeInstances(typeName : String, fillVar : String) = {
-        s"""g.V().has("${superTypeAttributeName}", "${typeName}").fill($fillVar)"""
+        s"""g.V().has("${superTypeAttributeName}", "${typeName}")"""
+//        s"""g.V()"""
     }
 }
 

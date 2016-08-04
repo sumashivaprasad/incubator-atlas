@@ -134,6 +134,7 @@ public class GraphBackedSearchIndexerTest {
         graphBackedSearchIndexer.onAdd(Arrays.asList(databaseType));
 
         verifySystemCompositeIndex(managementSystem, "Database.name" + Constants.ENTITY_TYPE_PROPERTY_KEY, false);
+        verifySystemCompositeIndex(managementSystem, "Database.name" + Constants.SUPER_TYPES_PROPERTY_KEY, false);
         verifyVertexIndexContains(managementSystem, "Database.name" + Constants.ENTITY_TYPE_PROPERTY_KEY);
 
         verifyVertexIndexContains(managementSystem, "Database.managedType");

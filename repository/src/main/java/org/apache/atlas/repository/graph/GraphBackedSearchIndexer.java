@@ -109,7 +109,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             // create a mixed index for entity state. Set systemProperty flag deliberately to false
             // so that it doesnt create a composite index which has issues with
             // titan 0.5.4 - Refer https://groups.google.com/forum/#!searchin/aureliusgraphs/hemanth/aureliusgraphs/bx7T843mzXU/fjAsclx7GAAJ
-            createIndexes(management, Constants.STATE_PROPERTY_KEY, String.class, false, Cardinality.SINGLE, false);
+            createStateMixedIndex(management);
 
             // create a composite index for entity state
             createIndexes(management, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, Long.class, false,
@@ -140,6 +140,15 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             rollback(management);
             throw new RepositoryException(t);
         }
+    }
+
+    private void createStateMixedIndex(TitanManagement management) {
+        PropertyKey propertyKey = management.getPropertyKey(Constants.STATE_PROPERTY_KEY);
+        if (propertyKey == null) {
+            propertyKey = management.makePropertyKey(Constants.STATE_PROPERTY_KEY).dataType(String.class).cardinality(Cardinality.SINGLE)
+                .make();
+        }
+        enhanceMixedIndex(management, Constants.STATE_PROPERTY_KEY, String.class, Cardinality.SINGLE, propertyKey);
     }
 
     private void createFullTextIndex(TitanManagement management) {
@@ -327,10 +336,11 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             if (isSystemProperty) {
                 createCompositeIndex(management, propertyName, propertyClass, propertyKey, isUnique);
-            } else if (isUnique) {
+            } else {
                 // send uniqueness as false because there can be many vertexes with the same property value
                 // but state can be active / deleted.
                 createCompositeIndexWithTypeName(management, propertyName, propertyClass, propertyKey);
+                createCompositeIndexWithSuperTypeName(management, propertyName, propertyClass, propertyKey);
             }
         }
         return propertyKey;
@@ -349,21 +359,31 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         LOG.info("Created composite index for property {} of type {} ", propertyName, propertyClass.getName());
     }
 
-    private void createCompositeIndexWithTypeName(TitanManagement management, String propertyName, Class propertyClass,
-        PropertyKey propertyKey) {
+    private void createCompositeIndexWithSystemProperty(TitanManagement management, String propertyName, Class propertyClass,
+        PropertyKey propertyKey, final String systemPropertyKey) {
         LOG.info("Creating composite index for property {} of type {} and {}", propertyName,
-            propertyClass.getName(), Constants.ENTITY_TYPE_PROPERTY_KEY);
-        PropertyKey typePropertyKey = management.getPropertyKey(Constants.ENTITY_TYPE_PROPERTY_KEY);
+            propertyClass.getName(), systemPropertyKey);
+        PropertyKey typePropertyKey = management.getPropertyKey(systemPropertyKey);
         if (typePropertyKey == null) {
-            typePropertyKey = management.makePropertyKey(Constants.ENTITY_TYPE_PROPERTY_KEY).
+            typePropertyKey = management.makePropertyKey(systemPropertyKey).
                 dataType(String.class).cardinality(Cardinality.SINGLE)
                 .make();
         }
         TitanManagement.IndexBuilder indexBuilder =
-            management.buildIndex(propertyName + Constants.ENTITY_TYPE_PROPERTY_KEY, Vertex.class).
+            management.buildIndex(propertyName + systemPropertyKey, Vertex.class).
                 addKey(propertyKey).addKey(typePropertyKey);
         indexBuilder.buildCompositeIndex();
-        LOG.info("Created composite index for property {} of type {} and {}", propertyName, propertyClass.getName(), Constants.ENTITY_TYPE_PROPERTY_KEY);
+        LOG.info("Created composite index for property {} of type {} and {}", propertyName, propertyClass.getName(), systemPropertyKey);
+    }
+
+    private void createCompositeIndexWithTypeName(TitanManagement management, String propertyName, Class propertyClass,
+        PropertyKey propertyKey) {
+        createCompositeIndexWithSystemProperty(management, propertyName, propertyClass, propertyKey, Constants.ENTITY_TYPE_PROPERTY_KEY);
+    }
+
+    private void createCompositeIndexWithSuperTypeName(TitanManagement management, String propertyName, Class propertyClass,
+        PropertyKey propertyKey) {
+        createCompositeIndexWithSystemProperty(management, propertyName, propertyClass, propertyKey, Constants.SUPER_TYPES_PROPERTY_KEY);
     }
 
     private void enhanceMixedIndex(TitanManagement management, String propertyName, Class propertyClass,
@@ -371,6 +391,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         if (checkIfMixedIndexApplicable(propertyClass, cardinality)) {
             //Use backing index
             LOG.info("Creating backing index for property {} of type {} ", propertyName, propertyClass.getName());
+
             TitanGraphIndex vertexIndex = management.getGraphIndex(Constants.VERTEX_INDEX);
             management.addIndexKey(vertexIndex, propertyKey);
             LOG.info("Created backing index for property {} of type {} ", propertyName, propertyClass.getName());
