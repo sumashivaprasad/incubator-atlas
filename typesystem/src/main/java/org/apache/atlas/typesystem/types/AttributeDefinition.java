@@ -29,7 +29,6 @@ public final class AttributeDefinition {
     public final boolean isComposite;
     public final boolean isUnique;
     public final boolean isIndexable;
-    public final boolean indexExactMatch;
 
     /**
      * If this is a reference attribute, then the name of the attribute on the Class
@@ -39,19 +38,18 @@ public final class AttributeDefinition {
 
     public AttributeDefinition(String name, String dataTypeName, Multiplicity multiplicity, boolean isComposite,
             String reverseAttributeName) {
-        this(name, dataTypeName, multiplicity, isComposite, false, true, false, reverseAttributeName);
+        this(name, dataTypeName, multiplicity, isComposite, false, false, reverseAttributeName);
 
     }
 
     public AttributeDefinition(String name, String dataTypeName, Multiplicity multiplicity, boolean isComposite,
-            boolean isUnique, boolean isIndexable, boolean indexExactMatch, String reverseAttributeName) {
+            boolean isUnique, boolean isIndexable, String reverseAttributeName) {
         this.name = ParamChecker.notEmpty(name, "Attribute name");
         this.dataTypeName = ParamChecker.notEmpty(dataTypeName, "Attribute type");
         this.multiplicity = multiplicity;
         this.isComposite = isComposite;
         this.isUnique = isUnique;
         this.isIndexable = isIndexable;
-        this.indexExactMatch = indexExactMatch;
         this.reverseAttributeName = ParamChecker.notEmptyIfNotNull(reverseAttributeName, "Reverse attribute name");
     }
 

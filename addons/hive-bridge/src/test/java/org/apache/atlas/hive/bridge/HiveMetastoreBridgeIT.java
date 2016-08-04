@@ -52,7 +52,7 @@ public class HiveMetastoreBridgeIT extends HiveITBase {
         assertEquals(outputs.size(), 1);
         assertEquals(outputs.get(0).getId()._getId(), tableId);
 
-        //Now import using import tool - should be no-op
+        //Now import using import tool - should be no-op. This also tests update since table exists
         hiveMetaStoreBridge.importTable(atlasClient.getEntity(dbId), DEFAULT_DB, tableName, true);
         String tableId2 = assertTableIsRegistered(DEFAULT_DB, tableName);
         assertEquals(tableId2, tableId);

@@ -235,9 +235,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
     private void createIndexForFields(TitanManagement management, IDataType dataType, Map<String, AttributeInfo> fields) {
         for (AttributeInfo field : fields.values()) {
-            if (field.isIndexable) {
-                createIndexForAttribute(management, dataType.getName(), field);
-            }
+            createIndexForAttribute(management, dataType.getName(), field);
         }
     }
 
@@ -247,12 +245,12 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         case PRIMITIVE:
             Cardinality cardinality = getCardinality(field.multiplicity);
             createIndexes(management, propertyName, getPrimitiveClass(field.dataType()), field.isUnique,
-                    cardinality, false, field.indexExactMatch);
+                    cardinality, false, field.isIndexable);
             break;
 
         case ENUM:
             cardinality = getCardinality(field.multiplicity);
-            createIndexes(management, propertyName, String.class, field.isUnique, cardinality, false, field.indexExactMatch);
+            createIndexes(management, propertyName, String.class, field.isUnique, cardinality, false, field.isIndexable);
             break;
 
         case ARRAY:
