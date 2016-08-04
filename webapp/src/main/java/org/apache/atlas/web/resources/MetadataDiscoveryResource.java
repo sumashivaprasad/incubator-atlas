@@ -102,7 +102,7 @@ public class MetadataDiscoveryResource {
                 dslQueryFailed = true;
             }
         } catch (Exception e) {
-            LOG.info("Error while running DSL. Switching to fulltext for query {}", query, e);
+            LOG.debug("Error while running DSL. Switching to fulltext for query {}", query, e);
             dslQueryFailed = true;
         }
 
