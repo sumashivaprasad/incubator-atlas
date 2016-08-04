@@ -113,7 +113,7 @@ public class HBaseBasedAuditRepository implements Service, EntityAuditRepository
                 addColumn(put, COLUMN_ACTION, event.getAction());
                 addColumn(put, COLUMN_USER, event.getUser());
                 addColumn(put, COLUMN_DETAIL, event.getDetails());
-                if ( ApplicationProperties.get().getBoolean(CONFIG_PERSIST_ENTITY_DEFINITION) ) {
+                if ( ApplicationProperties.get().getBoolean(CONFIG_PERSIST_ENTITY_DEFINITION, false) ) {
                     addColumn(put, COLUMN_DEFINITION, event.getEntityDefinitionString());
                 }
                 puts.add(put);
@@ -189,7 +189,7 @@ public class HBaseBasedAuditRepository implements Service, EntityAuditRepository
                 event.setUser(getResultString(result, COLUMN_USER));
                 event.setAction(EntityAuditEvent.EntityAuditAction.valueOf(getResultString(result, COLUMN_ACTION)));
                 event.setDetails(getResultString(result, COLUMN_DETAIL));
-                if ( ApplicationProperties.get().getBoolean(CONFIG_PERSIST_ENTITY_DEFINITION)) {
+                if ( ApplicationProperties.get().getBoolean(CONFIG_PERSIST_ENTITY_DEFINITION, false)) {
                     String colDef = getResultString(result, COLUMN_DEFINITION);
                     if (colDef != null) {
                         event.setEntityDefinition(colDef);
