@@ -107,7 +107,7 @@ public class MetadataDiscoveryResource {
         }
 
         if ( dslQueryFailed ) {
-            return searchUsingFullText(query, limit, offset);
+            response = searchUsingFullText(query, limit, offset);
         }
         AtlasPerfTracer.log(perf);
         return response;
