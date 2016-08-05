@@ -234,13 +234,14 @@ public class HiveMetaStoreBridge {
     private String getCreateTableString(Table table, String location){
         String colString = "";
         List<FieldSchema> colList = table.getAllCols();
-        for(FieldSchema col:colList){
-            colString += col.getName()  + " " + col.getType() + ",";
-        }
-
-        if ( colList.size() > 0 ) {
-            colString = colString.substring(0, colString.length() - 1);
-            colString = "(" + colString + ")";
+        if ( colList != null) {
+            for (FieldSchema col : colList) {
+                colString += col.getName() + " " + col.getType() + ",";
+            }
+            if (colList.size() > 0) {
+                colString = colString.substring(0, colString.length() - 1);
+                colString = "(" + colString + ")";
+            }
         }
         String query = "create external table " + table.getTableName() +  colString +
                 " location '" + location + "'";
