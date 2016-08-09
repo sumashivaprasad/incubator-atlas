@@ -115,12 +115,12 @@ public class QuickStart {
         return baseUrl;
     }
 
-    static final String DATABASE_TYPE = "DB";
-    static final String COLUMN_TYPE = "Column";
-    static final String TABLE_TYPE = "Table";
-    static final String VIEW_TYPE = "View";
-    static final String LOAD_PROCESS_TYPE = "LoadProcess";
-    static final String STORAGE_DESC_TYPE = "StorageDesc";
+    public static final String DATABASE_TYPE = "DB";
+    public static final String COLUMN_TYPE = "Column";
+    public static final String TABLE_TYPE = "Table";
+    public static final String VIEW_TYPE = "View";
+    public static final String LOAD_PROCESS_TYPE = "LoadProcess";
+    public static final String STORAGE_DESC_TYPE = "StorageDesc";
 
     private static final String[] TYPES =
             {DATABASE_TYPE, TABLE_TYPE, STORAGE_DESC_TYPE, COLUMN_TYPE, LOAD_PROCESS_TYPE, VIEW_TYPE, "JdbcAccess",

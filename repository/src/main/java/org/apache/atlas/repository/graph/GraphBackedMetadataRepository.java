@@ -274,6 +274,8 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
                 // update the traits in entity once trait removal is successful
                 traitNames.remove(traitNameToBeDeleted);
                 updateTraits(instanceVertex, traitNames);
+            } else {
+                throw new TraitNotFoundException("Could not find edge to delete trait");
             }
         } catch (Exception e) {
             throw new RepositoryException(e);

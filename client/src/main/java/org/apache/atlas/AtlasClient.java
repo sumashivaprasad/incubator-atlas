@@ -822,6 +822,26 @@ public class AtlasClient {
     }
 
     /**
+     * Delete trait associated with an entity
+     *
+     * @param guid guid
+     * @param traitName Name of the trait to be deleted
+     *
+     */
+    public void deleteTrait(String guid, String traitName) throws AtlasServiceException {
+        LOG.debug("Deleting trait from entity with id {} {}", guid, traitName);
+        API api = API.DELETE_TRAITS;
+        WebResource resource = getResource(api);
+        resource = resource.path(guid);
+        resource = resource.path(URI_TRAITS);
+        resource = resource.path(traitName);
+        JSONObject jsonResponse = callAPIWithResource(API.DELETE_ENTITIES, resource, null);
+        EntityResult results = extractEntityResult(jsonResponse);
+        LOG.debug("Delete entities returned results: {}", results);
+    }
+
+
+    /**
      * Supports Partial updates
      * Updates properties set in the definition for the entity corresponding to guid
      * @param entityType Type of the entity being updated

@@ -25,18 +25,25 @@ import com.tinkerpop.blueprints.Compare;
 import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Predicate;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.TestUtils;
+import org.apache.atlas.discovery.DiscoveryService;
+import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
+import org.apache.atlas.query.QueryParams;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -49,6 +56,11 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
+
+import static org.testng.Assert.assertNotEquals;
 
 @Test
 @Guice(modules = RepositoryMetadataModule.class)
@@ -65,6 +77,9 @@ public class GraphRepoMapperScaleTest {
 
     @Inject
     private GraphBackedSearchIndexer searchIndexer;
+
+    @Inject
+    private GraphBackedDiscoveryService discoveryService;
 
     private TypeSystem typeSystem = TypeSystem.getInstance();
 
@@ -234,5 +249,105 @@ public class GraphRepoMapperScaleTest {
         ClassType tableType = typeSystem.getDataType(ClassType.class, TestUtils.TABLE_TYPE);
         return tableType.convert(tableInstance, Multiplicity.REQUIRED);
     }
+
+    @Test(dependsOnMethods = "testSubmitEntity")
+    public void testConcurrentTransactions() throws Exception {
+        //http://stackoverflow.com/questions/21797774/titan-refreshing-the-graph-after-adding-new-vertex-or-edges
+        FutureTask<Integer> addTask = new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                try {
+                    addTraitToEntities();
+                } catch (AtlasException e) {
+                    Assert.fail("Add trait failed with exception ", e);
+                    return 1;
+                }
+
+                return 0;
+            }
+        });
+
+        FutureTask<Integer> deleteTask = new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                try {
+                    deleteTraitFromEntities();
+                } catch(AtlasException e) {
+                    Assert.fail("Delete trait failed with exception ", e);
+                    return 2;
+                }
+
+                return 0;
+            }
+        });
+
+        FutureTask<Integer> searchTask = new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                try {
+                    performSearch();
+                    return 0;
+                } catch (AtlasException e) {
+                    Assert.fail("Add trait failed with exception ", e);
+                    return 1;
+                }
+            }
+        });
+        Thread traitMutationThread = new Thread(addTask);
+        Thread traitDeletionThread = new Thread(deleteTask);
+        Thread dslReadThread = new Thread(searchTask);
+
+        System.out.println("Started running concurrency tests");
+        traitMutationThread.start();
+        dslReadThread.start();
+
+        Thread.sleep(1000);
+        traitDeletionThread.start();
+
+        //Wait for test to end
+        traitMutationThread.join();
+        traitDeletionThread.join();
+        dslReadThread.join();
+
+        Integer mutationStatus = addTask.get();
+        if (mutationStatus > 0) {
+            Assert.fail("Add trait failed");
+        }
+
+        Integer deletionStatus = deleteTask.get();
+        if (deletionStatus > 0) {
+            Assert.fail("Delete trait failed");
+        }
+
+        Integer readStatus = searchTask.get();
+        if (readStatus > 0) {
+            Assert.fail("Search failed");
+        }
+    }
+
+    void addTraitToEntities() throws AtlasException {
+        for (int index = 0; index < 1000; index++) {
+            final ITypedReferenceableInstance entityDefinition = repositoryService.getEntityDefinition(TestUtils.TABLE_TYPE, AtlasClient.NAME, TABLE_NAME + "-" + index);
+            String entityGuid = entityDefinition.getId()._getId();
+            TraitType traitType = typeSystem.getDataType(TraitType.class, TestUtils.PII);
+            ITypedStruct traitInstance = traitType.createInstance();
+
+            repositoryService.addTrait(entityGuid, traitInstance);
+        }
+    }
+
+    void performSearch() throws AtlasException {
+        String searchResult = discoveryService.searchByDSL(TestUtils.TABLE_TYPE, new QueryParams(500, 0));
+        Assert.assertNotNull(searchResult);
+    }
+
+    void deleteTraitFromEntities() throws AtlasException {
+        for (int index = 0; index < 1000; index++) {
+            final ITypedReferenceableInstance entityDefinition = repositoryService.getEntityDefinition(TestUtils.TABLE_TYPE, AtlasClient.NAME, TABLE_NAME + "-" + index);
+            String entityGuid = entityDefinition.getId()._getId();
+            repositoryService.deleteTrait(entityGuid, TestUtils.PII);
+        }
+    }
+
 }
 
