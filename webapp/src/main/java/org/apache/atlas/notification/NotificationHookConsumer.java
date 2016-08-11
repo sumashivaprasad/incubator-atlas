@@ -24,12 +24,14 @@ import com.google.inject.Singleton;
 import kafka.consumer.ConsumerTimeoutException;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.LocalAtlasClient;
 import org.apache.atlas.ha.HAConfiguration;
 import org.apache.atlas.listener.ActiveStateChangeHandler;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.service.Service;
 import org.apache.commons.configuration.Configuration;
+import org.codehaus.jettison.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +48,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Singleton
 public class NotificationHookConsumer implements Service, ActiveStateChangeHandler {
     private static final Logger LOG = LoggerFactory.getLogger(NotificationHookConsumer.class);
+    private static final Logger FAILED_LOG = LoggerFactory.getLogger("FAILED");
+
     private static final String THREADNAME_PREFIX = NotificationHookConsumer.class.getSimpleName();
 
     public static final String CONSUMER_THREADS_PROPERTY = "atlas.notification.hook.numthreads";
+    public static final String CONSUMER_RETRIES_PROPERTY = "atlas.notification.hook.maxretries";
     public static final int SERVER_READY_WAIT_TIME_MS = 1000;
     private final LocalAtlasClient atlasClient;
 
@@ -69,8 +74,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
         startInternal(configuration, null);
     }
 
-    void startInternal(Configuration configuration,
-                       ExecutorService executorService) {
+    void startInternal(Configuration configuration, ExecutorService executorService) {
         this.applicationProperties = configuration;
         if (consumers == null) {
             consumers = new ArrayList<>();
@@ -82,6 +86,10 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
             LOG.info("HA is disabled, starting consumers inline.");
             startConsumers(executorService);
         }
+    }
+
+    private int getNumberOfRetries() throws AtlasException {
+        return ApplicationProperties.get().getInt(CONSUMER_RETRIES_PROPERTY, 3);
     }
 
     private void startConsumers(ExecutorService executorService) {
@@ -107,7 +115,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
         try {
             if (executors != null) {
                 stopConsumerThreads();
-                executors.shutdownNow();
+                executors.shutdown();
                 if (!executors.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
                     LOG.error("Timed out waiting for consumer threads to shut down, exiting uncleanly");
                 }
@@ -184,7 +192,8 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
             while (shouldRun.get()) {
                 try {
                     if (hasNext()) {
-                        handleMessage(consumer.next());
+                        HookNotification.HookNotificationMessage message = consumer.next();
+                        handleMessage(message);
                     }
                 } catch (Throwable t) {
                     LOG.warn("Failure in NotificationHookConsumer", t);
@@ -193,44 +202,53 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
         }
 
         @VisibleForTesting
-        void handleMessage(HookNotification.HookNotificationMessage message) {
-            atlasClient.setUser(message.getUser());
-            try {
-                switch (message.getType()) {
-                case ENTITY_CREATE:
-                    HookNotification.EntityCreateRequest createRequest =
+        void handleMessage(HookNotification.HookNotificationMessage message) throws
+            AtlasServiceException, AtlasException {
+            int numRetries = 0;
+            for (; numRetries < getNumberOfRetries(); numRetries++) {
+                LOG.debug("Running attempt {}", numRetries);
+                try {
+                    atlasClient.setUser(message.getUser());
+                    switch (message.getType()) {
+                    case ENTITY_CREATE:
+                        HookNotification.EntityCreateRequest createRequest =
                             (HookNotification.EntityCreateRequest) message;
-                    atlasClient.createEntity(createRequest.getEntities());
-                    break;
+                        atlasClient.createEntity(createRequest.getEntities());
+                        break;
 
-                case ENTITY_PARTIAL_UPDATE:
-                    HookNotification.EntityPartialUpdateRequest partialUpdateRequest =
+                    case ENTITY_PARTIAL_UPDATE:
+                        HookNotification.EntityPartialUpdateRequest partialUpdateRequest =
                             (HookNotification.EntityPartialUpdateRequest) message;
-                    atlasClient.updateEntity(partialUpdateRequest.getTypeName(),
+                        atlasClient.updateEntity(partialUpdateRequest.getTypeName(),
                             partialUpdateRequest.getAttribute(),
                             partialUpdateRequest.getAttributeValue(), partialUpdateRequest.getEntity());
-                    break;
+                        break;
 
-                case ENTITY_DELETE:
-                    HookNotification.EntityDeleteRequest deleteRequest =
-                        (HookNotification.EntityDeleteRequest) message;
-                    atlasClient.deleteEntity(deleteRequest.getTypeName(),
-                        deleteRequest.getAttribute(),
-                        deleteRequest.getAttributeValue());
-                    break;
+                    case ENTITY_DELETE:
+                        HookNotification.EntityDeleteRequest deleteRequest =
+                            (HookNotification.EntityDeleteRequest) message;
+                        atlasClient.deleteEntity(deleteRequest.getTypeName(),
+                            deleteRequest.getAttribute(),
+                            deleteRequest.getAttributeValue());
+                        break;
 
-                case ENTITY_FULL_UPDATE:
-                    HookNotification.EntityUpdateRequest updateRequest =
+                    case ENTITY_FULL_UPDATE:
+                        HookNotification.EntityUpdateRequest updateRequest =
                             (HookNotification.EntityUpdateRequest) message;
-                    atlasClient.updateEntities(updateRequest.getEntities());
-                    break;
+                        atlasClient.updateEntities(updateRequest.getEntities());
+                        break;
 
-                default:
-                    throw new IllegalStateException("Unhandled exception!");
+                    default:
+                        throw new IllegalStateException("Unhandled exception!");
+                    }
+
+                    break;
+                } catch (Throwable e) {
+                    LOG.warn("Error handling message {}", message, e);
+                    if (numRetries >= (getNumberOfRetries() - 1)) {
+                        FAILED_LOG.info(AbstractNotification.getMessageJson(message));
+                    }
                 }
-            } catch (Exception e) {
-                //todo handle failures
-                LOG.warn("Error handling message {}", message, e);
             }
             consumer.commit();
         }

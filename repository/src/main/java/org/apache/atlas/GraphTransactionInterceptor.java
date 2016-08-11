@@ -39,6 +39,7 @@ public class GraphTransactionInterceptor implements MethodInterceptor {
         }
 
         try {
+            titanGraph.rollback();
             Object response = invocation.proceed();
             titanGraph.commit();
             LOG.debug("graph commit");
