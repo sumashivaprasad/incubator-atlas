@@ -192,8 +192,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
             while (shouldRun.get()) {
                 try {
                     if (hasNext()) {
-                        HookNotification.HookNotificationMessage message = consumer.next();
-                        handleMessage(message);
+                        handleMessage(consumer.next());
                     }
                 } catch (Throwable t) {
                     LOG.warn("Failure in NotificationHookConsumer", t);
@@ -245,7 +244,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
                     break;
                 } catch (Throwable e) {
                     LOG.warn("Error handling message {}", message, e);
-                    if (numRetries >= (getNumberOfRetries() - 1)) {
+                    if (numRetries == (getNumberOfRetries() - 1)) {
                         FAILED_LOG.info(AbstractNotification.getMessageJson(message));
                     }
                 }
