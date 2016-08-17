@@ -177,15 +177,15 @@ public class GraphBackedMetadataRepositoryTest {
 
         boolean validated1 = assertEdge(id1);
         boolean validated2 = assertEdge(id2);
-        assertNotEquals(validated1, validated2);
+        assertEquals(validated1, validated2);
     }
 
     private boolean assertEdge(String id) throws Exception {
         TitanGraph graph = graphProvider.get();
         Vertex vertex = graph.query().has(Constants.GUID_PROPERTY_KEY, id).vertices().iterator().next();
         Iterable<Edge> edges =
-                vertex.getEdges(Direction.OUT, TestUtils.DATABASE_TYPE + "." + TestUtils.PII);
-        if(!edges.iterator().hasNext()) {
+                vertex.getEdges(Direction.OUT, TestUtils.PII);
+        if (!edges.iterator().hasNext()) {
             repositoryService.deleteTrait(id, TestUtils.PII);
             List<String> traits = repositoryService.getTraitNames(id);
             assertTrue(traits.isEmpty());
@@ -237,7 +237,7 @@ public class GraphBackedMetadataRepositoryTest {
     public void testGetTraitLabel() throws Exception {
         Assert.assertEquals(
                 repositoryService.getTraitLabel(typeSystem.getDataType(ClassType.class, TestUtils.TABLE_TYPE),
-                        TestUtils.CLASSIFICATION), TestUtils.TABLE_TYPE + "." + TestUtils.CLASSIFICATION);
+                        TestUtils.CLASSIFICATION), TestUtils.CLASSIFICATION);
     }
 
     @Test
