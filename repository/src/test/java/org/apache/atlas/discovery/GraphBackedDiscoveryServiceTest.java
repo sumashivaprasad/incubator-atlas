@@ -163,7 +163,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
         assertNotNull(rows);
         assertEquals(rows.length(), 1);
 
-        dslQuery = "Department where " + Constants.CREATION_TIMESTAMP_PROPERTY_KEY + " < " + "\"2016-11-01T02:35:58.440Z\"";
+        dslQuery = "Department where " + Constants.CREATION_TIMESTAMP_PROPERTY_KEY + " > " + "\"2011-11-01T02:35:58.440Z\"";
         jsonResults = searchByDSL(dslQuery);
         assertNotNull(jsonResults);
 
@@ -175,7 +175,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
         assertEquals(rows.length(), 1);
 
 
-        dslQuery = "Department where " + Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY + " < " + "\"2020-11-01T02:35:58.440Z\"";
+        dslQuery = "Department where " + Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY + " > " + "\"2011-11-01T02:35:58.440Z\"";
         jsonResults = searchByDSL(dslQuery);
         assertNotNull(jsonResults);
 
