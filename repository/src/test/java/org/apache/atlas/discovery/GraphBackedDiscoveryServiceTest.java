@@ -162,6 +162,30 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
         rows = results.getJSONArray("rows");
         assertNotNull(rows);
         assertEquals(rows.length(), 1);
+
+        dslQuery = "Department where " + Constants.CREATION_TIMESTAMP_PROPERTY_KEY + " < " + "\"2016-11-01T02:35:58.440Z\"";
+        jsonResults = searchByDSL(dslQuery);
+        assertNotNull(jsonResults);
+
+        results = new JSONObject(jsonResults);
+        assertEquals(results.length(), 3);
+
+        rows = results.getJSONArray("rows");
+        assertNotNull(rows);
+        assertEquals(rows.length(), 1);
+
+
+        dslQuery = "Department where " + Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY + " < " + "\"2020-11-01T02:35:58.440Z\"";
+        jsonResults = searchByDSL(dslQuery);
+        assertNotNull(jsonResults);
+
+        results = new JSONObject(jsonResults);
+        assertEquals(results.length(), 3);
+
+        rows = results.getJSONArray("rows");
+        assertNotNull(rows);
+        assertEquals(rows.length(), 1);
+
     }
 
     @Test
@@ -240,7 +264,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
             assertNotNull(object);
             Long timestampAsLong = Long.valueOf((String)object);
             Assert.assertTrue(timestampAsLong > 1420070400000L);
-            object = vertexProps.get(Constants.TIMESTAMP_PROPERTY_KEY);
+            object = vertexProps.get(Constants.CREATION_TIMESTAMP_PROPERTY_KEY);
             assertNotNull(object);
         }
     }

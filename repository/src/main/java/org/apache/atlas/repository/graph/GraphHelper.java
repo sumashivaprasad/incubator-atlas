@@ -149,7 +149,7 @@ public final class GraphHelper {
         setProperty(vertexWithoutIdentity, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
 
         // add timestamp information
-        setProperty(vertexWithoutIdentity, Constants.TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
+        setProperty(vertexWithoutIdentity, Constants.CREATION_TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
         setProperty(vertexWithoutIdentity, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY,
                 RequestContext.get().getRequestTime());
 
@@ -161,7 +161,7 @@ public final class GraphHelper {
         Edge edge = titanGraph.addEdge(null, fromVertex, toVertex, edgeLabel);
 
         setProperty(edge, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
-        setProperty(edge, Constants.TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
+        setProperty(edge, Constants.CREATION_TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
         setProperty(edge, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
 
         LOG.debug("Added {}", string(edge));
@@ -734,9 +734,9 @@ public final class GraphHelper {
         case Constants.GUID_PROPERTY_KEY:
             return TypesUtil.newAttributeInfo(field, DataTypes.STRING_TYPE);
 
-        case Constants.TIMESTAMP_PROPERTY_KEY:
+        case Constants.CREATION_TIMESTAMP_PROPERTY_KEY:
         case Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY:
-            return TypesUtil.newAttributeInfo(field, DataTypes.LONG_TYPE);
+            return TypesUtil.newAttributeInfo(field, DataTypes.DATE_TYPE);
         }
         return null;
     }

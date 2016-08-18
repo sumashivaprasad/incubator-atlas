@@ -104,7 +104,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
                     Cardinality.SINGLE, true, true);
 
             // create a composite index for entity state
-            createIndexes(management, Constants.TIMESTAMP_PROPERTY_KEY, Long.class, false, Cardinality.SINGLE, true, true);
+            createIndexes(management, Constants.CREATION_TIMESTAMP_PROPERTY_KEY, Long.class, false, Cardinality.SINGLE, true, true);
 
             // create a mixed index for entity state. Set systemProperty flag deliberately to false
             // so that it doesnt create a composite index which has issues with

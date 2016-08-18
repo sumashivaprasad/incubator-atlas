@@ -118,8 +118,8 @@ public class DefaultPropertyMapper implements PropertyMapper {
         m_qualifiedToCleanMap.put(Constants.GUID_PROPERTY_KEY, "id");
         m_cleanToQualifiedMap.put("id", Constants.GUID_PROPERTY_KEY);
 
-        m_qualifiedToCleanMap.put(Constants.TIMESTAMP_PROPERTY_KEY, "creation_time");
-        m_cleanToQualifiedMap.put("creation_time", Constants.TIMESTAMP_PROPERTY_KEY);
+        m_qualifiedToCleanMap.put(Constants.CREATION_TIMESTAMP_PROPERTY_KEY, "creation_time");
+        m_cleanToQualifiedMap.put("creation_time", Constants.CREATION_TIMESTAMP_PROPERTY_KEY);
 
         m_qualifiedToCleanMap.put(Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, "modified_time");
         m_cleanToQualifiedMap.put("modified_time", Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY);

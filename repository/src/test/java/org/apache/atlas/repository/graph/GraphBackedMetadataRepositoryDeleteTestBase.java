@@ -433,7 +433,7 @@ public abstract class GraphBackedMetadataRepositoryDeleteTestBase {
         ITypedReferenceableInstance max = repositoryService.getEntityDefinition(nameGuidMap.get("Max"));
         String maxGuid = max.getId()._getId();
         Vertex vertex = GraphHelper.getInstance().getVertexForGUID(maxGuid);
-        Long creationTimestamp = vertex.getProperty(Constants.TIMESTAMP_PROPERTY_KEY);
+        Long creationTimestamp = vertex.getProperty(Constants.CREATION_TIMESTAMP_PROPERTY_KEY);
         Assert.assertNotNull(creationTimestamp);
 
         Long modificationTimestampPreUpdate = vertex.getProperty(Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY);
