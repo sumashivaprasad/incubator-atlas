@@ -15,45 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.atlas.typesystem.exception;
 
-package org.apache.atlas.falcon.event;
+import org.apache.atlas.AtlasException;
 
-import org.apache.falcon.entity.v0.Entity;
-
-import java.util.Date;
-
-/**
- * Falcon event to interface with Atlas Service.
- */
-public class FalconEvent {
-    protected String user;
-    protected OPERATION operation;
-    protected Entity entity;
-
-    public FalconEvent(String doAsUser, OPERATION falconOperation, Entity entity) {
-        this.user = doAsUser;
-        this.operation = falconOperation;
-        this.entity = entity;
+public class SchemaNotFoundException extends AtlasException {
+    public SchemaNotFoundException() {
     }
 
-    public enum OPERATION {
-        ADD_CLUSTER,
-        UPDATE_CLUSTER,
-        ADD_FEED,
-        UPDATE_FEED,
-        ADD_PROCESS,
-        UPDATE_PROCESS,
+    public SchemaNotFoundException(String message) {
+        super(message);
     }
 
-    public String getUser() {
-        return user;
+    public SchemaNotFoundException(String message, Throwable cause) {
+        super(message, cause);
     }
 
-    public OPERATION getOperation() {
-        return operation;
+    public SchemaNotFoundException(Throwable cause) {
+        super(cause);
     }
 
-    public Entity getEntity() {
-        return entity;
+    public SchemaNotFoundException(String message, Throwable cause, boolean enableSuppression,
+        boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }
