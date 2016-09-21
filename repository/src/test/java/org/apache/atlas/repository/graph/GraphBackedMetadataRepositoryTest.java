@@ -27,6 +27,8 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
@@ -252,8 +254,10 @@ public class GraphBackedMetadataRepositoryTest {
         databaseInstance.set("created", new Date(TestUtils.TEST_DATE_IN_LONG));
 
         databaseInstance.set("namespace", "colo:cluster:hive:db");
-        databaseInstance.set("cluster", "cluster-1");
+        databaseInstance.set(AtlasClient.CLUSTER_ATTRIBUTE,
+            new Referenceable(AtlasClient.CLUSTER_TYPE) {{ set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, "cluster1");}});
         databaseInstance.set("colo", "colo-1");
+
         System.out.println("databaseInstance = " + databaseInstance);
 
         ClassType dbType = typeSystem.getDataType(ClassType.class, TestUtils.DATABASE_TYPE);

@@ -236,6 +236,10 @@ public class DefaultMetadataServiceTest {
         String responseJson = discoveryService.searchByDSL(query, new QueryParams(1, 0));
         JSONObject response = new JSONObject(responseJson);
         assertEquals(response.getJSONArray("rows").length(), 1);
+
+//        String json = "{\"enumTypes\": [], \"structTypes\": [], \"traitTypes\": [{\"superTypes\": [], \"hierarchicalMetaTypeName\": \"org.apache.atlas.typesystem.types.TraitType\",\"typeName\": \"PII\",\"typeDescription\": \"Personally identifiable information\",\"attributeDefinitions\": [] }],\"classTypes\": []}";
+//        metadataService.createType(json);
+
     }
 
     //equals excluding the id

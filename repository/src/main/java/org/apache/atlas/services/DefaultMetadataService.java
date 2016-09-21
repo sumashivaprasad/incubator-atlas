@@ -217,6 +217,14 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
                 new AttributeDefinition(PROCESS_ATTRIBUTE_OUTPUTS, DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
                     Multiplicity.OPTIONAL, false, null));
         createType(processType);
+
+        HierarchicalTypeDefinition<ClassType> clusterType = TypesUtil
+            .createClassTypeDef(AtlasClient.CLUSTER_TYPE,
+                ImmutableSet.of(AtlasClient.INFRASTRUCTURE_SUPER_TYPE),
+            new AttributeDefinition(AtlasClient.PREVIOUS_NAMES, DataTypes.arrayTypeName(DataTypes.STRING_TYPE), Multiplicity.OPTIONAL, false, false, true, null),
+            TypesUtil.createOptionalAttrDef(AtlasClient.DESCRIPTION, DataTypes.STRING_TYPE),
+            new AttributeDefinition(AtlasClient.OWNER, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, false, true, null));
+        createType(clusterType);
     }
 
     private void createType(HierarchicalTypeDefinition<ClassType> type) throws AtlasException {

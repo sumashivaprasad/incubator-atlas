@@ -119,6 +119,10 @@ public class AtlasClient {
     public static final String INFRASTRUCTURE_SUPER_TYPE = "Infrastructure";
     public static final String DATA_SET_SUPER_TYPE = "DataSet";
     public static final String PROCESS_SUPER_TYPE = "Process";
+    public static final String CLUSTER_TYPE = "Cluster";
+    public static final String CLUSTER_ATTRIBUTE = "cluster";
+    public static final String ALIASES = "aliases";
+    public static final String PREVIOUS_NAMES = "previousNames";
     public static final String PROCESS_ATTRIBUTE_INPUTS = "inputs";
     public static final String PROCESS_ATTRIBUTE_OUTPUTS = "outputs";
 
@@ -138,6 +142,7 @@ public class AtlasClient {
     // Setting the default value based on testing failovers while client code like quickstart is running.
     // With number of retries, this gives a total time of about 20s for the server to start.
     public static final int DEFAULT_SLEEP_BETWEEN_RETRIES_MS = 5000;
+
 
     private WebResource service;
     private AtlasClientContext atlasClientContext;

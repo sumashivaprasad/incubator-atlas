@@ -74,6 +74,8 @@ public class HiveMetaStoreBridge {
     public static final String TEMP_TABLE_PREFIX = "_temp-";
 
     private final String clusterName;
+    private final Referenceable clusterRef;
+
     public static final long MILLIS_CONVERT_FACTOR = 1000;
 
     public static final String ATLAS_ENDPOINT = "atlas.rest.address";
@@ -87,10 +89,15 @@ public class HiveMetaStoreBridge {
         this.clusterName = clusterName;
         this.hiveClient = hiveClient;
         this.atlasClient = atlasClient;
+        this.clusterRef = createClusterReference(clusterName);
     }
 
     public String getClusterName() {
         return clusterName;
+    }
+
+    public Referenceable getClusterReference() {
+        return clusterRef;
     }
 
     /**
@@ -136,7 +143,7 @@ public class HiveMetaStoreBridge {
      * @throws HiveException
      */
     public Referenceable createDBInstance(Database hiveDB) throws HiveException {
-        return createOrUpdateDBInstance(hiveDB, null);
+        return createOrUpdateDBInstance(hiveDB, null, clusterRef);
     }
 
     /**
@@ -155,23 +162,31 @@ public class HiveMetaStoreBridge {
                 dbRef = registerInstance(dbRef);
             } else {
                 LOG.info("Database {} is already registered with id {}. Updating it.", databaseName, dbRef.getId().id);
-                dbRef = createOrUpdateDBInstance(db, dbRef);
+                dbRef = createOrUpdateDBInstance(db, dbRef, clusterRef);
                 updateInstance(dbRef);
             }
         }
         return dbRef;
     }
 
-    private Referenceable createOrUpdateDBInstance(Database hiveDB, Referenceable dbRef) {
+    private Referenceable createClusterReference(String clusterName) {
+        Referenceable clusterRef = new Referenceable(AtlasClient.CLUSTER_TYPE);
+        clusterRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, clusterName);
+        clusterRef.set(AtlasClient.NAME, clusterName);
+        return clusterRef;
+    }
+
+    private Referenceable createOrUpdateDBInstance(Database hiveDB, Referenceable dbRef, Referenceable clusterRef) {
         LOG.info("Importing objects from databaseName : " + hiveDB.getName());
 
         if (dbRef == null) {
             dbRef = new Referenceable(HiveDataTypes.HIVE_DB.getName());
         }
+
         String dbName = hiveDB.getName().toLowerCase();
         dbRef.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, getDBQualifiedName(clusterName, dbName));
         dbRef.set(AtlasClient.NAME, dbName);
-        dbRef.set(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, clusterName);
+        dbRef.set(AtlasConstants.CLUSTER_ATTRIBUTE, clusterRef);
         dbRef.set(DESCRIPTION_ATTR, hiveDB.getDescription());
         dbRef.set(HiveDataModelGenerator.LOCATION, hiveDB.getLocationUri());
         dbRef.set(HiveDataModelGenerator.PARAMETERS, hiveDB.getParameters());

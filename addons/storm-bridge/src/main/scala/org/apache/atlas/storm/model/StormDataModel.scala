@@ -18,7 +18,7 @@
 
 package org.apache.atlas.storm.model
 
-import org.apache.atlas.AtlasClient
+import org.apache.atlas.{AtlasConstants, AtlasClient}
 import org.apache.atlas.typesystem.TypesDef
 import org.apache.atlas.typesystem.builders.TypesBuilder
 import org.apache.atlas.typesystem.json.TypesSerialization
@@ -48,7 +48,8 @@ object StormDataModel extends App {
             "startTime" ~ date
             "endTime" ~ date
             "conf" ~ (map(string, string), optional)
-            "clusterName" ~ (string, optional, indexed)
+//            "clusterName" ~ (string, optional, indexed)
+            AtlasConstants.CLUSTER_ATTRIBUTE ~ AtlasClient.CLUSTER_TYPE.name
 
             // Nodes in the Graph
             "nodes" ~ (array(StormDataTypes.STORM_NODE.getName), collection, composite)

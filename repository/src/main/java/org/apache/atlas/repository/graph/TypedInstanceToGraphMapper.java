@@ -22,6 +22,7 @@ import com.thinkaurelius.titan.core.SchemaViolationException;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.repository.Constants;
@@ -603,15 +604,26 @@ public final class TypedInstanceToGraphMapper {
         return graphHelper.getOrCreateEdge(instanceVertex, toVertex, edgeLabel);
     }
 
-    private Vertex getClassVertex(ITypedReferenceableInstance typedReference) throws EntityNotFoundException {
+    private Vertex getClassVertex(ITypedReferenceableInstance typedReference) throws AtlasException {
         Vertex referenceVertex = null;
         Id id = null;
         if (typedReference != null) {
             id = typedReference instanceof Id ? (Id) typedReference : typedReference.getId();
             if (id.isAssigned()) {
                 referenceVertex = graphHelper.getVertexForGUID(id.id);
-            } else {
+            } else if ( idToVertexMap.containsKey(id) ) {
                 referenceVertex = idToVertexMap.get(id);
+            } else {
+                //Get Class Vertex By its unique attribute
+                final ClassType clsType = typeSystem.getDataType(ClassType.class, typedReference.getTypeName());
+//                if (clsType.getAllSuperTypeNames().contains(AtlasClient.REFERENCEABLE_SUPER_TYPE)) {
+//                    referenceVertex = graphHelper.findVertex(
+//                        AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, typedReference.get(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME),
+//                        Constants.ENTITY_TYPE_PROPERTY_KEY, typedReference.getTypeName(),
+//                        Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+//                }
+
+                return graphHelper.getVertexForInstanceByUniqueAttribute(clsType, typedReference);
             }
         }
 
