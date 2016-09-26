@@ -516,6 +516,11 @@ public class DefaultMetadataServiceTest {
     }
 
     @Test
+    public void testSetType() throws Exception {
+
+    }
+
+    @Test
     public void testUpdateEntityAddAndUpdateArrayAttr() throws Exception {
         //Update entity, add new array attribute
         //add array of primitives

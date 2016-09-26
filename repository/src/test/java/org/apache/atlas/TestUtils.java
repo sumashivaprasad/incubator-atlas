@@ -242,14 +242,13 @@ public final class TestUtils {
     public static TypesDef defineHiveTypes() {
         String _description = "_description";
         HierarchicalTypeDefinition<ClassType> superTypeDefinition =
-                createClassTypeDef(AtlasConstants.CL, ImmutableSet.<String>of(),
-                        createOptionalAttrDef("namespace", DataTypes.STRING_TYPE),
-                        createOptionalAttrDef("cluster", DataTypes.STRING_TYPE),
-                        createOptionalAttrDef("colo", DataTypes.STRING_TYPE));
+                createClassTypeDef(AtlasClient.CLUSTER_TYPE, ImmutableSet.<String>of(AtlasClient.INFRASTRUCTURE_SUPER_TYPE),
+                        new AttributeDefinition("aliases", DataTypes.arrayTypeName(DataTypes.STRING_TYPE), Multiplicity.SET, false,
+                            null));
         HierarchicalTypeDefinition<ClassType> databaseTypeDefinition =
                 createClassTypeDef(DATABASE_TYPE, DATABASE_TYPE + _description,ImmutableSet.of(SUPER_TYPE_NAME),
                         TypesUtil.createUniqueRequiredAttrDef(NAME, DataTypes.STRING_TYPE),
-                        createOptionalAttrDef(AtlasConstants.CLUSTER_ATTRIBUTE, AtlasClient.CLUSTER_TYPE),
+                        createOptionalAttrDef(AtlasClient.CLUSTER_ATTRIBUTE, AtlasClient.CLUSTER_TYPE),
                         createOptionalAttrDef("created", DataTypes.DATE_TYPE),
                         createRequiredAttrDef("description", DataTypes.STRING_TYPE));
 
