@@ -156,6 +156,14 @@ public class AtlasMapType extends AtlasType {
         return null;
     }
 
+    public AtlasType getKeyType() {
+        return keyType;
+    }
+
+    public AtlasType getValueType() {
+        return valueType;
+    }
+
     @Override
     public boolean validateValue(Object obj, String objName, List<String> messages) {
         boolean ret = true;

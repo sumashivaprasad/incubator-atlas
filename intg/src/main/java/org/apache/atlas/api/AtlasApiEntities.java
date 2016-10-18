@@ -33,6 +33,8 @@ import org.apache.atlas.model.instance.AtlasObjectId;
 public interface AtlasApiEntities {
     AtlasEntity createEntity(AtlasEntity entity) throws AtlasBaseException;
 
+    AtlasEntities createEntities(AtlasEntities entities) throws AtlasBaseException;
+
     AtlasEntity getEntity(AtlasObjectId objId) throws AtlasBaseException;
 
     AtlasEntity updateEntity(AtlasObjectId objId, AtlasEntity entity) throws AtlasBaseException;

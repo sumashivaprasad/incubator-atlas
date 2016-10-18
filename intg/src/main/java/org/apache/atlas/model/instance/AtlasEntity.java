@@ -239,4 +239,13 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
             super(list, startIndex, pageSize, totalCount, sortType, sortBy);
         }
     }
+
+    public boolean isAssigned() {
+        try {
+            long l = Long.parseLong(guid);
+            return l < 0;
+        } catch (NumberFormatException ne) {
+            return false;
+        }
+    }
 }

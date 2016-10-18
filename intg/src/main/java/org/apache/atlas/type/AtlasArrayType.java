@@ -253,6 +253,10 @@ public class AtlasArrayType extends AtlasType {
         return ret;
     }
 
+    public AtlasType getElementType() {
+        return elementType;
+    }
+
     private boolean isValidElementCount(int count) {
         if (minCount != COUNT_NOT_SET) {
             if (count < minCount) {
