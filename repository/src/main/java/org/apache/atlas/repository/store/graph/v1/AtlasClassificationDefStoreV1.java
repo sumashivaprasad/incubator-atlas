@@ -31,8 +31,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.security.provider.certpath.Vertex;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -347,7 +345,7 @@ public class AtlasClassificationDefStoreV1 implements AtlasClassificationDefStor
         typeDefStore.createSuperTypeEdges(vertex, classificationDef.getSuperTypes());
     }
 
-    private AtlasClassificationDef toClassificationDef(AtlasVertex vertex) {
+    private AtlasClassificationDef toClassificationDef(AtlasVertex vertex) throws AtlasBaseException {
         AtlasClassificationDef ret = null;
 
         if (vertex != null && typeDefStore.isTypeVertex(vertex, TypeCategory.TRAIT)) {
