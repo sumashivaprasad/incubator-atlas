@@ -24,7 +24,9 @@ public interface AtlasEntityStore {
 
     AtlasEntity getEntityByUniqueAttribute(String attribute) throws AtlasBaseException;
 
-    /* Return list of deleted entities ids  */
+     /*
+      * Return list of deleted entities
+      */
     List<String> deleteEntitiesById(List<AtlasEntity> entities) throws AtlasBaseException;
 
     List<String> deleteEntitiesByUniqueAttribute(List<AtlasEntity> entities) throws AtlasBaseException;

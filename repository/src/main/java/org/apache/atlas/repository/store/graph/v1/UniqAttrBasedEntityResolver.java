@@ -14,6 +14,7 @@ import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 
 import javax.inject.Inject;
 import java.util.LinkedHashMap;
@@ -46,7 +47,7 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
     }
 
     @Override
-    public DiscoveredEntities resolveEntityReferences(DiscoveredEntities entities) {
+    public DiscoveredEntities resolveEntityReferences(DiscoveredEntities entities) throws EntityNotFoundException, AtlasBaseException {
         addToUniqueList(entities.getRootEntities());
         addToUniqueList(entities.getUnResolvedReferences());
 
@@ -62,6 +63,7 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
                 }
             }
         }
+        return entities;
     }
 
     private void addToUniqueList(List<AtlasEntity> rootReferences) {

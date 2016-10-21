@@ -39,7 +39,7 @@ import java.util.List;
 /**
  * EntityDef store in v1 format.
  */
-public class AtlasEntityDefStoreV1 implements AtlasEntityDefStore {
+public class  AtlasEntityDefStoreV1 implements AtlasEntityDefStore {
     private static final Logger LOG = LoggerFactory.getLogger(AtlasEntityDefStoreV1.class);
 
     private final AtlasTypeDefGraphStoreV1 typeDefStore;
