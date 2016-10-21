@@ -96,10 +96,6 @@ public class AtlasArrayType extends AtlasType {
         return maxCount;
     }
 
-    public AtlasType getElementType() {
-        return elementType;
-    }
-
     @Override
     public void resolveReferences(AtlasTypeRegistry typeRegistry) throws AtlasBaseException {
         elementType = typeRegistry.getType(elementTypeName);
