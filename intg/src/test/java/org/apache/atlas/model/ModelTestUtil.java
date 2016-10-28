@@ -53,7 +53,7 @@ public final class  ModelTestUtil {
     private static final String PREFIX_STRUCT_DEF         = "testStructDef-";
     private static final String PREFIX_ENTITY_DEF         = "testEntityDef-";
     private static final String PREFIX_CLASSIFICATION_DEF = "testClassificationDef-";
-    private static final String PREFIX_ATTRIBUTE_NAME     = "attr-";
+    public static final String PREFIX_ATTRIBUTE_NAME     = "attr-";
     private static final String PREFIX_STRUCT             = "testStruct-";
     private static final String PREFIX_ENTITY             = "testEntity-";
     private static final String PREFIX_CLASSIFICATION     = "testClassification-";
@@ -443,4 +443,6 @@ public final class  ModelTestUtil {
     private static String getRandomBuiltInType() {
         return ATLAS_BUILTIN_TYPES[ThreadLocalRandom.current().nextInt(0, ATLAS_BUILTIN_TYPES.length)];
     }
+
+    public static AtlasEntityDef newStructDefWithAllTypes
 }
