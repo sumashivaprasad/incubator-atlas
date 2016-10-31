@@ -3,6 +3,7 @@ package org.apache.atlas.web.adapters;
 
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Referenceable;
@@ -13,24 +14,24 @@ import javax.inject.Inject;
 public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter<AtlasEntity, Referenceable> {
 
     protected AtlasTypeRegistry typeRegistry;
-    protected AtlasFormatters registry;
+    protected AtlasFormatConverters registry;
 
     @Inject
-    AtlasEntityToReferenceableConverter(AtlasTypeRegistry typeRegistry, AtlasFormatters registry) {
+    AtlasEntityToReferenceableConverter(AtlasTypeRegistry typeRegistry) {
         this.typeRegistry = typeRegistry;
-        this.registry = registry;
     }
 
     @Inject
-    public void init() throws AtlasBaseException {
-       registry.registerConverter(AtlasType.TypeCategory.ENTITY, this);
+    public void init(AtlasFormatConverters registry) throws AtlasBaseException {
+        this.registry = registry;
+        registry.registerConverter(this);
     }
 
     @Override
     public Referenceable convert(final AtlasEntity source) throws AtlasBaseException {
         Referenceable ref = new Referenceable(source.getTypeName());
 
-        AtlasFormatAdapter structConverter = registry.getConverter(AtlasType.TypeCategory.STRUCT);
+        AtlasFormatAdapter structConverter = registry.getConverter(AtlasStruct.class);
 
         final Struct struct = (Struct) structConverter.convert(source);
 
@@ -38,5 +39,20 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter<A
             ref.set(attrName, struct.get(attrName));
         }
         return ref;
+    }
+
+    @Override
+    public Class getSourceType() {
+        return AtlasEntity.class;
+    }
+
+    @Override
+    public Class getTargetType() {
+        return Referenceable.class;
+    }
+
+    @Override
+    public AtlasType.TypeCategory getTypeCategory() {
+        return AtlasType.TypeCategory.ENTITY;
     }
 }

@@ -17,7 +17,28 @@
  */
 package org.apache.atlas.type;
 
+import com.google.common.collect.ImmutableSet;
+
+import com.sun.tools.internal.xjc.model.Multiplicity;
+
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
+import org.apache.atlas.model.typedef.AtlasClassificationDef;
+import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.model.typedef.AtlasEnumDef;
+import org.apache.atlas.model.typedef.AtlasEnumDef.AtlasEnumElementDef;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef;
+import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef.Cardinality;
+import org.apache.atlas.model.typedef.AtlasTypesDef;
+import org.apache.commons.lang.StringUtils;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_PREFIX;
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_SUFFIX;
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_PREFIX;
@@ -91,5 +112,90 @@ public class AtlasTypeUtil {
             }
         }
 
+    }
+
+    public static AtlasAttributeDef createOptionalAttrDef(String name, AtlasType dataType) {
+        return new AtlasAttributeDef(name, dataType.getTypeName(), true,
+            Cardinality.SINGLE, 0, 1,
+            true, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createOptionalAttrDef(String name, String dataType) {
+        return new AtlasAttributeDef(name, dataType);
+    }
+
+    public static AtlasAttributeDef createRequiredAttrDef(String name, String dataType) {
+        return new AtlasAttributeDef(name, dataType, false,
+            Cardinality.SINGLE, 1, 1,
+            false, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createUniqueRequiredAttrDef(String name, AtlasType dataType) {
+        return new AtlasAttributeDef(name, dataType.getTypeName(), false,
+            Cardinality.SINGLE, 1, 1,
+            true, true,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createUniqueRequiredAttrDef(String name, String typeName) {
+        return new AtlasAttributeDef(name, typeName, false,
+            Cardinality.SINGLE, 1, 1,
+            true, true,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createRequiredAttrDef(String name, AtlasType dataType) {
+        return new AtlasAttributeDef(name, dataType.getTypeName(), false,
+            Cardinality.SINGLE, 1, 1,
+            false, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasEnumDef createEnumTypeDef(String name, String description, AtlasEnumElementDef... enumValues) {
+        return new AtlasEnumDef(name, description, "1.0", Arrays.asList(enumValues));
+    }
+
+    public static AtlasClassificationDef createTraitTypeDef(String name, ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createTraitTypeDef(name, null, superTypes, attrDefs);
+    }
+
+    public static AtlasClassificationDef createTraitTypeDef(String name, String description, ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createTraitTypeDef(name, description, "1.0", superTypes, attrDefs);
+    }
+
+    public static AtlasClassificationDef createTraitTypeDef(String name, String description, String version, ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return new AtlasClassificationDef(name, description, "1.0", Arrays.asList(attrDefs), superTypes);
+    }
+
+    public static AtlasStructDef createStructTypeDef(String name, AtlasAttributeDef... attrDefs) {
+        return createStructTypeDef(name, null, attrDefs);
+    }
+
+    public static AtlasStructDef createStructTypeDef(String name, String description, AtlasAttributeDef... attrDefs) {
+        return new AtlasStructDef(name, description, "1.0", Arrays.asList(attrDefs));
+    }
+
+    public static AtlasEntityDef createClassTypeDef(String name,
+        ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createClassTypeDef(name, null, "1.0", superTypes, attrDefs);
+    }
+
+    public static AtlasEntityDef createClassTypeDef(String name, String description,
+        ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createClassTypeDef(name, description, "1.0", superTypes, attrDefs);
+    }
+
+    public static AtlasEntityDef createClassTypeDef(String name, String description, String version,
+        ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return new AtlasEntityDef(name, description, "1.0", Arrays.asList(attrDefs), superTypes);
+    }
+
+    public static AtlasTypesDef getTypesDef(List<AtlasEnumDef> enums,
+        List<AtlasStructDef> structs,
+        List<AtlasClassificationDef> traits,
+        List<AtlasEntityDef> classes) {
+        return new AtlasTypesDef(enums, structs, traits, classes);
     }
 }

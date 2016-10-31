@@ -443,6 +443,4 @@ public final class  ModelTestUtil {
     private static String getRandomBuiltInType() {
         return ATLAS_BUILTIN_TYPES[ThreadLocalRandom.current().nextInt(0, ATLAS_BUILTIN_TYPES.length)];
     }
-
-    public static AtlasEntityDef newStructDefWithAllTypes
 }

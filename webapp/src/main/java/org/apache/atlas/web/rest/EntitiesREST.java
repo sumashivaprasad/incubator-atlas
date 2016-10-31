@@ -18,7 +18,6 @@
 package org.apache.atlas.web.rest;
 
 import com.google.inject.Inject;
-import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.SearchFilter;
@@ -28,17 +27,13 @@ import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
-import org.apache.atlas.services.DefaultMetadataService;
 import org.apache.atlas.services.MetadataService;
-import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.web.adapters.AtlasFormatAdapter;
-import org.apache.atlas.web.adapters.AtlasFormatters;
-import org.apache.atlas.web.resources.EntityResource;
-import org.apache.atlas.web.resources.TypesResource;
+import org.apache.atlas.web.adapters.AtlasFormatConverters;
 import org.apache.atlas.web.util.Servlets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,18 +43,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.MatrixParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 
 @Path("v2/entities")
@@ -73,7 +63,7 @@ public class EntitiesREST {
     private HttpServletRequest httpServletRequest;
 
     @Inject
-    private AtlasFormatters instanceFormatters;
+    private AtlasFormatConverters instanceFormatters;
 
     @Inject
     private MetadataService metadataService;
@@ -128,7 +118,7 @@ public class EntitiesREST {
     }
 
     private ITypedReferenceableInstance getITypedReferenceable(AtlasEntity entity) throws AtlasBaseException {
-        AtlasFormatAdapter<AtlasEntity, Referenceable> entityFormatter = instanceFormatters.getConverter(AtlasType.TypeCategory.ENTITY);
+        AtlasFormatAdapter<AtlasEntity, Referenceable> entityFormatter = instanceFormatters.getConverter(entity.getClass());
 
         Referenceable ref = entityFormatter.convert(entity);
         try {

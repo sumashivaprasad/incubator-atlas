@@ -4,30 +4,31 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasStruct;
-import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Struct;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Singleton
 public class AtlasStructToStructConverter implements AtlasFormatAdapter<AtlasStruct, Struct> {
 
     protected AtlasTypeRegistry typeRegistry;
-    protected AtlasFormatters registry;
+    protected AtlasFormatConverters registry;
 
     @Inject
-    AtlasStructToStructConverter(AtlasTypeRegistry typeRegistry, AtlasFormatters registry) {
+    AtlasStructToStructConverter(AtlasTypeRegistry typeRegistry) {
         this.typeRegistry = typeRegistry;
-        this.registry = registry;
     }
 
     @Inject
-    public void init() throws AtlasBaseException {
-        registry.registerConverter(AtlasType.TypeCategory.STRUCT, this);
+    public void init(AtlasFormatConverters registry) throws AtlasBaseException {
+        this.registry = registry;
+        registry.registerConverter(this);
     }
 
     @Override
@@ -45,6 +46,21 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter<AtlasStr
 
     }
 
+    @Override
+    public Class getSourceType() {
+        return AtlasStruct.class;
+    }
+
+    @Override
+    public Class getTargetType() {
+        return Struct.class;
+    }
+
+    @Override
+    public AtlasType.TypeCategory getTypeCategory() {
+        return AtlasType.TypeCategory.STRUCT;
+    }
+
     protected Map<String, Object> convertAttributes(final AtlasStruct source) throws AtlasBaseException {
         Map<String, Object> newAttrMap = new HashMap<>();
         final Map<String, Object> attributes = source.getAttributes();
@@ -52,35 +68,15 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter<AtlasStr
         for (String attrName : attributes.keySet()) {
             Object val = attributes.get(attrName);
 
-            if (isPrimitiveType(val)) {
-                newAttrMap.put(attrName, attributes.get(attrName));
+            if ( val != null) {
+                AtlasFormatAdapter converter = registry.getConverter(val.getClass());
+                Object convertedVal = converter.convert(val);
+                newAttrMap.put(attrName, convertedVal);
+            } else {
+                newAttrMap.put(attrName, null);
             }
-
-            String typeName = source.getTypeName();
-            AtlasType attrType = typeRegistry.getType(typeName);
-
-            AtlasFormatAdapter converter = registry.getConverter(attrType.getTypeCategory());
-            Object convertedVal = converter.convert(attributes.get(attrName));
-            newAttrMap.put(attrName, convertedVal);
         }
 
         return newAttrMap;
-    }
-
-    private boolean isPrimitiveType(final Object o) {
-        if (o != null) {
-            if (Number.class.isAssignableFrom(o.getClass())) {
-                return true;
-            }
-
-            if (String.class.isAssignableFrom(o.getClass())) {
-                return true;
-            }
-
-            if (Date.class.isAssignableFrom(o.getClass())) {
-                return true;
-            }
-        }
-        return false;
     }
 }
