@@ -18,7 +18,7 @@
 package org.apache.atlas.web.adapters;
 
 import org.apache.atlas.RepositoryMetadataModule;
-import org.apache.atlas.model.TestUtilsV2;
+import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasStructDef;
