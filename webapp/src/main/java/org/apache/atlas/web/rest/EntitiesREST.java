@@ -43,6 +43,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HttpMethod;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -141,18 +142,6 @@ public class EntitiesREST {
     public EntityMutationResponse update(List<AtlasEntity> entities) throws AtlasBaseException {
         return null;
     }
-
-    /*******
-     * Entity Partial Update - Will allow a subset of attributes to be updated.
-     * Null updates are not possible
-     *******/
-    @POST
-    @Consumes(Servlets.JSON_MEDIA_TYPE)
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse partialUpdate(List<AtlasEntity> entities) throws AtlasBaseException {
-        return null;
-    }
-
 
     @GET
     @Path("/guids")

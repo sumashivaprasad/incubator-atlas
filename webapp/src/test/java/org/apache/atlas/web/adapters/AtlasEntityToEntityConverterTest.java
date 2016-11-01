@@ -20,7 +20,6 @@ package org.apache.atlas.web.adapters;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.model.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
-import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
@@ -30,7 +29,6 @@ import org.apache.atlas.type.AtlasArrayType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Referenceable;
-import org.apache.atlas.typesystem.Struct;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -79,7 +77,7 @@ public class AtlasEntityToEntityConverterTest {
             if (isPrimitiveOrCollectionWithPrimitives(attrType)) {
                 Assert.assertEquals(ref.get(attrDef.getName()), tableEntity.getAttribute(attrDef.getName()));
             } else if (isArrayType(attrType)) {
-                //compareLists(tableEntity)
+//                compareLists(attrType, tableEntity, )
             }
             //TODO - Compare arrays and maps
 
@@ -102,8 +100,6 @@ public class AtlasEntityToEntityConverterTest {
         }
         return false;
     }
-
-
 
 //    boolean compareLists(AtlasArrayType type, List<? extends AtlasStruct> list1, List<? extends Struct> list2) {
 //        for (AtlasStruct l : list1) {

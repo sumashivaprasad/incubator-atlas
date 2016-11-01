@@ -17,19 +17,29 @@
  */
 package org.apache.atlas.web.adapters;
 
-
+import com.google.inject.Inject;
 import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.model.instance.AtlasStruct;
+import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
-import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.Referenceable;
 
-public interface AtlasFormatAdapter<S, T> {
+public class AtlasEntityvsReferenceValidator implements AtlasInstanceValueValidation<AtlasEntity, Referenceable> {
 
-    T convert(S source) throws AtlasBaseException;
+    @Inject
+    public AtlasTypeRegistry typeRegistry;
 
-    Class getSourceType();
+    @Override
+    public void assertIfEquals(final AtlasType type, final AtlasEntity expected, final Referenceable result) throws AtlasBaseException {
 
-    Class getTargetType();
+        AtlasEntityType entityType = (AtlasEntityType) type;
+        for (AtlasStructDef.AtlasAttributeDef attrDef : entityType.getStructDefinition().getAttributeDefs()) {
+            String attrDefTypeName =  attrDef.getTypeName();
+            AtlasType attrType = typeRegistry.getType(attrDefTypeName);
 
-    AtlasType.TypeCategory getTypeCategory();
+
+        }
+    }
 }
