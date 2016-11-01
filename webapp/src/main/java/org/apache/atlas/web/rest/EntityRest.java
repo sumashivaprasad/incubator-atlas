@@ -74,41 +74,6 @@ public class EntityRest {
 
 
     /**
-     * Updates entity identified by its GUID
-     * Support Partial update of an entity - Adds/updates any values specified
-     * Does not support removal of attribute values i.e set to null
-     *
-     * @param guid
-     * @param entity The updated entity
-     * @return
-     */
-    @POST
-    @Path("guid/{guid}")
-    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse partialUpdateByGuid(@PathParam("guid") String guid, AtlasEntity entity) {
-        return null;
-    }
-
-
-    /*******
-     * Entity Partial Update - Allows a subset of attributes to be updated on
-     * an entity which is identified by its type and unique attribute  eg: Referenceable.qualifiedName.
-     * Null updates are not possible
-     *******/
-
-    @Deprecated
-    @POST
-    @Consumes(Servlets.JSON_MEDIA_TYPE)
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    @Path("/type/{typeName}/attribute/{attributeName}/attrValue/{attrVal}")
-    public EntityMutationResponse partialUpdateByUniqueAttribute(@PathParam("typeName") String entityType,
-        @PathParam("attribute") String attribute,
-        @PathParam("value") String value, AtlasEntity entity) throws Exception {
-        return null;
-    }
-
-    /**
      * Fetch the complete definition of an entity given its GUID.
      *
      * @param guid GUID for the entity
@@ -121,16 +86,34 @@ public class EntityRest {
     }
 
 
-    @Deprecated
+    /**
+     * Delete an entity identified by its GUID
+     *
+     * @param guid
+     * @return
+     */
     @DELETE
-    @Consumes(Servlets.JSON_MEDIA_TYPE)
+    @Path("guid/{guid}")
+    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    @Path("/type/{typeName}/attribute/{attribute}/value/{value}")
-    public EntityMutationResponse deleteByUniqueAttribute(@PathParam("typeName") String entityType,
-        @PathParam("attribute") String attribute,
-        @PathParam("value") String value) throws Exception {
+    public EntityMutationResponse deleteByGuid(@PathParam("guid") String guid) {
         return null;
     }
+
+
+    /**
+     * Gets the list of classifications for a given entity represented by a guid.
+     *
+     * @param guid globally unique identifier for the entity
+     * @return a list of classifications for the given entity guid
+     */
+    @GET
+    @Path("/guid/{guid}/classification/{classificationName}")
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    public AtlasClassification.AtlasClassifications getClassification(@PathParam("guid") String guid, @PathParam("classificationName") String classificationName) {
+        return null;
+    }
+
 
     /**
      * Gets the list of classifications for a given entity represented by a guid.
