@@ -53,7 +53,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
      */
     public enum Status { STATUS_ACTIVE, STATUS_DELETED };
 
-    private String guid       = null;
+    private AtlasObjectId guid       = null;
     private Status status     = Status.STATUS_ACTIVE;
     private String createdBy  = null;
     private String updatedBy  = null;
@@ -99,11 +99,11 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         }
     }
 
-    public String getGuid() {
+    public AtlasObjectId getGuid() {
         return guid;
     }
 
-    public void setGuid(String guid) {
+    public void setGuid(AtlasObjectId guid) {
         this.guid = guid;
     }
 

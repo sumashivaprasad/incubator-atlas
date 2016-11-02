@@ -51,7 +51,7 @@ public class AtlasEntityToEntityConverterTest {
     private AtlasEntityToReferenceableConverter converter;
 
     @BeforeClass
-    public void setUp() throws Exception {
+      public void setUp() throws Exception {
         AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
         typeStore.createTypesDef(typesDef);
     }

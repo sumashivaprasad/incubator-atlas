@@ -20,11 +20,13 @@ package org.apache.atlas.web.adapters;
 
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.persistence.Id;
 
 import javax.inject.Inject;
 
@@ -46,7 +48,7 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter<A
 
     @Override
     public Referenceable convert(final AtlasEntity source) throws AtlasBaseException {
-        Referenceable ref = new Referenceable(source.getTypeName());
+        Referenceable ref = new Referenceable(source.getGuid(), source.getTypeName());
 
         AtlasFormatAdapter structConverter = registry.getConverter(AtlasStruct.class);
 

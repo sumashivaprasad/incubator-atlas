@@ -607,14 +607,14 @@ public final class TestUtilsV2 {
         return entity;
     }
 
-    public static AtlasEntity createTableEntity(String dbId) {
+    public static AtlasEntity createTableEntity(AtlasObjectId dbId) {
         AtlasEntity entity = new AtlasEntity(TABLE_TYPE);
         String tableName = RandomStringUtils.randomAlphanumeric(10);
         entity.setAttribute(NAME, tableName);
         entity.setAttribute("description", "random table");
         entity.setAttribute("type", "type");
         entity.setAttribute("tableType", "MANAGED");
-        entity.setAttribute("database", new AtlasObjectId(DATABASE_TYPE, dbId));
+        entity.setAttribute("database", dbId);
         entity.setAttribute("created", new Date());
         return entity;
     }
