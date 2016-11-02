@@ -18,22 +18,15 @@
 package org.apache.atlas.web.rest;
 
 import com.google.inject.Inject;
-import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.SearchFilter;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
-import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.instance.EntityMutationResponse;
-import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.type.AtlasTypeRegistry;
-import org.apache.atlas.typesystem.ITypedReferenceableInstance;
-import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.types.TypeSystem;
-import org.apache.atlas.web.adapters.AtlasFormatAdapter;
-import org.apache.atlas.web.adapters.AtlasFormatConverters;
 import org.apache.atlas.web.util.Servlets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,9 +56,6 @@ public class EntitiesREST {
     private HttpServletRequest httpServletRequest;
 
     @Inject
-    private AtlasFormatConverters instanceFormatters;
-
-    @Inject
     private MetadataService metadataService;
 
     private TypeSystem typeSystem = TypeSystem.getInstance();
@@ -79,56 +69,17 @@ public class EntitiesREST {
     }
 
     /*******
-     * Entity Creation
+     * Entity Creation/Updation if it already exists in ATLAS
+     * An existing entity is matched by its guid if supplied or by its unique attribute eg: qualifiedName
      * Any associations like Classifications, Business Terms will have to be handled through the respective APIs
      *******/
 
     @POST
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse create(List<AtlasEntity> entities) throws AtlasBaseException {
-
-        EntityMutationResponse response = new EntityMutationResponse();
-        ITypedReferenceableInstance[] entitiesInOldFormat = getITypedReferenceables(entities);
-
-        try {
-            final List<String> createdGuids = metadataService.createEntities(entitiesInOldFormat);
-            for (String guid : createdGuids) {
-                AtlasEntityHeader header = new AtlasEntityHeader();
-                header.setGuid(guid);
-                response.addEntity(EntityMutations.EntityOperation.CREATE_OR_UPDATE, header);
-            }
-
-        } catch (AtlasException e) {
-            LOG.error("Exception while getting a typed reference for the entity ", e);
-            throw new AtlasBaseException(e);
-        }
-        return response;
+    public EntityMutationResponse createOrUpdate(List<AtlasEntity> entities) throws AtlasBaseException {
+        return null;
     }
-
-    private ITypedReferenceableInstance[] getITypedReferenceables(List<AtlasEntity> entities) throws AtlasBaseException {
-        ITypedReferenceableInstance[] entitiesInOldFormat = new ITypedReferenceableInstance[entities.size()];
-
-        for (int i = 0; i < entities.size(); i++) {
-            ITypedReferenceableInstance typedInstance = getITypedReferenceable(entities.get(i));
-            entitiesInOldFormat[i] = typedInstance;
-        }
-
-        return entitiesInOldFormat;
-    }
-
-    private ITypedReferenceableInstance getITypedReferenceable(AtlasEntity entity) throws AtlasBaseException {
-        AtlasFormatAdapter<AtlasEntity, Referenceable> entityFormatter = instanceFormatters.getConverter(entity.getClass());
-
-        Referenceable ref = entityFormatter.convert(entity);
-        try {
-            return metadataService.getTypedReferenceableInstance(ref);
-        } catch (AtlasException e) {
-            LOG.error("Exception while getting a typed reference for the entity ");
-            throw new AtlasBaseException(e);
-        }
-    }
-
 
     /*******
      * Entity Updation - Allows full update of the specified entities.
@@ -162,16 +113,6 @@ public class EntitiesREST {
         return null;
     }
 
-    /*******
-     * Add or update a classification if it already exists to a list of entities identified by their guids
-     *******/
-    @POST
-    @Consumes(Servlets.JSON_MEDIA_TYPE)
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    @Path("/guids/classification")
-    public void addClassification(@QueryParam("guid") List<String> guids, AtlasClassification classification) throws AtlasBaseException {
-    }
-
     /**
      * Bulk retrieval API for searching on entities by certain predefined attributes ( typeName, superType, name, qualifiedName etc) + optional user defined attributes
      *
@@ -179,7 +120,8 @@ public class EntitiesREST {
      */
     @GET
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public AtlasEntity.AtlasEntities searchEntities(SearchFilter searchFilter) throws AtlasBaseException {
+    public AtlasEntity.AtlasEntities searchEntities() throws AtlasBaseException {
+        //SearchFilter searchFilter
         return null;
     }
 

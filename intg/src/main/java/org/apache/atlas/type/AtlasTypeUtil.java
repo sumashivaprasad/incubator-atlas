@@ -75,7 +75,7 @@ public class AtlasTypeUtil {
 
     public static boolean isMapType(String typeName) {
         return StringUtils.startsWith(typeName, ATLAS_TYPE_MAP_PREFIX)
-                && StringUtils.endsWith(typeName, ATLAS_TYPE_MAP_SUFFIX);
+            && StringUtils.endsWith(typeName, ATLAS_TYPE_MAP_SUFFIX);
     }
 
 
@@ -117,7 +117,10 @@ public class AtlasTypeUtil {
     }
 
     public static AtlasAttributeDef createOptionalAttrDef(String name, String dataType) {
-        return new AtlasAttributeDef(name, dataType);
+        return new AtlasAttributeDef(name, dataType, true,
+            Cardinality.SINGLE, 0, 1,
+            true, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
     }
 
     public static AtlasAttributeDef createRequiredAttrDef(String name, String dataType) {

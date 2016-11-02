@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.atlas.model.instance.AtlasEntity;
-import org.apache.atlas.model.instance.AtlasEntityId;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasEnumDef;
@@ -614,7 +614,7 @@ public final class TestUtilsV2 {
         entity.setAttribute("description", "random table");
         entity.setAttribute("type", "type");
         entity.setAttribute("tableType", "MANAGED");
-        entity.setAttribute("database", new AtlasEntityId(DATABASE_TYPE, dbId, 0));
+        entity.setAttribute("database", new AtlasObjectId(DATABASE_TYPE, dbId));
         entity.setAttribute("created", new Date());
         return entity;
     }

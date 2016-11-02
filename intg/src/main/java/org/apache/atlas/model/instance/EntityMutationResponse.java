@@ -19,6 +19,8 @@ package org.apache.atlas.model.instance;
 
 
 import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
@@ -27,6 +29,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +44,7 @@ import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONL
 @XmlAccessorType(XmlAccessType.PROPERTY)
 public class EntityMutationResponse {
 
-    Map<EntityMutations.EntityOperation, List<AtlasEntityHeader>> entitiesMutated;
+    Map<EntityMutations.EntityOperation, List<AtlasEntityHeader>> entitiesMutated = new HashMap<>();
 
     public EntityMutationResponse() {
     }
@@ -58,11 +62,18 @@ public class EntityMutationResponse {
     }
 
     List<AtlasEntityHeader> getEntitiesByOperation(EntityMutations.EntityOperation op) {
-        return entitiesMutated.get(op);
+        if ( entitiesMutated != null) {
+            return entitiesMutated.get(op);
+        }
+        return null;
     }
 
     public void addEntity(EntityMutations.EntityOperation op, AtlasEntityHeader header) {
-        if ( entitiesMutated.get(op) == null) {
+        if (entitiesMutated == null) {
+            entitiesMutated = new HashMap<EntityMutations.EntityOperation, List<AtlasEntityHeader>>();
+        }
+
+        if (entitiesMutated != null && entitiesMutated.get(op) == null) {
             entitiesMutated.put(op, new ArrayList<AtlasEntityHeader>());
         }
         entitiesMutated.get(op).add(header);
@@ -73,7 +84,26 @@ public class EntityMutationResponse {
         if ( sb == null) {
             sb = new StringBuilder();
         }
-        sb.append(entitiesMutated);
+
+        if (MapUtils.isNotEmpty(entitiesMutated)) {
+            int i = 0;
+            for (Map.Entry<EntityMutations.EntityOperation, List<AtlasEntityHeader>> e : entitiesMutated.entrySet()) {
+                if (i > 0) {
+                    sb.append(",");
+                }
+                sb.append(e.getKey()).append(":");
+                if (CollectionUtils.isNotEmpty(e.getValue())) {
+                    for (int j = 0; i < e.getValue().size(); j++) {
+                        if (j > 0) {
+                            sb.append(",");
+                        }
+                        e.getValue().get(i).toString(sb);
+                    }
+                }
+                i++;
+            }
+        }
+
         return sb;
     }
 

@@ -36,40 +36,48 @@ public interface AtlasEntityStore {
     /**
      * Initialization
      */
-    void init() throws AtlasBaseException;;
-
+    void init() throws AtlasBaseException;
 
     /**
-     * Create or update a list of entities
-     * @param entities List of AtlasEntity objects that need to be created
-     * @return AtlasEntity Return the entity that was created or updated if it already exists
-     * @throws AtlasBaseException
+     * Create or update an entity if it already exists.
+     * @param entity
+     * @return
      */
-
-    List<EntityMutationResponse> createOrUpdate(List<AtlasEntity> entities) throws AtlasBaseException;
+    EntityMutationResponse createOrUpdate(AtlasEntity entity);
 
 
     /**
-     * Create or update a list of entities
-     * @param entities List of AtlasEntity objects that need to be created
-     * @return AtlasEntity Return the entity that was created or updated if it already exists
-     * @throws AtlasBaseException
+     * Update entity identified by its guid
+     * @param guid
+     * @param entity
+     * @return
      */
-
-    List<EntityMutationResponse> partialUpdate(List<AtlasEntity> entities) throws AtlasBaseException;
+    EntityMutationResponse updateById(String guid, AtlasEntity entity);
 
     /**
-     * @deprecated
-     * Create or update a single entity
-     * @param typeName The entity's type
-     * @param attributeName Attribute that uniquely identifies the entity
-     * @param attributeValue The unqiue attribute's value
-     * @return AtlasEntity Return the entity that was created or updated if it already exists
-     * @throws AtlasBaseException
      *
+     * Get entity definition by its guid
+     * @param guid
+     * @return
+     */
+    AtlasEntity   getById(String guid);
+
+    /**
+     * Delete an entity by its guid
+     * @param guid
+     * @return
+     */
+    EntityMutationResponse deleteById(String guid);
+
+
+    /**
+     * Create or update a list of entities
+     * @param entities List of AtlasEntity objects that need to be created
+     * @return EntityMutationResponse Entity mutations operations with the correspomding set of entities on which these operations were performed
+     * @throws AtlasBaseException
      */
 
-    List<EntityMutationResponse> updateByUniqueAttribute(String typeName, String attributeName, String attributeValue, AtlasEntity entity) throws AtlasBaseException;
+    EntityMutationResponse createOrUpdate(List<AtlasEntity> entities) throws AtlasBaseException;
 
     /**
      *
@@ -79,7 +87,7 @@ public interface AtlasEntityStore {
      * @return
      * @throws AtlasBaseException
      */
-    List<EntityMutationResponse> updateById(String guid, AtlasEntity entity) throws AtlasBaseException;
+    EntityMutationResponse updateByIds(String guid, AtlasEntity entity) throws AtlasBaseException;
 
     /**
      * Batch GET to retrieve entities by their ID
@@ -87,7 +95,7 @@ public interface AtlasEntityStore {
      * @return
      * @throws AtlasBaseException
      */
-    AtlasEntity.AtlasEntities getById(List<String> guid) throws AtlasBaseException;
+    AtlasEntity.AtlasEntities getByIds(List<String> guid) throws AtlasBaseException;
 
     /**
      * Batch GET to retrieve entities and their associations by their ID
@@ -95,12 +103,35 @@ public interface AtlasEntityStore {
      * @return
      * @throws AtlasBaseException
      */
-    AtlasEntityWithAssociations getWithAssociationsById(List<String> guid) throws AtlasBaseException;
+    AtlasEntityWithAssociations getWithAssociationsByIds(List<String> guid) throws AtlasBaseException;
 
     /*
      * Return list of deleted entity guids
      */
-    List<EntityMutationResponse> deleteById(List<String> guid) throws AtlasBaseException;
+    EntityMutationResponse deleteByIds(List<String> guid) throws AtlasBaseException;
+
+    /**
+     *
+     * Get an eneity by its unique attribute
+     * @param typeName
+     * @param attrName
+     * @param attrValue
+     * @return
+     */
+    AtlasEntity  getByUniqueAttribute(String typeName, String attrName, String attrValue);
+
+    /**
+     * @deprecated
+     * Create or update a single entity
+     * @param typeName The entity's type
+     * @param attributeName Attribute that uniquely identifies the entity
+     * @param attributeValue The unqiue attribute's value
+     * @return EntityMutationResponse Entity mutations operations with the correspomding set of entities on which these operations were performed
+     * @throws AtlasBaseException
+     *
+     */
+
+    EntityMutationResponse updateByUniqueAttribute(String typeName, String attributeName, String attributeValue, AtlasEntity entity) throws AtlasBaseException;
 
     /**
      * @deprecated
@@ -110,7 +141,7 @@ public interface AtlasEntityStore {
      * @return
      * @throws AtlasBaseException
      */
-    List<EntityMutationResponse> deleteByUniqueAttribute(String typeName, String attributeName, String attributeValue) throws AtlasBaseException;
+    EntityMutationResponse deleteByUniqueAttribute(String typeName, String attributeName, String attributeValue) throws AtlasBaseException;
 
     /**
      * Compose any type of mutation op - EntityMutation.EntityOperation - CREATE_OR_UPDATE, PARTIAL_UPDATE, DELETE etc in a single transaction
@@ -118,7 +149,7 @@ public interface AtlasEntityStore {
      * @return
      * @throws AtlasBaseException
      */
-    List<EntityMutationResponse> batchMutate(EntityMutations mutations) throws AtlasBaseException;
+    EntityMutationResponse batchMutate(EntityMutations mutations) throws AtlasBaseException;
 
     /**
      * Add classification(s)

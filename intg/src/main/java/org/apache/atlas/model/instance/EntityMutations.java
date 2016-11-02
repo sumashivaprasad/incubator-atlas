@@ -17,6 +17,7 @@
  */
 package org.apache.atlas.model.instance;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
@@ -25,6 +26,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
@@ -37,7 +40,7 @@ import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONL
 @XmlAccessorType(XmlAccessType.PROPERTY)
 public class EntityMutations implements Serializable {
 
-    private List<EntityMutation> entityMutations;
+    private List<EntityMutation> entityMutations = new ArrayList<>();
 
     public enum EntityOperation {
         CREATE_OR_UPDATE,
@@ -58,8 +61,14 @@ public class EntityMutations implements Serializable {
             if ( sb == null) {
                 sb = new StringBuilder();
             }
-            sb.append(op);
-            sb.append(entity);
+            sb.append("EntityMutation {");
+            sb.append("op=").append(op);
+            if (entity != null) {
+                sb.append(", entity=");
+                entity.toString(sb);
+            }
+            sb.append("}");
+
             return sb;
         }
 
@@ -71,6 +80,7 @@ public class EntityMutations implements Serializable {
             EntityMutation that = (EntityMutation) o;
 
             if (op != null ? !op.equals(that.op) : that.op != null) { return false; }
+            if (entity != null ? !entity.equals(that.entity) : that.entity != null) { return false; }
 
             return true;
         }
@@ -96,7 +106,17 @@ public class EntityMutations implements Serializable {
         if ( sb == null) {
             sb = new StringBuilder();
         }
-        sb.append(entityMutations);
+        sb.append("EntityMutations{");
+        if (CollectionUtils.isNotEmpty(entityMutations)) {
+            for (int i = 0; i < entityMutations.size(); i++) {
+                if (i > 0) {
+                    sb.append(",");
+                }
+                entityMutations.get(i).toString(sb);
+            }
+        }
+        sb.append("}");
+
         return sb;
     }
 

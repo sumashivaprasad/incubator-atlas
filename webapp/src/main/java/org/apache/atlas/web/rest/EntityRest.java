@@ -23,9 +23,9 @@ import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.web.util.Servlets;
 
 import javax.inject.Singleton;
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -68,7 +68,7 @@ public class EntityRest {
     @Path("guid/{guid}")
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse updateByGuid(@PathParam("guid") String guid, AtlasEntity entity) {
+    public EntityMutationResponse updateByGuid(@PathParam("guid") String guid, AtlasEntity entity, @DefaultValue("false") @QueryParam("partialUpdate") boolean partialUpdate) {
         return null;
     }
 
@@ -97,6 +97,50 @@ public class EntityRest {
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public EntityMutationResponse deleteByGuid(@PathParam("guid") String guid) {
+        return null;
+    }
+
+
+    /*******
+     * Entity Partial Update - Allows a subset of attributes to be updated on
+     * an entity which is identified by its type and unique attribute  eg: Referenceable.qualifiedName.
+     * Null updates are not possible
+     *******/
+
+    @Deprecated
+    @PUT
+    @Consumes(Servlets.JSON_MEDIA_TYPE)
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    @Path("/uniqueAttribute/type/{typeName}/attribute/{attrName}")
+    public EntityMutationResponse partialUpdateByUniqueAttribute(@PathParam("typeName") String entityType,
+        @PathParam("attrName") String attribute,
+        @QueryParam("value") String value, AtlasEntity entity) throws Exception {
+        return null;
+    }
+
+    @Deprecated
+    @DELETE
+    @Consumes(Servlets.JSON_MEDIA_TYPE)
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    @Path("/uniqueAttribute/type/{typeName}/attribute/{attrName}")
+    public EntityMutationResponse deleteByUniqueAttribute(@PathParam("typeName") String entityType,
+        @PathParam("attrName") String attribute,
+        @QueryParam("value") String value) throws Exception {
+        return null;
+    }
+
+    /**
+     * Fetch the complete definition of an entity
+     * which is identified by its type and unique attribute  eg: Referenceable.qualifiedName.
+     */
+    @Deprecated
+    @GET
+    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    @Path("/uniqueAttribute/type/{typeName}/attribute/{attrName}")
+    public AtlasEntity getByUniqueAttribute(@PathParam("typeName") String entityType,
+        @PathParam("attrName") String attribute,
+        @QueryParam("value") String value) {
         return null;
     }
 
@@ -141,7 +185,7 @@ public class EntityRest {
     @Path("/guid/{guid}/classifications")
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public void addClassification(@PathParam("guid") final String guid, List<AtlasClassification> classifications) {
+    public void addClassifications(@PathParam("guid") final String guid, List<AtlasClassification> classifications) {
     }
 
     /**
@@ -154,7 +198,7 @@ public class EntityRest {
     @Path("/guid/{guid}/classifications")
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public void updateClassification(@PathParam("guid") final String guid, List<AtlasClassification> classifications) {
+    public void updateClassifications(@PathParam("guid") final String guid, List<AtlasClassification> classifications) {
     }
 
     /**
@@ -167,7 +211,7 @@ public class EntityRest {
     @Path("/guid/{guid}/classification/{classificationName}")
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public void deleteClassification(@Context HttpServletRequest request, @PathParam("guid") String guid,
+    public void deleteClassification(@PathParam("guid") String guid,
         @PathParam("classificationName") String classificationName) {
     }
 }

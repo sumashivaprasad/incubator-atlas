@@ -70,9 +70,7 @@ public class AtlasEntityWithAssociations extends AtlasEntity implements Serializ
     public AtlasEntityWithAssociations(AtlasEntityWithAssociations other) {
         super(other);
 
-        if (other != null) {
-            setClassifications(null);
-        }
+        setClassifications(other != null ? other.getClassifications() : null);
     }
 
     @Override

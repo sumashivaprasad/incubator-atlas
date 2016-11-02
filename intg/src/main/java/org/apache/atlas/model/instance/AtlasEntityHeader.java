@@ -110,7 +110,7 @@ public class AtlasEntityHeader extends AtlasStruct implements Serializable {
             sb = new StringBuilder();
         }
 
-        sb.append("AtlasEntity{");
+        sb.append("AtlasEntityHeader{");
         sb.append("guid='").append(guid).append('\'');
         sb.append(", status=").append(status);
         sb.append(", displayText=").append(displayText);
