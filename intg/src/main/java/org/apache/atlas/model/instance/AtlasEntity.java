@@ -76,7 +76,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
     public AtlasEntity(String typeName, Map<String, Object> attributes) {
         super(typeName, attributes);
 
-        setGuid(null);
+        setGuid(new AtlasObjectId(typeName));
         setStatus(null);
         setCreatedBy(null);
         setUpdatedBy(null);

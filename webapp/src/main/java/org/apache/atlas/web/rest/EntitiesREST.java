@@ -18,15 +18,22 @@
 package org.apache.atlas.web.rest;
 
 import com.google.inject.Inject;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.SearchFilter;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.instance.EntityMutationResponse;
+import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.types.TypeSystem;
+import org.apache.atlas.web.adapters.AtlasFormatAdapter;
+import org.apache.atlas.web.adapters.AtlasFormatConverters;
 import org.apache.atlas.web.util.Servlets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,11 +63,10 @@ public class EntitiesREST {
     private HttpServletRequest httpServletRequest;
 
     @Inject
+    private AtlasFormatConverters instanceFormatters;
+
+    @Inject
     private MetadataService metadataService;
-
-    private TypeSystem typeSystem = TypeSystem.getInstance();
-
-
 
     @Inject
     public EntitiesREST(AtlasEntityStore entitiesStore, AtlasTypeRegistry atlasTypeRegistry) {
@@ -78,7 +84,45 @@ public class EntitiesREST {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public EntityMutationResponse createOrUpdate(List<AtlasEntity> entities) throws AtlasBaseException {
-        return null;
+        EntityMutationResponse response = new EntityMutationResponse();
+        ITypedReferenceableInstance[] entitiesInOldFormat = getITypedReferenceables(entities);
+
+        try {
+            final List<String> createdGuids = metadataService.createEntities(entitiesInOldFormat);
+            for (String guid : createdGuids) {
+                AtlasEntityHeader header = new AtlasEntityHeader();
+                header.setGuid(guid);
+                response.addEntity(EntityMutations.EntityOperation.CREATE_OR_UPDATE, header);
+            }
+
+        } catch (AtlasException e) {
+            LOG.error("Exception while getting a typed reference for the entity ", e);
+            throw new AtlasBaseException(e);
+        }
+        return response;
+    }
+
+    private ITypedReferenceableInstance[] getITypedReferenceables(List<AtlasEntity> entities) throws AtlasBaseException {
+        ITypedReferenceableInstance[] entitiesInOldFormat = new ITypedReferenceableInstance[entities.size()];
+
+        for (int i = 0; i < entities.size(); i++) {
+            ITypedReferenceableInstance typedInstance = getITypedReferenceable(entities.get(i));
+            entitiesInOldFormat[i] = typedInstance;
+        }
+
+        return entitiesInOldFormat;
+    }
+
+    private ITypedReferenceableInstance getITypedReferenceable(AtlasEntity entity) throws AtlasBaseException {
+        AtlasFormatAdapter<AtlasEntity, Referenceable> entityFormatter = instanceFormatters.getConverter(entity.getClass());
+
+        Referenceable ref = entityFormatter.convert(entity);
+        try {
+            return metadataService.getTypedReferenceableInstance(ref);
+        } catch (AtlasException e) {
+            LOG.error("Exception while getting a typed reference for the entity ", e);
+            throw new AtlasBaseException(e);
+        }
     }
 
     /*******

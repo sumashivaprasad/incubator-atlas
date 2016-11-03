@@ -17,6 +17,8 @@
  */
 package org.apache.atlas.web.adapters;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
@@ -36,6 +38,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.List;
 
 @Guice(modules = {AtlasFormatConvertersModule.class, RepositoryMetadataModule.class})
@@ -51,7 +54,7 @@ public class AtlasEntityToEntityConverterTest {
     private AtlasEntityToReferenceableConverter converter;
 
     @BeforeClass
-      public void setUp() throws Exception {
+    public void setUp() throws Exception {
         AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
         typeStore.createTypesDef(typesDef);
     }
@@ -65,6 +68,16 @@ public class AtlasEntityToEntityConverterTest {
     public void testConvert() throws Exception {
         final AtlasEntity dbEntity = TestUtilsV2.createDBEntity();
         final AtlasEntity tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+        List<AtlasEntity> entitiesAsJSON = new ArrayList<AtlasEntity>();
+        entitiesAsJSON.add(dbEntity);
+        entitiesAsJSON.add(tableEntity);
+
+        String jsonStr = gson.toJson(entitiesAsJSON);
+
+        System.out.println("JSON string " + jsonStr);
 
         String typeName = tableEntity.getTypeName();
 
@@ -87,8 +100,7 @@ public class AtlasEntityToEntityConverterTest {
 
     private boolean isPrimitiveOrCollectionWithPrimitives(AtlasType attrType) {
         if ( attrType.getTypeCategory() == AtlasType.TypeCategory.PRIMITIVE ||
-            ((attrType.getTypeCategory() == AtlasType.TypeCategory.ARRAY || attrType.getTypeCategory() == AtlasType.TypeCategory.MAP) &&
-                ((AtlasArrayType) attrType).getElementType().getTypeCategory() == AtlasType.TypeCategory.PRIMITIVE)) {
+            ((attrType.getTypeCategory() == AtlasType.TypeCategory.ARRAY && ((AtlasArrayType) attrType).getElementType().getTypeCategory() == AtlasType.TypeCategory.PRIMITIVE))) {
             return true;
         }
         return false;

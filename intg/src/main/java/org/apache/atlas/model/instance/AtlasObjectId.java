@@ -56,8 +56,6 @@ public class AtlasObjectId  implements Serializable {
 
     private static AtomicLong s_nextId = new AtomicLong(System.nanoTime());
 
-    private static final String TEMP_ID_PREFIX = "tempAtlasId";
-
     public AtlasObjectId() {
         this(null, String.valueOf(nextNegativeLong()));
     }
@@ -69,7 +67,7 @@ public class AtlasObjectId  implements Serializable {
     public AtlasObjectId(String typeName, String guid) {
         setTypeName(typeName);
         if (StringUtils.isEmpty(guid)) {
-            guid = TEMP_ID_PREFIX + String.valueOf(nextNegativeLong());
+            guid = String.valueOf(nextNegativeLong());
         }
         setGuid(guid);
     }
@@ -82,10 +80,12 @@ public class AtlasObjectId  implements Serializable {
     }
 
     public boolean isUnassigned() {
-        if ( guid.startsWith(TEMP_ID_PREFIX)) {
-            return true;
+        try {
+            long l = Long.parseLong(guid);
+            return l < 0;
+        } catch (NumberFormatException ne) {
+            return false;
         }
-        return false;
     }
 
     public boolean isAssigned() {
