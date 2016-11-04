@@ -17,11 +17,15 @@
  */
 package org.apache.atlas.web.adapters;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
@@ -31,11 +35,13 @@ import org.apache.atlas.type.AtlasArrayType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Referenceable;
+import org.apache.commons.lang.RandomStringUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import scala.collection.mutable.HashMap;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -67,7 +73,22 @@ public class AtlasEntityToEntityConverterTest {
     @Test
     public void testConvert() throws Exception {
         final AtlasEntity dbEntity = TestUtilsV2.createDBEntity();
-        final AtlasEntity tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+        dbEntity.setAttribute(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, "default");
+        dbEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, dbEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
+
+        final AtlasEntity tableEntity = TestUtilsV2.createTableEntity(dbEntity.getTransientId());
+        tableEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
+        tableEntity.setAttribute("parameters", new java.util.HashMap<String, String>() {{
+            put("key1", "value1");
+        }});
+
+        final AtlasEntity colEntity = TestUtilsV2.createColumnEntity();
+        colEntity.setAttribute(AtlasClient.NAME, RandomStringUtils.randomAlphanumeric(10));
+        tableEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, colEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
+        colEntity.setAttribute("type", "VARCHAR(32)");
+
+        colEntity.setAttribute("table", tableEntity.getGuid());
+        tableEntity.setAttribute("columns", new ArrayList<AtlasEntity>() {{ add(colEntity); }});
 
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
@@ -77,12 +98,19 @@ public class AtlasEntityToEntityConverterTest {
 
         String jsonStr = gson.toJson(entitiesAsJSON);
 
+        ObjectMapper mapper = new ObjectMapper();
+
+        String jsonInString = mapper.writeValueAsString(entitiesAsJSON);
+
         System.out.println("JSON string " + jsonStr);
+
+        System.out.println("JSON string " + jsonInString);
 
         String typeName = tableEntity.getTypeName();
 
+
         AtlasEntityDef tblDef = typeRegistry.getEntityDefByName(typeName);
-        Referenceable ref = converter.convert(tableEntity);
+        Referenceable ref = (Referenceable) converter.convert(typeRegistry.getType(typeName), tableEntity);
 
         for ( AtlasStructDef.AtlasAttributeDef attrDef: tblDef.getAttributeDefs()) {
             String attrTypeName = attrDef.getTypeName();

@@ -155,6 +155,15 @@ public interface MetadataService {
      */
     AtlasClient.EntityResult updateEntities(String entityJson) throws AtlasException;
 
+
+    /**
+     * Batch API - Adds/Updates the given entity id(guid).
+     *
+     * @param entityJson entity json
+     * @return json array of guids of entities created/updated
+     */
+    AtlasClient.EntityResult updateEntities(ITypedReferenceableInstance[] iTypedReferenceableInstances) throws AtlasException;
+
     // Trait management functions
 
     /**

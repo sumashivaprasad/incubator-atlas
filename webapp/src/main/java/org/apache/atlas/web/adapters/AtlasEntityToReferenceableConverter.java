@@ -18,22 +18,39 @@
 package org.apache.atlas.web.adapters;
 
 
+import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasStruct;
+import org.apache.atlas.model.instance.AtlasTransientId;
+import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.repository.Constants;
+import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.types.StructTypeDefinition;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
-public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter<AtlasEntity, Referenceable> {
+import static org.apache.atlas.model.instance.AtlasTransientId.*;
+
+public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
 
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
+
 
     @Inject
     AtlasEntityToReferenceableConverter(AtlasTypeRegistry typeRegistry) {
@@ -47,27 +64,61 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter<A
     }
 
     @Override
-    public Referenceable convert(final AtlasEntity source) throws AtlasBaseException {
-        Referenceable ref = new Referenceable(source.getGuid(), source.getTypeName());
+    public Object convert(final AtlasType type, final Object source) throws AtlasBaseException {
 
-        AtlasFormatAdapter structConverter = registry.getConverter(AtlasStruct.class);
+        if ( source != null) {
+            //JSOn unmarshalling gives us a Map instead of AtlasObjectId or AtlasEntity
+            if ( AtlasFormatConverters.isMapType(source)) {
+                //Could be an entity or an Id
 
-        final Struct struct = (Struct) structConverter.convert(source);
+                Map srcMap = (Map) source;
+                String idStr = null;
+                String typeName = type.getTypeName();
+                if (StringUtils.isEmpty((String) srcMap.get(AtlasObjectId.KEY_GUID))) {
+                    Map transientIdMap = (Map) srcMap.get(AtlasStructToStructConverter.TRANSIENT_ID);
+                    idStr = (String) transientIdMap.get(AtlasTransientId.KEY_ID);
+                } else {
+                    idStr = (String)srcMap.get(AtlasObjectId.KEY_GUID);
+                }
 
-        for (String attrName : source.getAttributes().keySet()) {
-            ref.set(attrName, struct.get(attrName));
+                if (StringUtils.isEmpty(idStr)) {
+                    throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND);
+                }
+
+                if (MapUtils.isEmpty((Map)srcMap.get(AtlasStructToStructConverter.ATTRIBUTES_PROPERTY_KEY))) {
+                    //Convert to Id
+                    Id id = new Id(idStr, 0, typeName);
+                    return id;
+                } else {
+                    AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(type.getTypeName());
+                    final Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs = entityType.getAllAttributeDefs().values();
+
+                    final Map attrMap = (Map) srcMap.get(AtlasStructToStructConverter.ATTRIBUTES_PROPERTY_KEY);
+                    //Resolve attributes
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasType.TypeCategory.STRUCT);
+                    return new Referenceable(idStr, typeName, converter.convertAttributes(attributeDefs, attrMap));
+
+                }
+            } else if ( isEntityType(source) ) {
+
+                AtlasEntity entity = (AtlasEntity) source;
+                String id = StringUtils.isEmpty(entity.getGuid()) ? entity.getTransientId().getId() : null;
+
+                AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
+
+                //Resolve attributes
+                AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasType.TypeCategory.STRUCT);
+                return new Referenceable(id, entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
+            }
         }
-        return ref;
+        return null;
     }
 
-    @Override
-    public Class getSourceType() {
-        return AtlasEntity.class;
-    }
-
-    @Override
-    public Class getTargetType() {
-        return Referenceable.class;
+    private boolean isEntityType(Object o) {
+        if ( o != null && o instanceof AtlasEntity) {
+            return true;
+        }
+        return false;
     }
 
     @Override

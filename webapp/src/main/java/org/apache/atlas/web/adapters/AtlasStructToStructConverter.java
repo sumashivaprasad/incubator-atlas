@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,12 +19,26 @@ package org.apache.atlas.web.adapters;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasStruct;
+import org.apache.atlas.model.instance.AtlasTransientId;
+import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.repository.Constants;
+import org.apache.atlas.type.AtlasEntityType;
+import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -32,10 +46,13 @@ import java.util.Map;
 import java.util.Set;
 
 @Singleton
-public class AtlasStructToStructConverter implements AtlasFormatAdapter<AtlasStruct, Struct> {
+public class AtlasStructToStructConverter implements AtlasFormatAdapter {
 
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
+
+    public static final String ATTRIBUTES_PROPERTY_KEY = "attributes";
+    public static final String TRANSIENT_ID="transientId";
 
     @Inject
     AtlasStructToStructConverter(AtlasTypeRegistry typeRegistry) {
@@ -49,28 +66,43 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter<AtlasStr
     }
 
     @Override
-    public Struct convert(final AtlasStruct source) throws AtlasBaseException {
+    public Object convert(final AtlasType type, final Object source) throws AtlasBaseException {
 
-        Struct oldStruct = new Struct(source.getTypeName());
+        if (source != null) {
+            //Json unmarshalling gives us a Map instead of AtlasObjectId or AtlasEntity
+            if (AtlasFormatConverters.isMapType(source)) {
+                //Could be an entity or an Id
+                Map srcMap = (Map) source;
+                AtlasStructDef structDef = ((AtlasStructType) type).getStructDefinition();
 
-        final Map<String, Object> convertedAttributes = convertAttributes(source);
+                final Map attrMap = (Map) srcMap.get(ATTRIBUTES_PROPERTY_KEY);
 
-        for (String attrName : source.getAttributes().keySet()) {
-            oldStruct.set(attrName, convertedAttributes.get(attrName));
+                if ( attrMap != null) {
+                    //Resolve attributes
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasType.TypeCategory.STRUCT);
+                    return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), attrMap));
+                }
+
+            }
+        } else if (isStructType(source)) {
+
+            AtlasStruct entity = (AtlasStruct) source;
+            AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
+
+            //Resolve attributes
+            AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasType.TypeCategory.STRUCT);
+            return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
         }
 
-        return oldStruct;
+        return null;
 
     }
 
-    @Override
-    public Class getSourceType() {
-        return AtlasStruct.class;
-    }
-
-    @Override
-    public Class getTargetType() {
-        return Struct.class;
+    private boolean isStructType(Object o) {
+        if (o != null && o instanceof AtlasStruct) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -78,20 +110,23 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter<AtlasStr
         return AtlasType.TypeCategory.STRUCT;
     }
 
-    protected Map<String, Object> convertAttributes(final AtlasStruct source) throws AtlasBaseException {
+    public Map<String, Object> convertAttributes(Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs, Object entity) throws AtlasBaseException {
         Map<String, Object> newAttrMap = new HashMap<>();
-        final Map<String, Object> attributes = source.getAttributes();
+        for (AtlasStructDef.AtlasAttributeDef attrDef : attributeDefs) {
+            String attrTypeName = attrDef.getTypeName();
+            AtlasType attrType = typeRegistry.getType(attrTypeName);
+            AtlasType.TypeCategory typeCategory = attrType.getTypeCategory();
 
-        for (String attrName : attributes.keySet()) {
-            Object val = attributes.get(attrName);
+            AtlasFormatAdapter attrConverter = registry.getConverter(typeCategory);
 
-            if ( val != null) {
-                AtlasFormatAdapter converter = registry.getConverter(val.getClass());
-                Object convertedVal = converter.convert(val);
-                newAttrMap.put(attrName, convertedVal);
+            Object attrVal = null;
+            if ( AtlasFormatConverters.isMapType(entity)) {
+                attrVal = ((Map)entity).get(attrDef.getName());
             } else {
-                newAttrMap.put(attrName, null);
+                attrVal = ((AtlasStruct)entity).getAttribute(attrDef.getName());
             }
+            final Object convertedVal = attrConverter.convert(attrType, attrVal);
+            newAttrMap.put(attrDef.getName(), convertedVal);
         }
 
         return newAttrMap;

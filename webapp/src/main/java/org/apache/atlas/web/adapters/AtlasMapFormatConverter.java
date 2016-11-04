@@ -19,6 +19,8 @@ package org.apache.atlas.web.adapters;
 
 
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.type.AtlasArrayType;
+import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 
@@ -26,7 +28,7 @@ import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AtlasMapFormatConverter implements AtlasFormatAdapter<Map, Map> {
+public class AtlasMapFormatConverter implements AtlasFormatAdapter {
 
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
@@ -43,32 +45,30 @@ public class AtlasMapFormatConverter implements AtlasFormatAdapter<Map, Map> {
     }
 
     @Override
-    public Map convert(final Map source) throws AtlasBaseException {
+    public Map convert(final AtlasType type, final Object source) throws AtlasBaseException {
        Map newMap = new HashMap<>();
-       for (Object key : source.keySet()) {
 
-           Object convertedKey = registry.getConverter(key.getClass());
-           Object val = source.get(key);
+        if ( source != null) {
+            Map origMap = (Map) source;
+            for (Object key : origMap.keySet()) {
 
-           if ( val != null) {
-               Object convertedValue = registry.getConverter(val.getClass());
-               newMap.put(convertedKey, convertedValue);
-           } else {
-               newMap.put(convertedKey, val);
-           }
-       }
 
+                AtlasMapType mapType = (AtlasMapType) type;
+                AtlasType keyType = mapType.getKeyType();
+                AtlasType valueType = mapType.getValueType();
+                AtlasFormatAdapter keyConverter = registry.getConverter(keyType.getTypeCategory());
+                Object convertedKey = keyConverter.convert(keyType, key);
+                Object val = origMap.get(key);
+
+                if (val != null) {
+                    AtlasFormatAdapter valueConverter = registry.getConverter(valueType.getTypeCategory());
+                    newMap.put(convertedKey, valueConverter.convert(valueType, val.getClass()));
+                } else {
+                    newMap.put(convertedKey, val);
+                }
+            }
+        }
         return newMap;
-    }
-
-    @Override
-    public Class getSourceType() {
-        return Map.class;
-    }
-
-    @Override
-    public Class getTargetType() {
-        return Map.class;
     }
 
     @Override

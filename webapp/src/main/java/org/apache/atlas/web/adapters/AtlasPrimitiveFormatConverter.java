@@ -43,18 +43,8 @@ public class AtlasPrimitiveFormatConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public Object convert(final Object source) throws AtlasBaseException {
+    public Object convert(final AtlasType type, final Object source) throws AtlasBaseException {
        return source;
-    }
-
-    @Override
-    public Class getSourceType() {
-        return Object.class;
-    }
-
-    @Override
-    public Class getTargetType() {
-        return Object.class;
     }
 
     @Override

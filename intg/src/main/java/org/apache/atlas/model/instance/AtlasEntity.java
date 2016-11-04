@@ -53,7 +53,8 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
      */
     public enum Status { STATUS_ACTIVE, STATUS_DELETED };
 
-    private AtlasObjectId guid       = null;
+    private AtlasTransientId transientId = null;
+    private String guid       = null;
     private Status status     = Status.STATUS_ACTIVE;
     private String createdBy  = null;
     private String updatedBy  = null;
@@ -76,7 +77,8 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
     public AtlasEntity(String typeName, Map<String, Object> attributes) {
         super(typeName, attributes);
 
-        setGuid(new AtlasObjectId(typeName));
+        setTransientId(new AtlasTransientId(typeName));
+        setGuid(null);
         setStatus(null);
         setCreatedBy(null);
         setUpdatedBy(null);
@@ -89,6 +91,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         super(other);
 
         if (other != null) {
+            setTransientId(other.getTransientId());
             setGuid(other.getGuid());
             setStatus(other.getStatus());
             setCreatedBy(other.getCreatedBy());
@@ -99,11 +102,11 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         }
     }
 
-    public AtlasObjectId getGuid() {
+    public String getGuid() {
         return guid;
     }
 
-    public void setGuid(AtlasObjectId guid) {
+    public void setGuid(String guid) {
         this.guid = guid;
     }
 
@@ -155,6 +158,14 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         this.version = version;
     }
 
+    public AtlasTransientId getTransientId() {
+        return transientId;
+    }
+
+    public void setTransientId(final AtlasTransientId transientId) {
+        this.transientId = transientId;
+    }
+
     @Override
     public StringBuilder toString(StringBuilder sb) {
         if (sb == null) {
@@ -163,6 +174,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
 
         sb.append("AtlasEntity{");
         sb.append("guid='").append(guid).append('\'');
+        sb.append("transientId='").append(transientId).append('\'');
         sb.append(", status=").append(status);
         sb.append(", createdBy='").append(createdBy).append('\'');
         sb.append(", updatedBy='").append(updatedBy).append('\'');

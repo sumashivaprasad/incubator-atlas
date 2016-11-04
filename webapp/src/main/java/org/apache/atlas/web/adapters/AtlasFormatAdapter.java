@@ -23,13 +23,9 @@ import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.typesystem.Struct;
 
-public interface AtlasFormatAdapter<S, T> {
+public interface AtlasFormatAdapter {
 
-    T convert(S source) throws AtlasBaseException;
-
-    Class getSourceType();
-
-    Class getTargetType();
+    Object convert(AtlasType type, Object source) throws AtlasBaseException;
 
     AtlasType.TypeCategory getTypeCategory();
 }

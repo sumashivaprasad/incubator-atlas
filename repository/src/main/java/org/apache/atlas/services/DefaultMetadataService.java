@@ -418,6 +418,19 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         return entityResult;
     }
 
+    /**
+     * Updates an entity, instance of the type based on the guid set.
+     *
+     * @param entityInstanceDefinitions
+     * @return guids - json array of guids
+     */
+    @Override
+    public AtlasClient.EntityResult updateEntities(ITypedReferenceableInstance[] entityInstanceDefinitions) throws AtlasException {
+        AtlasClient.EntityResult entityResult = repository.updateEntities(entityInstanceDefinitions);
+        onEntitiesAddedUpdated(entityResult);
+        return entityResult;
+    }
+
     private void onEntitiesAddedUpdated(AtlasClient.EntityResult entityResult) throws AtlasException {
         onEntitiesAdded(entityResult.getCreatedEntities());
         onEntitiesUpdated(entityResult.getUpdateEntities());

@@ -17,27 +17,26 @@
  */
 package org.apache.atlas.model.instance;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
+import org.apache.atlas.AtlasErrorCode;
+import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.PList;
+import org.apache.atlas.model.SearchFilter.SortType;
+import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.annotate.JsonAutoDetect;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
+import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.atlas.model.PList;
-import org.apache.atlas.model.SearchFilter.SortType;
-import org.apache.commons.lang.StringUtils;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
-
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 
 /**
  * Reference to an object-instance of an Atlas type - like entity.
@@ -47,48 +46,51 @@ import org.codehaus.jackson.map.annotate.JsonSerialize;
 @JsonIgnoreProperties(ignoreUnknown=true)
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.PROPERTY)
-public class AtlasObjectId  implements Serializable {
+public class AtlasTransientId implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public static final String KEY_TYPENAME = "typeName";
-    public static final String KEY_GUID     = "guid";
+    public static final String KEY_ID     = "id";
 
     private String typeName;
-    private String guid;
+    private String id;
 
     private static AtomicLong s_nextId = new AtomicLong(System.nanoTime());
 
-    public AtlasObjectId() {
-        this(null, null);
+    public AtlasTransientId() {
+        this(null, String.valueOf(nextNegativeLong()));
     }
 
-    public AtlasObjectId(String typeName) {
-        this(typeName, null);
+    public AtlasTransientId(String typeName) {
+        this(typeName, String.valueOf(nextNegativeLong()));
     }
 
-    public AtlasObjectId(String typeName, String guid) {
+    public AtlasTransientId(String typeName, String id)  {
         setTypeName(typeName);
-        setGuid(guid);
+        if (StringUtils.isEmpty(id)) {
+            id = String.valueOf(nextNegativeLong());
+        }
+        setId(id);
     }
 
-    public AtlasObjectId(AtlasObjectId other) {
+    public AtlasTransientId(AtlasTransientId other) {
         if (other != null) {
             setTypeName(other.getTypeName());
-            setGuid(other.getGuid());
+            setId(other.getId());
         }
     }
 
-    public AtlasObjectId(Map objIdMap) {
+    public AtlasTransientId(Map objIdMap) {
         if (objIdMap != null) {
             Object t = objIdMap.get(KEY_TYPENAME);
-            Object g = objIdMap.get(KEY_GUID);
+            Object g = objIdMap.get(KEY_ID);
 
             if (t != null) {
                 setTypeName(t.toString());
             }
 
             if (g != null) {
-                setGuid(g.toString());
+                setId(g.toString());
             }
         }
     }
@@ -101,12 +103,12 @@ public class AtlasObjectId  implements Serializable {
         this.typeName = typeName;
     }
 
-    public String getGuid() {
-        return guid;
+    public String getId() {
+        return id;
     }
 
-    public void setGuid(String guid) {
-        this.guid = guid;
+    public void setId(final String id) {
+        this.id = id;
     }
 
     public StringBuilder toString(StringBuilder sb) {
@@ -114,9 +116,9 @@ public class AtlasObjectId  implements Serializable {
             sb = new StringBuilder();
         }
 
-        sb.append("AtlasObjectId{");
+        sb.append("AtlasTransientId{");
         sb.append("typeName='").append(typeName).append('\'');
-        sb.append(", guid='").append(guid).append('\'');
+        sb.append(", id='").append(id).append('\'');
         sb.append('}');
 
         return sb;
@@ -127,10 +129,10 @@ public class AtlasObjectId  implements Serializable {
         if (this == o) { return true; }
         if (o == null || getClass() != o.getClass()) { return false; }
 
-        AtlasObjectId that = (AtlasObjectId) o;
+        AtlasTransientId that = (AtlasTransientId) o;
 
         if (typeName != null ? !typeName.equals(that.typeName) : that.typeName != null) { return false; }
-        if (guid != null ? !guid.equals(that.guid) : that.guid != null) { return false; }
+        if (id != null ? !id.equals(that.id) : that.id != null) { return false; }
 
         return true;
     }
@@ -138,7 +140,7 @@ public class AtlasObjectId  implements Serializable {
     @Override
     public int hashCode() {
         int result = typeName != null ? typeName.hashCode() : 0;
-        result = 31 * result + (guid != null ? guid.hashCode() : 0);
+        result = 31 * result + (id != null ? id.hashCode() : 0);
         return result;
     }
 
@@ -146,6 +148,28 @@ public class AtlasObjectId  implements Serializable {
     public String toString() {
         return toString(new StringBuilder()).toString();
     }
+
+    private static long nextNegativeLong() {
+        long ret = s_nextId.getAndDecrement();
+
+        if (ret > 0) {
+            ret *= -1;
+        } else if (ret == 0) {
+            ret = Long.MIN_VALUE;
+        }
+
+        return ret;
+    }
+
+    public boolean validate(String id) {
+        try {
+            long l = Long.parseLong(id);
+            return l < 0;
+        } catch (NumberFormatException ne) {
+            return false;
+        }
+    }
+
 
     /**
      * REST serialization friendly list.
@@ -155,19 +179,19 @@ public class AtlasObjectId  implements Serializable {
     @JsonIgnoreProperties(ignoreUnknown=true)
     @XmlRootElement
     @XmlAccessorType(XmlAccessType.PROPERTY)
-    @XmlSeeAlso(AtlasObjectId.class)
-    public static class AtlasObjectIds extends PList<AtlasObjectId> {
+    @XmlSeeAlso(AtlasTransientId.class)
+    public static class AtlasTransientIds extends PList<AtlasTransientId> {
         private static final long serialVersionUID = 1L;
 
-        public AtlasObjectIds() {
+        public AtlasTransientIds() {
             super();
         }
 
-        public AtlasObjectIds(List<AtlasObjectId> list) {
+        public AtlasTransientIds(List<AtlasTransientId> list) {
             super(list);
         }
 
-        public AtlasObjectIds(List list, long startIndex, int pageSize, long totalCount,
+        public AtlasTransientIds(List list, long startIndex, int pageSize, long totalCount,
                               SortType sortType, String sortBy) {
             super(list, startIndex, pageSize, totalCount, sortType, sortBy);
         }

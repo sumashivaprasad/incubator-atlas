@@ -19,14 +19,19 @@ package org.apache.atlas.web.adapters;
 
 
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.type.AtlasArrayType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public abstract class AtlasArrayFormatConverter implements AtlasFormatAdapter {
+public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
 
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
@@ -45,6 +50,39 @@ public abstract class AtlasArrayFormatConverter implements AtlasFormatAdapter {
     @Override
     public AtlasType.TypeCategory getTypeCategory() {
         return AtlasType.TypeCategory.ARRAY;
+    }
+
+    @Override
+    public Object convert(AtlasType type, final Object source) throws AtlasBaseException {
+        Collection newCollection = null;
+        if ( source != null ) {
+            if (isArrayListType(source.getClass())) {
+                newCollection = new ArrayList();
+            } else if (isSetType(source.getClass())) {
+                newCollection = new LinkedHashSet();
+            }
+
+
+            AtlasArrayType arrType = (AtlasArrayType) type;
+            AtlasType elemType = arrType.getElementType();
+
+            Collection originalList = (Collection) source;
+            for (Object elem : originalList) {
+                AtlasFormatAdapter elemConverter = registry.getConverter(elemType.getTypeCategory());
+                Object convertedVal = elemConverter.convert(elemType, elem);
+
+                newCollection.add(convertedVal);
+            }
+        }
+        return newCollection;
+    }
+
+    public static boolean isArrayListType(Class c) {
+        return List.class.isAssignableFrom(c);
+    }
+
+    public static boolean isSetType(Class c) {
+        return Set.class.isAssignableFrom(c);
     }
 }
 
