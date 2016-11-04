@@ -74,6 +74,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         // bind the ITypeStore interface to an implementation
         bind(ITypeStore.class).to(GraphBackedTypeStore.class).asEagerSingleton();
         bind(AtlasTypeDefStore.class).to(AtlasTypeDefGraphStoreV1.class).asEagerSingleton();
+        bind(AtlasTypeRegistry.class).asEagerSingleton();
 
         //GraphBackedSearchIndexer must be an eager singleton to force the search index creation to happen before
         //we try to restore the type system (otherwise we'll end up running queries
