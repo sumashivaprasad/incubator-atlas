@@ -25,6 +25,7 @@ import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -38,15 +39,18 @@ import static org.apache.atlas.type.AtlasType.TypeCategory.STRUCT;
 @Singleton
 public class AtlasFormatConverters {
 
-    private Map<AtlasType.TypeCategory, AtlasFormatAdapter> registry = new HashMap<>();
+    public static String VERSION_V1 = "v1";
+    public static String VERSION_V2 = "v2";
 
-    public void registerConverter(AtlasFormatAdapter adapter) {
-        registry.put(adapter.getTypeCategory(), adapter);
+    private Map<Pair<String, AtlasType.TypeCategory>, AtlasFormatAdapter> registry = new HashMap<>();
+
+    public void registerConverter(AtlasFormatAdapter adapter, String targetVersion) {
+        registry.put(Pair.of(targetVersion, adapter.getTypeCategory()), adapter);
     }
 
-    public AtlasFormatAdapter getConverter(AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
-        if (registry.containsKey(typeCategory)) {
-            return registry.get(typeCategory);
+    public AtlasFormatAdapter getConverter(String targetVersion, AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
+        if (registry.containsKey(Pair.of(targetVersion, typeCategory))) {
+            return registry.get(Pair.of(targetVersion, typeCategory));
         }
         throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, "Could not find the converter for this type " + typeCategory);
     }

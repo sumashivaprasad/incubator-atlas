@@ -19,6 +19,8 @@ package org.apache.atlas.web.adapters;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.atlas.web.adapters.v2.AtlasEntityToReferenceableConverter;
+import org.apache.atlas.web.adapters.v2.AtlasStructToStructConverter;
 
 public class AtlasFormatConvertersModule extends AbstractModule {
 

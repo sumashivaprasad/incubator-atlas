@@ -41,11 +41,12 @@ public class AtlasMapFormatConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2);
     }
 
     @Override
-    public Map convert(final AtlasType type, final Object source) throws AtlasBaseException {
+    public Map convert(String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
        Map newMap = new HashMap<>();
 
         if ( source != null) {
@@ -56,13 +57,13 @@ public class AtlasMapFormatConverter implements AtlasFormatAdapter {
                 AtlasMapType mapType = (AtlasMapType) type;
                 AtlasType keyType = mapType.getKeyType();
                 AtlasType valueType = mapType.getValueType();
-                AtlasFormatAdapter keyConverter = registry.getConverter(keyType.getTypeCategory());
-                Object convertedKey = keyConverter.convert(keyType, key);
+                AtlasFormatAdapter keyConverter = registry.getConverter(targetVersion, keyType.getTypeCategory());
+                Object convertedKey = keyConverter.convert(targetVersion, keyType, key);
                 Object val = origMap.get(key);
 
                 if (val != null) {
-                    AtlasFormatAdapter valueConverter = registry.getConverter(valueType.getTypeCategory());
-                    newMap.put(convertedKey, valueConverter.convert(valueType, val.getClass()));
+                    AtlasFormatAdapter valueConverter = registry.getConverter(targetVersion, valueType.getTypeCategory());
+                    newMap.put(convertedKey, valueConverter.convert(targetVersion, valueType, val.getClass()));
                 } else {
                     newMap.put(convertedKey, val);
                 }

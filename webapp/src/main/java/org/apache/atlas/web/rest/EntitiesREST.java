@@ -95,8 +95,7 @@ public class EntitiesREST {
             response = toEntityMutationResponse(result);
         } catch (AtlasException e) {
             LOG.error("Exception while getting a typed reference for the entity ", e);
-            //TODO - Map exceptions correctly
-            throw new AtlasBaseException(e);
+            throw AtlasInstanceRestAdapters.toAtlasBaseException(e);
         }
         return response;
     }

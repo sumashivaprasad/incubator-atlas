@@ -30,6 +30,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import static org.apache.atlas.web.adapters.AtlasFormatConverters.VERSION_V1;
+import static org.apache.atlas.web.adapters.AtlasFormatConverters.VERSION_V2;
 
 public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
 
@@ -44,7 +46,8 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2);
     }
 
     @Override
@@ -53,7 +56,7 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public Object convert(AtlasType type, final Object source) throws AtlasBaseException {
+    public Object convert(String targetVersion, AtlasType type, final Object source) throws AtlasBaseException {
         Collection newCollection = null;
         if ( source != null ) {
             if (isArrayListType(source.getClass())) {
@@ -62,14 +65,13 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
                 newCollection = new LinkedHashSet();
             }
 
-
             AtlasArrayType arrType = (AtlasArrayType) type;
             AtlasType elemType = arrType.getElementType();
 
             Collection originalList = (Collection) source;
             for (Object elem : originalList) {
-                AtlasFormatAdapter elemConverter = registry.getConverter(elemType.getTypeCategory());
-                Object convertedVal = elemConverter.convert(elemType, elem);
+                AtlasFormatAdapter elemConverter = registry.getConverter(targetVersion, elemType.getTypeCategory());
+                Object convertedVal = elemConverter.convert(targetVersion, elemType, elem);
 
                 newCollection.add(convertedVal);
             }

@@ -20,8 +20,6 @@ package org.apache.atlas.model.instance;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -30,7 +28,6 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 
 import org.apache.atlas.model.PList;
 import org.apache.atlas.model.SearchFilter.SortType;
-import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
@@ -55,8 +52,6 @@ public class AtlasObjectId  implements Serializable {
 
     private String typeName;
     private String guid;
-
-    private static AtomicLong s_nextId = new AtomicLong(System.nanoTime());
 
     public AtlasObjectId() {
         this(null, null);

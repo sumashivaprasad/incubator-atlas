@@ -39,11 +39,12 @@ public class AtlasPrimitiveFormatConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2);
     }
 
     @Override
-    public Object convert(final AtlasType type, final Object source) throws AtlasBaseException {
+    public Object convert(final String targetversion, final AtlasType type, final Object source) throws AtlasBaseException {
        return source;
     }
 
