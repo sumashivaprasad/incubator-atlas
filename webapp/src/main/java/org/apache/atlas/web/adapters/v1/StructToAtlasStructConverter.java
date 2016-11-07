@@ -39,9 +39,6 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
 
-    public static final String ATTRIBUTES_PROPERTY_KEY = "attributes";
-    public static final String TRANSIENT_ID="transientId";
-
     public static final String TARGET_VERSION = AtlasFormatConverters.VERSION_V2;
 
     @Inject
@@ -60,32 +57,19 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
 
         if (source != null) {
             //Json unmarshalling gives us a Map instead of AtlasObjectId or AtlasEntity
-            if (AtlasFormatConverters.isMapType(source)) {
-                //Could be an entity or an Id
-                Map srcMap = (Map) source;
-                AtlasStructDef structDef = ((AtlasStructType) type).getStructDefinition();
 
-                final Map attrMap = (Map) srcMap.get(ATTRIBUTES_PROPERTY_KEY);
+            if (isStructType(source)) {
 
-                if ( attrMap != null) {
-                    //Resolve attributes
-                    StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(TARGET_VERSION, AtlasType.TypeCategory.STRUCT);
-                    return new AtlasStruct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), attrMap));
-                }
+                Struct entity = (Struct) source;
+                AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
 
+                //Resolve attributes
+                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(TARGET_VERSION, AtlasType.TypeCategory.STRUCT);
+                return new AtlasStruct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
             }
-        } else if (isStructType(source)) {
 
-            Struct entity = (Struct) source;
-            AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
-
-            //Resolve attributes
-            StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(TARGET_VERSION, AtlasType.TypeCategory.STRUCT);
-            return new AtlasStruct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
         }
-
         return null;
-
     }
 
     private boolean isStructType(Object o) {

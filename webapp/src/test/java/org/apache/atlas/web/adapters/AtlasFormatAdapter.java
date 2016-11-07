@@ -17,10 +17,14 @@
  */
 package org.apache.atlas.web.adapters;
 
+
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.type.AtlasType;
 
-public interface AtlasInstanceValueValidation<S, T> {
+public interface AtlasFormatAdapter {
 
-    void assertIfEquals(AtlasType type, S source, T target) throws AtlasBaseException;
+    Object convert(String targetVersion, AtlasType type, Object source) throws AtlasBaseException;
+
+    AtlasType.TypeCategory getTypeCategory();
+
 }
