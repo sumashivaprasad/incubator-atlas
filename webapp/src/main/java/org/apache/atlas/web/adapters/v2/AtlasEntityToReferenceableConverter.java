@@ -91,23 +91,35 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
                     return new Referenceable(idStr, typeName, converter.convertAttributes(attributeDefs, attrMap));
 
                 }
-            } else if ( isEntityType(source) ) {
+            } else {
 
-                AtlasEntity entity = (AtlasEntity) source;
-                String id = StringUtils.isEmpty(entity.getGuid()) ? entity.getTransientId().getId() : null;
+                AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(type.getTypeName());
+                if ( isEntityType(source) ) {
+                    AtlasEntity entity = (AtlasEntity) source;
+                    String id = StringUtils.isEmpty(entity.getGuid()) ? entity.getTransientId().getId() : null;
+                    //Resolve attributes
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                    return new Referenceable(id, entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
 
-                AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
-
-                //Resolve attributes
-                AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
-                return new Referenceable(id, entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
+                } else if (isTransientId(source)) {
+                    AtlasTransientId transientId = (AtlasTransientId) source;
+                    String id = transientId.getId();
+                    return new Referenceable(id, type.getTypeName(), null);
+                }
             }
         }
         return null;
     }
 
     private boolean isEntityType(Object o) {
-        if ( o != null && o instanceof AtlasEntity) {
+        if ( o != null && (o instanceof AtlasEntity)) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isTransientId(Object o) {
+        if ( o != null && (o instanceof AtlasTransientId)) {
             return true;
         }
         return false;

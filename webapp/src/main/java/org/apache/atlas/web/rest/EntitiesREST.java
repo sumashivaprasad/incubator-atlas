@@ -22,6 +22,8 @@ import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.services.MetadataService;
@@ -33,6 +35,7 @@ import org.apache.atlas.web.util.Servlets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.atlas.web.adapters.AtlasInstanceRestAdapters.toAtlasBaseException;
 import static org.apache.atlas.web.adapters.AtlasInstanceRestAdapters.toEntityMutationResponse;
 
 import javax.inject.Singleton;
@@ -46,6 +49,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -116,8 +120,23 @@ public class EntitiesREST {
     @Path("/guids")
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse getById(@QueryParam("guid") List<String> guids) throws AtlasBaseException {
-        return null;
+    public AtlasEntity.AtlasEntities getById(@QueryParam("guid") List<String> guids) throws AtlasBaseException {
+        AtlasEntity.AtlasEntities entities = new AtlasEntity.AtlasEntities();
+
+        List<AtlasEntity> entityList = new ArrayList<>();
+
+        for (String guid : guids) {
+            try {
+               ITypedReferenceableInstance ref = metadataService.getEntityDefinition(guid);
+               AtlasEntity entity = restAdapters.getAtlasEntity(ref);
+               entityList.add(entity);
+            } catch (AtlasException e) {
+                throw toAtlasBaseException(e);
+            }
+        }
+
+        entities.setList(entityList);
+        return entities;
     }
 
     /*******
@@ -139,7 +158,7 @@ public class EntitiesREST {
      */
     @GET
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public AtlasEntity.AtlasEntities searchEntities() throws AtlasBaseException {
+    public AtlasEntityHeader.AtlasEntityHeaders searchEntities() throws AtlasBaseException {
         //SearchFilter searchFilter
         return null;
     }

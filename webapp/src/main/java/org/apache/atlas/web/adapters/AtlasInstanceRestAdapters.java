@@ -30,6 +30,7 @@ import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
@@ -74,6 +75,15 @@ public class AtlasInstanceRestAdapters {
             throw toAtlasBaseException(e);
         }
     }
+
+    public AtlasEntity getAtlasEntity(IReferenceableInstance referenceable) throws AtlasBaseException {
+        AtlasFormatAdapter entityFormatter = instanceFormatters.getConverter(AtlasFormatConverters.VERSION_V2, AtlasType.TypeCategory.ENTITY);
+        AtlasType entityType = typeRegistry.getType(referenceable.getTypeName());
+
+        AtlasEntity result = (AtlasEntity) entityFormatter.convert(AtlasFormatConverters.VERSION_V2, entityType, referenceable);
+        return result;
+    }
+
 
     public static EntityMutationResponse toEntityMutationResponse(AtlasClient.EntityResult result) {
         EntityMutationResponse response = new EntityMutationResponse();

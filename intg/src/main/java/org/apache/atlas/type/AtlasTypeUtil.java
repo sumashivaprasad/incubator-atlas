@@ -112,21 +112,21 @@ public class AtlasTypeUtil {
     public static AtlasAttributeDef createOptionalAttrDef(String name, AtlasType dataType) {
         return new AtlasAttributeDef(name, dataType.getTypeName(), true,
             Cardinality.SINGLE, 0, 1,
-            true, false,
+            false, false,
             Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
     }
 
     public static AtlasAttributeDef createOptionalAttrDef(String name, String dataType) {
         return new AtlasAttributeDef(name, dataType, true,
             Cardinality.SINGLE, 0, 1,
-            true, false,
+            false, false,
             Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
     }
 
     public static AtlasAttributeDef createRequiredAttrDef(String name, String dataType) {
         return new AtlasAttributeDef(name, dataType, false,
             Cardinality.SINGLE, 1, 1,
-            false, false,
+            false, true,
             Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
     }
 
@@ -147,7 +147,7 @@ public class AtlasTypeUtil {
     public static AtlasAttributeDef createRequiredAttrDef(String name, AtlasType dataType) {
         return new AtlasAttributeDef(name, dataType.getTypeName(), false,
             Cardinality.SINGLE, 1, 1,
-            false, false,
+            false, true,
             Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
     }
 

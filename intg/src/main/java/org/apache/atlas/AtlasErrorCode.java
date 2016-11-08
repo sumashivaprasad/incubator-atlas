@@ -56,8 +56,7 @@ public enum AtlasErrorCode {
     INDEX_ROLLBACK_FAILED(500, "ATLAS5003E", "Index rollback failed for {0}"),
 
     ENTITY_GUID_NOT_FOUND(404, "ATLAS4045E", "Given entity guid/transientId {0} was invalid"),
-    ENTITY_ALREADY_EXISTS(405, "ATLAS4051E", "Given entity with guid/name {0} already exists"),
-
+    ENTITY_ALREADY_EXISTS(405, "ATLAS4051E", "Given entity with guid/name {0} already exists");
 
 
     private String errorCode;

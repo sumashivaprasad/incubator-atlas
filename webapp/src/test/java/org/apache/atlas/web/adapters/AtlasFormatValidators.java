@@ -30,18 +30,18 @@ import java.util.Map;
 import java.util.Set;
 
 @Singleton
-public class AtlasFormatConverters {
+public class AtlasFormatValidators {
 
     public static String VERSION_V1 = "v1";
     public static String VERSION_V2 = "v2";
 
-    private Map<Pair<String, AtlasType.TypeCategory>, AtlasFormatAdapter> registry = new HashMap<>();
+    private Map<Pair<String, AtlasType.TypeCategory>, AtlasInstanceValueValidator> registry = new HashMap<>();
 
-    public void registerConverter(AtlasFormatAdapter adapter, String targetVersion) {
+    public void registerConverter(AtlasInstanceValueValidator adapter, String targetVersion) {
         registry.put(Pair.of(targetVersion, adapter.getTypeCategory()), adapter);
     }
 
-    public AtlasFormatAdapter getConverter(String targetVersion, AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
+    public AtlasInstanceValueValidator getValidator(String targetVersion, AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
         if (registry.containsKey(Pair.of(targetVersion, typeCategory))) {
             return registry.get(Pair.of(targetVersion, typeCategory));
         }

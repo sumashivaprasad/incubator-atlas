@@ -21,14 +21,17 @@ package org.apache.atlas.web.adapters.v1;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasTransientId;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
 import org.apache.atlas.web.adapters.AtlasFormatAdapter;
 import org.apache.atlas.web.adapters.AtlasFormatConverters;
 import org.apache.commons.collections.MapUtils;
@@ -60,9 +63,16 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     public Object convert(final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
 
         if ( source != null) {
-           if ( isEntityType(source) ) {
 
-                Referenceable entity = (Referenceable) source;
+            if ( isId(source)) {
+
+                Id idObj = (Id) source;
+                AtlasEntity result = new AtlasEntity(idObj.getTypeName());
+                setId(idObj, result);
+                return result;
+            } else if ( isEntityType(source) ) {
+
+                IReferenceableInstance entity = (IReferenceableInstance) source;
                 String id = entity.getId()._getId();
 
                 AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
@@ -78,7 +88,14 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     }
 
     private boolean isEntityType(Object o) {
-        if ( o != null && o instanceof Referenceable) {
+        if ( o != null && o instanceof IReferenceableInstance) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isId(Object o) {
+        if ( o != null && o instanceof Id) {
             return true;
         }
         return false;
@@ -90,7 +107,7 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     }
 
 
-    private void setId(Referenceable entity, AtlasEntity result) {
+    private void setId(IReferenceableInstance entity, AtlasEntity result) {
         if ( entity.getId().isAssigned()) {
             result.setGuid(entity.getId()._getId());
         } else {

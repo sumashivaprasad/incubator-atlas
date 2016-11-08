@@ -19,15 +19,16 @@ package org.apache.atlas.web.adapters.v1;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
-import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
-import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.web.adapters.AtlasFormatAdapter;
 import org.apache.atlas.web.adapters.AtlasFormatConverters;
+import org.apache.atlas.web.adapters.AtlasInstanceRestAdapters;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -60,7 +61,7 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
 
             if (isStructType(source)) {
 
-                Struct entity = (Struct) source;
+                IStruct entity = (IStruct) source;
                 AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
 
                 //Resolve attributes
@@ -73,7 +74,7 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
     }
 
     private boolean isStructType(Object o) {
-        if (o != null && o instanceof Struct) {
+        if (o != null && o instanceof IStruct) {
             return true;
         }
         return false;
@@ -97,7 +98,11 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
             if ( AtlasFormatConverters.isMapType(entity)) {
                 attrVal = ((Map)entity).get(attrDef.getName());
             } else {
-                attrVal = ((Struct)entity).get(attrDef.getName());
+                try {
+                    attrVal = ((IStruct)entity).get(attrDef.getName());
+                } catch (AtlasException e) {
+                    throw AtlasInstanceRestAdapters.toAtlasBaseException(e);
+                }
             }
             final Object convertedVal = attrConverter.convert(TARGET_VERSION, attrType, attrVal);
             newAttrMap.put(attrDef.getName(), convertedVal);

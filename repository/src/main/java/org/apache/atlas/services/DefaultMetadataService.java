@@ -354,11 +354,25 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
      * @return entity definition as JSON
      */
     @Override
-    public String getEntityDefinition(String guid) throws AtlasException {
+    public String getEntityDefinitionJson(String guid) throws AtlasException {
         guid = ParamChecker.notEmpty(guid, "entity id");
 
         final ITypedReferenceableInstance instance = repository.getEntityDefinition(guid);
         return InstanceSerialization.toJson(instance, true);
+    }
+
+    /**
+     * Return the definition for the given guid.
+     *
+     * @param guid guid
+     * @return entity definition as JSON
+     */
+    @Override
+    public ITypedReferenceableInstance getEntityDefinition(String guid) throws AtlasException {
+        guid = ParamChecker.notEmpty(guid, "entity id");
+
+        final ITypedReferenceableInstance instance = repository.getEntityDefinition(guid);
+        return instance;
     }
 
     private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value)
