@@ -137,11 +137,13 @@ public class TestAtlasEntitiesREST {
 
         LOG.info("verifying entity of type {} ", dbEntity.getTypeName());
         verifyAttributes(dbEntity.getAttributes(), retrievedDBEntity.getAttributes());
-
         verifyAttributes(((List<AtlasEntity>)tableEntity.getAttribute("columns")).get(0).getAttributes(), retrievedColumnEntity.getAttributes());
-
         LOG.info("verifying entity of type {} ", columns.get(0).getTypeName());
         verifyAttributes(columns.get(0).getAttributes(), retrievedColumnEntity.getAttributes());
+
+        Assert.assertEquals(tableEntity.getAttribute("parameters"), retrievedTableEntity.getAttribute("parameters"));
+
+        
     }
 
 
