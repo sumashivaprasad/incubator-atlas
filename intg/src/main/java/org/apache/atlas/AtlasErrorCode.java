@@ -55,9 +55,11 @@ public enum AtlasErrorCode {
     INDEX_CREATION_FAILED(500, "ATLAS5002E", "Index creation failed for {0}"),
     INDEX_ROLLBACK_FAILED(500, "ATLAS5003E", "Index rollback failed for {0}"),
 
+    PATCH_NOT_APPLICABLE_FOR_TYPE(500, "ATLAS5004E", "{0} - invalid patch for type {1}"),
+    PATCH_FOR_UNKNOWN_TYPE(500, "ATLAS5005E", "{0} - patch references unknown type {1}"),
+
     ENTITY_GUID_NOT_FOUND(404, "ATLAS4045E", "Given entity guid/transientId {0} was invalid"),
     ENTITY_ALREADY_EXISTS(405, "ATLAS4051E", "Given entity with guid/name {0} already exists");
-
 
     private String errorCode;
     private String errorMessage;

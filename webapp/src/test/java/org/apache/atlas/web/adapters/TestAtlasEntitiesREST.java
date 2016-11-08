@@ -143,7 +143,7 @@ public class TestAtlasEntitiesREST {
 
         Assert.assertEquals(tableEntity.getAttribute("parameters"), retrievedTableEntity.getAttribute("parameters"));
 
-        
+
     }
 
 

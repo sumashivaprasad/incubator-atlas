@@ -15,12 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.atlas.web.adapters;
+
+import org.apache.atlas.type.AtlasType;
+import org.testng.Assert;
 
 
-package org.apache.atlas.services;
+public class AtlasPrimitiveValueValidator implements AtlasInstanceValueValidator {
 
-public class ReservedTypesRegistrationException extends RuntimeException {
-    public ReservedTypesRegistrationException(String message, Exception e) {
-        super(message, e);
+    @Override
+    public void assertIfEquals(final AtlasType type, final Object expected, final Object result) {
+        Assert.assertEquals(expected, result);
+    }
+
+    @Override
+    public AtlasType.TypeCategory getTypeCategory() {
+        return AtlasType.TypeCategory.PRIMITIVE;
     }
 }
