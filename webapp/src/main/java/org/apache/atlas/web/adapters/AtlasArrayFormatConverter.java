@@ -46,8 +46,8 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1);
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1);
     }
 
     @Override
@@ -56,22 +56,24 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public Object convert(String targetVersion, AtlasType type, final Object source) throws AtlasBaseException {
+    public Object convert(String sourceVersion, String targetVersion, AtlasType type, final Object source) throws AtlasBaseException {
+
+        Object normalizedValue = type.getNormalizedValue(source);
         Collection newCollection = null;
-        if ( source != null ) {
-            if (isArrayListType(source.getClass())) {
+        if ( normalizedValue != null ) {
+            if (isArrayListType(normalizedValue.getClass())) {
                 newCollection = new ArrayList();
-            } else if (isSetType(source.getClass())) {
+            } else if (isSetType(normalizedValue.getClass())) {
                 newCollection = new LinkedHashSet();
             }
 
             AtlasArrayType arrType = (AtlasArrayType) type;
             AtlasType elemType = arrType.getElementType();
 
-            Collection originalList = (Collection) source;
+            Collection originalList = (Collection) normalizedValue;
             for (Object elem : originalList) {
-                AtlasFormatAdapter elemConverter = registry.getConverter(targetVersion, elemType.getTypeCategory());
-                Object convertedVal = elemConverter.convert(targetVersion, elemType, elem);
+                AtlasFormatAdapter elemConverter = registry.getConverter(sourceVersion, targetVersion, elemType.getTypeCategory());
+                Object convertedVal = elemConverter.convert(sourceVersion, targetVersion, elemType, elem);
 
                 newCollection.add(convertedVal);
             }

@@ -21,6 +21,8 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -33,6 +35,8 @@ import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
+
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
@@ -53,7 +57,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
      */
     public enum Status { STATUS_ACTIVE, STATUS_DELETED };
 
-    private AtlasTransientId transientId = null;
     private String guid       = null;
     private Status status     = Status.STATUS_ACTIVE;
     private String createdBy  = null;
@@ -61,6 +64,9 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
     private Date   createTime = null;
     private Date   updateTime = null;
     private Long   version    = null;
+
+    @JsonIgnore
+    private static AtomicLong s_nextId = new AtomicLong(System.nanoTime());
 
     public AtlasEntity() {
         this(null, null);
@@ -77,8 +83,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
     public AtlasEntity(String typeName, Map<String, Object> attributes) {
         super(typeName, attributes);
 
-        setTransientId(new AtlasTransientId(typeName));
-        setGuid(null);
+        setGuid(String.valueOf(nextNegativeLong()));
         setStatus(null);
         setCreatedBy(null);
         setUpdatedBy(null);
@@ -91,7 +96,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         super(other);
 
         if (other != null) {
-            setTransientId(other.getTransientId());
             setGuid(other.getGuid());
             setStatus(other.getStatus());
             setCreatedBy(other.getCreatedBy());
@@ -158,14 +162,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         this.version = version;
     }
 
-    public AtlasTransientId getTransientId() {
-        return transientId;
-    }
-
-    public void setTransientId(final AtlasTransientId transientId) {
-        this.transientId = transientId;
-    }
-
     @Override
     public StringBuilder toString(StringBuilder sb) {
         if (sb == null) {
@@ -174,7 +170,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
 
         sb.append("AtlasEntity{");
         sb.append("guid='").append(guid).append('\'');
-        sb.append("transientId='").append(transientId).append('\'');
         sb.append(", status=").append(status);
         sb.append(", createdBy='").append(createdBy).append('\'');
         sb.append(", updatedBy='").append(updatedBy).append('\'');
@@ -250,5 +245,48 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
                              SortType sortType, String sortBy) {
             super(list, startIndex, pageSize, totalCount, sortType, sortBy);
         }
+    }
+
+    private static long nextNegativeLong() {
+        long ret = s_nextId.getAndDecrement();
+
+        if (ret > 0) {
+            ret *= -1;
+        } else if (ret == 0) {
+            ret = Long.MIN_VALUE;
+        }
+
+        return ret;
+    }
+
+    @JsonIgnore
+    public boolean validate(String id) {
+        try {
+            long l = Long.parseLong(id);
+            return l < 0;
+        } catch (NumberFormatException ne) {
+            return false;
+        }
+    }
+
+    @JsonIgnore
+    public boolean isUnassigned() {
+        try {
+            long l = Long.parseLong(guid);
+            return l < 0;
+        } catch (NumberFormatException ne) {
+            return false;
+        }
+    }
+
+    @JsonIgnore
+    public boolean isAssigned() {
+        try {
+            UUID.fromString(guid);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+
+        return true;
     }
 }

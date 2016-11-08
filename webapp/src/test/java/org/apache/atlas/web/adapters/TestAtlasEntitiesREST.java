@@ -17,6 +17,7 @@
  */
 package org.apache.atlas.web.adapters;
 
+import org.apache.atlas.AtlasClient;
 import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
@@ -25,6 +26,7 @@ import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.apache.atlas.repository.store.bootstrap.AtlasTypeDefStoreInitializer;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.web.rest.EntitiesREST;
@@ -53,6 +55,9 @@ public class TestAtlasEntitiesREST {
     private AtlasTypeRegistry typeRegistry;
 
     @Inject
+    private AtlasTypeDefStoreInitializer initializer;
+
+    @Inject
     private EntitiesREST restResource;
 
     private List<String> createdGuids = new ArrayList<>();
@@ -65,23 +70,23 @@ public class TestAtlasEntitiesREST {
 
     @BeforeClass
     public void setUp() throws Exception {
-        AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
+        AtlasTypesDef typesDef = initializer.initializeStore(typeStore, typeRegistry, );
         typeStore.createTypesDef(typesDef);
 
         dbEntity = TestUtilsV2.createDBEntity();
 //        dbEntity.setAttribute(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, "default");
 //        dbEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, dbEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
 
-        tableEntity = TestUtilsV2.createTableEntity(dbEntity.getTransientId());
+        tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
 //        tableEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
-        tableEntity.setAttribute("parameters", new java.util.HashMap<String, String>() {{
+        tableEntity.setAttribute("parametersMap", new java.util.HashMap<String, String>() {{
             put("key1", "value1");
         }});
 
         final AtlasEntity colEntity = TestUtilsV2.createColumnEntity();
 //        colEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, colEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
         colEntity.setAttribute("type", "VARCHAR(32)");
-        colEntity.setAttribute("table", tableEntity.getGuid());
+//        colEntity.setAttribute("table", tableEntity.getGuid());
 
         columns = new ArrayList<AtlasEntity>() {{ add(colEntity); }};
         tableEntity.setAttribute("columns", columns);
@@ -137,15 +142,12 @@ public class TestAtlasEntitiesREST {
 
         LOG.info("verifying entity of type {} ", dbEntity.getTypeName());
         verifyAttributes(dbEntity.getAttributes(), retrievedDBEntity.getAttributes());
-        verifyAttributes(((List<AtlasEntity>)tableEntity.getAttribute("columns")).get(0).getAttributes(), retrievedColumnEntity.getAttributes());
         LOG.info("verifying entity of type {} ", columns.get(0).getTypeName());
         verifyAttributes(columns.get(0).getAttributes(), retrievedColumnEntity.getAttributes());
 
-        Assert.assertEquals(tableEntity.getAttribute("parameters"), retrievedTableEntity.getAttribute("parameters"));
-
-
+        Assert.assertEquals(tableEntity.getAttribute(AtlasClient.NAME), retrievedTableEntity.getAttribute(AtlasClient.NAME));
+        Assert.assertEquals(tableEntity.getAttribute("parametersMap"), retrievedTableEntity.getAttribute("parametersMap"));
     }
-
 
     private void verifyAttributes(Map<String, Object> sourceAttrs, Map<String, Object> targetAttributes) throws Exception {
         for (String name : sourceAttrs.keySet() ) {

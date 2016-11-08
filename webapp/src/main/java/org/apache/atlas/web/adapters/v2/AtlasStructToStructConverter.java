@@ -40,7 +40,6 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
     protected AtlasFormatConverters registry;
 
     public static final String ATTRIBUTES_PROPERTY_KEY = "attributes";
-    public static final String TRANSIENT_ID="transientId";
 
     @Inject
     AtlasStructToStructConverter(AtlasTypeRegistry typeRegistry) {
@@ -50,11 +49,11 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1);
     }
 
     @Override
-    public Object convert(final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
+    public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
 
         if (source != null) {
             //Json unmarshalling gives us a Map instead of AtlasObjectId or AtlasEntity
@@ -67,19 +66,19 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
 
                 if ( attrMap != null) {
                     //Resolve attributes
-                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
                     return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), attrMap));
                 }
 
+            } else if (isStructType(source)) {
+
+                AtlasStruct entity = (AtlasStruct) source;
+                AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
+
+                //Resolve attributes
+                AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
             }
-        } else if (isStructType(source)) {
-
-            AtlasStruct entity = (AtlasStruct) source;
-            AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
-
-            //Resolve attributes
-            AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
-            return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
         }
 
         return null;
@@ -105,7 +104,7 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
             AtlasType attrType = typeRegistry.getType(attrTypeName);
             AtlasType.TypeCategory typeCategory = attrType.getTypeCategory();
 
-            AtlasFormatAdapter attrConverter = registry.getConverter(AtlasFormatConverters.VERSION_V1, typeCategory);
+            AtlasFormatAdapter attrConverter = registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, typeCategory);
 
             Object attrVal = null;
             if ( AtlasFormatConverters.isMapType(entity)) {
@@ -113,7 +112,7 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
             } else {
                 attrVal = ((AtlasStruct)entity).getAttribute(attrDef.getName());
             }
-            final Object convertedVal = attrConverter.convert(AtlasFormatConverters.VERSION_V1, attrType, attrVal);
+            final Object convertedVal = attrConverter.convert(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, attrType, attrVal);
             newAttrMap.put(attrDef.getName(), convertedVal);
         }
 

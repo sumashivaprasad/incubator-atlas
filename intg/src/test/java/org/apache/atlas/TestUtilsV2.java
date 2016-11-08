@@ -22,8 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.atlas.model.instance.AtlasEntity;
-import org.apache.atlas.model.instance.AtlasObjectId;
-import org.apache.atlas.model.instance.AtlasTransientId;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasEnumDef;
@@ -608,7 +606,7 @@ public final class TestUtilsV2 {
         return entity;
     }
 
-    public static AtlasEntity createTableEntity(AtlasTransientId dbId) {
+    public static AtlasEntity createTableEntity(String dbId) {
         AtlasEntity entity = new AtlasEntity(TABLE_TYPE);
         String tableName = RandomStringUtils.randomAlphanumeric(10);
         entity.setAttribute(NAME, tableName);

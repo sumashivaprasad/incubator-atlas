@@ -41,12 +41,12 @@ public class AtlasMapFormatConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1);
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1);
     }
 
     @Override
-    public Map convert(String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
+    public Map convert(String sourceVersion, String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
        Map newMap = new HashMap<>();
 
         if ( source != null) {
@@ -57,13 +57,13 @@ public class AtlasMapFormatConverter implements AtlasFormatAdapter {
                 AtlasMapType mapType = (AtlasMapType) type;
                 AtlasType keyType = mapType.getKeyType();
                 AtlasType valueType = mapType.getValueType();
-                AtlasFormatAdapter keyConverter = registry.getConverter(targetVersion, keyType.getTypeCategory());
-                Object convertedKey = keyConverter.convert(targetVersion, keyType, key);
+                AtlasFormatAdapter keyConverter = registry.getConverter(sourceVersion, targetVersion, keyType.getTypeCategory());
+                Object convertedKey = keyConverter.convert(sourceVersion, targetVersion, keyType, key);
                 Object val = origMap.get(key);
 
                 if (val != null) {
-                    AtlasFormatAdapter valueConverter = registry.getConverter(targetVersion, valueType.getTypeCategory());
-                    newMap.put(convertedKey, valueConverter.convert(targetVersion, valueType, val.getClass()));
+                    AtlasFormatAdapter valueConverter = registry.getConverter(sourceVersion, targetVersion, valueType.getTypeCategory());
+                    newMap.put(convertedKey, valueConverter.convert(sourceVersion, targetVersion, valueType, val));
                 } else {
                     newMap.put(convertedKey, val);
                 }

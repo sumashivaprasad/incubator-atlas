@@ -21,21 +21,13 @@ package org.apache.atlas.web.adapters.v1;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
-import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
-import org.apache.atlas.model.instance.AtlasObjectId;
-import org.apache.atlas.model.instance.AtlasTransientId;
-import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.IReferenceableInstance;
-import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
 import org.apache.atlas.web.adapters.AtlasFormatAdapter;
 import org.apache.atlas.web.adapters.AtlasFormatConverters;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
 import java.util.Collection;
@@ -46,8 +38,6 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
 
-    public static final String TARGET_VERSION = AtlasFormatConverters.VERSION_V2;
-
     @Inject
     ReferenceableToAtlasEntityConverter(AtlasTypeRegistry typeRegistry) {
         this.typeRegistry = typeRegistry;
@@ -56,11 +46,11 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         this.registry = registry;
-        registry.registerConverter(this, TARGET_VERSION);
+        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2);
     }
 
     @Override
-    public Object convert(final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
+    public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
 
         if ( source != null) {
 
@@ -73,12 +63,10 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
             } else if ( isEntityType(source) ) {
 
                 IReferenceableInstance entity = (IReferenceableInstance) source;
-                String id = entity.getId()._getId();
-
                 AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
 
                 //Resolve attributes
-                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(TARGET_VERSION, AtlasType.TypeCategory.STRUCT);
+                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, AtlasType.TypeCategory.STRUCT);
                 AtlasEntity result =  new AtlasEntity(entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
                 setId(entity, result);
                 return  result;
@@ -108,10 +96,6 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
 
 
     private void setId(IReferenceableInstance entity, AtlasEntity result) {
-        if ( entity.getId().isAssigned()) {
-            result.setGuid(entity.getId()._getId());
-        } else {
-            result.setTransientId(new AtlasTransientId(entity.getTypeName(), entity.getId().id));
-        }
+        result.setGuid(entity.getId()._getId());
     }
 }

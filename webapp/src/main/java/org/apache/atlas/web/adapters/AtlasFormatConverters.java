@@ -42,15 +42,15 @@ public class AtlasFormatConverters {
     public static String VERSION_V1 = "v1";
     public static String VERSION_V2 = "v2";
 
-    private Map<Pair<String, AtlasType.TypeCategory>, AtlasFormatAdapter> registry = new HashMap<>();
+    private Map<String, AtlasFormatAdapter> registry = new HashMap<>();
 
-    public void registerConverter(AtlasFormatAdapter adapter, String targetVersion) {
-        registry.put(Pair.of(targetVersion, adapter.getTypeCategory()), adapter);
+    public void registerConverter(AtlasFormatAdapter adapter, String sourceVersion, String targetVersion) {
+        registry.put(getKey(sourceVersion, targetVersion, adapter.getTypeCategory()), adapter);
     }
 
-    public AtlasFormatAdapter getConverter(String targetVersion, AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
-        if (registry.containsKey(Pair.of(targetVersion, typeCategory))) {
-            return registry.get(Pair.of(targetVersion, typeCategory));
+    public AtlasFormatAdapter getConverter(String sourceVersion, String targetVersion, AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
+        if (registry.containsKey(getKey(sourceVersion, targetVersion, typeCategory))) {
+            return registry.get(getKey(sourceVersion, targetVersion, typeCategory));
         }
         throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, "Could not find the converter for this type " + typeCategory);
     }
@@ -87,5 +87,9 @@ public class AtlasFormatConverters {
             return Map.class.isAssignableFrom(o.getClass());
         }
         return false;
+    }
+
+    String getKey(String sourceVersion, String targetVersion, AtlasType.TypeCategory typeCategory) {
+        return sourceVersion + "-to-" + targetVersion + "-" + typeCategory.name();
     }
 }

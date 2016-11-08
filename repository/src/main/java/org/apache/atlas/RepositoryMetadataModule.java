@@ -67,8 +67,6 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
 
         bind(TypeSystem.class).toProvider(TypeSystemProvider.class).in(Singleton.class);
 
-        bind(AtlasTypeRegistry.class).asEagerSingleton();
-
         // bind the ITypeStore interface to an implementation
         bind(ITypeStore.class).to(GraphBackedTypeStore.class).asEagerSingleton();
         bind(AtlasTypeDefStore.class).to(AtlasTypeDefGraphStoreV1.class).asEagerSingleton();
