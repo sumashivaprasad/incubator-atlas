@@ -22,14 +22,15 @@ import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
-import org.apache.atlas.repository.store.bootstrap.AtlasTypeDefStoreInitializer;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.web.rest.EntitiesREST;
+import org.apache.atlas.web.rest.EntityREST;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,10 +56,10 @@ public class TestAtlasEntitiesREST {
     private AtlasTypeRegistry typeRegistry;
 
     @Inject
-    private AtlasTypeDefStoreInitializer initializer;
+    private EntitiesREST entitiesREST;
 
     @Inject
-    private EntitiesREST restResource;
+    private EntityREST entityREST;
 
     private List<String> createdGuids = new ArrayList<>();
 
@@ -70,24 +71,12 @@ public class TestAtlasEntitiesREST {
 
     @BeforeClass
     public void setUp() throws Exception {
-        AtlasTypesDef typesDef = initializer.initializeStore(typeStore, typeRegistry, );
+        AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
         typeStore.createTypesDef(typesDef);
-
         dbEntity = TestUtilsV2.createDBEntity();
-//        dbEntity.setAttribute(AtlasConstants.CLUSTER_NAME_ATTRIBUTE, "default");
-//        dbEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, dbEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
 
         tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
-//        tableEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
-        tableEntity.setAttribute("parametersMap", new java.util.HashMap<String, String>() {{
-            put("key1", "value1");
-        }});
-
         final AtlasEntity colEntity = TestUtilsV2.createColumnEntity();
-//        colEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, colEntity.getAttribute(AtlasClient.NAME) + "@" + AtlasConstants.CLUSTER_NAME_ATTRIBUTE);
-        colEntity.setAttribute("type", "VARCHAR(32)");
-//        colEntity.setAttribute("table", tableEntity.getGuid());
-
         columns = new ArrayList<AtlasEntity>() {{ add(colEntity); }};
         tableEntity.setAttribute("columns", columns);
     }
@@ -103,7 +92,7 @@ public class TestAtlasEntitiesREST {
         entities.add(dbEntity);
         entities.add(tableEntity);
 
-        final EntityMutationResponse response = restResource.createOrUpdate(entities);
+        final EntityMutationResponse response = entitiesREST.createOrUpdate(entities);
         List<AtlasEntityHeader> guids = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE);
         Assert.assertEquals(guids.size(), 3);
 
@@ -115,11 +104,33 @@ public class TestAtlasEntitiesREST {
     @Test(dependsOnMethods = "testCreateOrUpdateEntities")
     public void testGetEntities() throws Exception {
 
-        final AtlasEntity.AtlasEntities response = restResource.getById(createdGuids);
+        final AtlasEntity.AtlasEntities response = entitiesREST.getById(createdGuids);
         final List<AtlasEntity> entities = response.getList();
 
         Assert.assertEquals(entities.size(), 3);
         verifyAttributes(entities);
+    }
+
+    @Test(dependsOnMethods = "testCreateOrUpdateEntities")
+    public void testGetEntity() throws Exception {
+
+         final AtlasEntity response = entityREST.getById(createdGuids.get(0));
+
+         Assert.assertNotNull(response);
+         verifyAttributes(new ArrayList<AtlasEntity>() {{ add(response); }});
+    }
+
+    @Test(dependsOnMethods = "testCreateOrUpdateEntities")
+    public void testCreateOrUpdateEntity() throws Exception {
+
+        dbEntity.setAttribute(TestUtilsV2.NAME, "updatedDBName");
+        final EntityMutationResponse response = entityREST.createOrUpdate(dbEntity);
+
+        Assert.assertNotNull(response);
+        List<AtlasEntityHeader> entitiesMutated = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE);
+        Assert.assertEquals(entitiesMutated.size(), 1);
+
+        verifyAttributes();
     }
 
     private void verifyAttributes(List<AtlasEntity> retrievedEntities) throws Exception {
@@ -140,13 +151,32 @@ public class TestAtlasEntitiesREST {
             }
         }
 
-        LOG.info("verifying entity of type {} ", dbEntity.getTypeName());
-        verifyAttributes(dbEntity.getAttributes(), retrievedDBEntity.getAttributes());
-        LOG.info("verifying entity of type {} ", columns.get(0).getTypeName());
-        verifyAttributes(columns.get(0).getAttributes(), retrievedColumnEntity.getAttributes());
+        if ( retrievedDBEntity != null) {
+            LOG.info("verifying entity of type {} ", dbEntity.getTypeName());
+            verifyAttributes(dbEntity.getAttributes(), retrievedDBEntity.getAttributes());
+        }
 
-        Assert.assertEquals(tableEntity.getAttribute(AtlasClient.NAME), retrievedTableEntity.getAttribute(AtlasClient.NAME));
-        Assert.assertEquals(tableEntity.getAttribute("parametersMap"), retrievedTableEntity.getAttribute("parametersMap"));
+        if ( retrievedColumnEntity != null) {
+            LOG.info("verifying entity of type {} ", columns.get(0).getTypeName());
+            verifyAttributes(columns.get(0).getAttributes(), retrievedColumnEntity.getAttributes());
+        }
+
+        if ( retrievedTableEntity != null) {
+            LOG.info("verifying entity of type {} ", tableEntity.getTypeName());
+
+            //String
+            Assert.assertEquals(tableEntity.getAttribute(AtlasClient.NAME), retrievedTableEntity.getAttribute(AtlasClient.NAME));
+            //Map
+            Assert.assertEquals(tableEntity.getAttribute("parametersMap"), retrievedTableEntity.getAttribute("parametersMap"));
+            //enum
+            Assert.assertEquals(tableEntity.getAttribute("tableType"), retrievedTableEntity.getAttribute("tableType"));
+            //date
+            Assert.assertEquals(tableEntity.getAttribute("created"), retrievedTableEntity.getAttribute("created"));
+            //array of Ids
+            Assert.assertEquals(((List<AtlasEntity>) retrievedTableEntity.getAttribute("columns")).get(0).getGuid(), retrievedColumnEntity.getGuid());
+            //array of structs
+            Assert.assertEquals(((List<AtlasStruct>) retrievedTableEntity.getAttribute("partitions")), tableEntity.getAttribute("partitions"));
+        }
     }
 
     private void verifyAttributes(Map<String, Object> sourceAttrs, Map<String, Object> targetAttributes) throws Exception {
@@ -155,5 +185,7 @@ public class TestAtlasEntitiesREST {
             Assert.assertEquals(targetAttributes.get(name), sourceAttrs.get(name));
         }
     }
+
+
 
 }

@@ -64,9 +64,6 @@ public class EntitiesREST {
     private HttpServletRequest httpServletRequest;
 
     @Inject
-    private AtlasFormatConverters instanceFormatters;
-
-    @Inject
     private MetadataService metadataService;
 
     private AtlasTypeRegistry typeRegistry;

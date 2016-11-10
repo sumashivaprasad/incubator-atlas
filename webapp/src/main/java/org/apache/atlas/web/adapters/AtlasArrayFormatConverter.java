@@ -57,8 +57,10 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
 
     @Override
     public Object convert(String sourceVersion, String targetVersion, AtlasType type, final Object source) throws AtlasBaseException {
-
-        Object normalizedValue = type.getNormalizedValue(source);
+        Object normalizedValue = source;
+        if ( AtlasFormatConverters.VERSION_V2.equals(sourceVersion) ) {
+            normalizedValue = type.getNormalizedValue(source);
+        }
         Collection newCollection = null;
         if ( normalizedValue != null ) {
             if (isArrayListType(normalizedValue.getClass())) {

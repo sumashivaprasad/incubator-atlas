@@ -17,10 +17,20 @@
  */
 package org.apache.atlas.web.rest;
 
+import com.google.inject.Inject;
+import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasException;
+import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.EntityMutationResponse;
+import org.apache.atlas.services.MetadataService;
+import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.web.adapters.AtlasInstanceRestAdapters;
 import org.apache.atlas.web.util.Servlets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -33,17 +43,27 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.apache.atlas.web.adapters.AtlasInstanceRestAdapters.toAtlasBaseException;
+import static org.apache.atlas.web.adapters.AtlasInstanceRestAdapters.toEntityMutationResponse;
 
 /**
  * REST for a single entity
  */
 @Path("v2/entity")
 @Singleton
-public class EntityRest {
+public class EntityREST {
 
+    private static final Logger LOG = LoggerFactory.getLogger(EntityREST.class);
+
+    @Inject
+    AtlasInstanceRestAdapters restAdapters;
+
+    @Inject
+    private MetadataService metadataService;
     /**
      * Create or Update an entity if it  already exists
      *
@@ -53,8 +73,18 @@ public class EntityRest {
     @POST
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse createOrUpdate(AtlasEntity entity) {
-        return null;
+    public EntityMutationResponse createOrUpdate(final AtlasEntity entity) throws AtlasBaseException {
+        EntityMutationResponse response = null;
+        ITypedReferenceableInstance[] entitiesInOldFormat = restAdapters.getITypedReferenceables(new ArrayList<AtlasEntity>() {{ add(entity); }});
+
+        try {
+            final AtlasClient.EntityResult result = metadataService.updateEntities(entitiesInOldFormat);
+            response = toEntityMutationResponse(result);
+        } catch (AtlasException e) {
+            LOG.error("Exception while getting a typed reference for the entity ", e);
+            throw AtlasInstanceRestAdapters.toAtlasBaseException(e);
+        }
+        return response;
     }
 
     /**
@@ -68,8 +98,8 @@ public class EntityRest {
     @Path("guid/{guid}")
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse updateByGuid(@PathParam("guid") String guid, AtlasEntity entity, @DefaultValue("false") @QueryParam("partialUpdate") boolean partialUpdate) {
-        return null;
+    public EntityMutationResponse updateByGuid(@PathParam("guid") String guid, AtlasEntity entity, @DefaultValue("false") @QueryParam("partialUpdate") boolean partialUpdate) throws AtlasBaseException {
+        return createOrUpdate(entity);
     }
 
 
@@ -81,9 +111,27 @@ public class EntityRest {
     @GET
     @Path("/guid/{guid}")
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public AtlasEntity getByGuid(@PathParam("guid") String guid) {
+    public AtlasEntity getById(@PathParam("guid") String guid) throws AtlasBaseException {
+        try {
+            ITypedReferenceableInstance ref = metadataService.getEntityDefinition(guid);
+            return restAdapters.getAtlasEntity(ref);
+        } catch (AtlasException e) {
+            throw toAtlasBaseException(e);
+        }
+    }
+
+    /**
+     * Fetch the complete definition of an entity given its GUID.
+     *
+     * @param guid GUID for the entity
+     */
+    @GET
+    @Path("/guid/{guid}")
+    @Produces(Servlets.JSON_MEDIA_TYPE)
+    public AtlasEntityWithAssociations getWithAssociationsByGuid(@PathParam("guid") String guid) {
         return null;
     }
+
 
 
     /**

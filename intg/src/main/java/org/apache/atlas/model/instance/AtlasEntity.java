@@ -271,12 +271,10 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
 
     @JsonIgnore
     public boolean isUnassigned() {
-        try {
-            long l = Long.parseLong(guid);
-            return l < 0;
-        } catch (NumberFormatException ne) {
-            return false;
+        if ( guid.startsWith("-")) {
+            return true;
         }
+        return false;
     }
 
     @JsonIgnore

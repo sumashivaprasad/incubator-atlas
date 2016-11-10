@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasEnumDef;
@@ -34,6 +35,8 @@ import org.apache.commons.lang.RandomStringUtils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Struct;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -431,7 +434,8 @@ public final class TestUtilsV2 {
                 AtlasTypeUtil.createClassTypeDef(COLUMN_TYPE, COLUMN_TYPE + "_description",
                         ImmutableSet.<String>of(),
                         AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
-                        AtlasTypeUtil.createRequiredAttrDef("type", "string"));
+                        AtlasTypeUtil.createRequiredAttrDef("type", "string")
+                        );
 
         AtlasStructDef partitionDefinition = new AtlasStructDef("partition_struct_type", "partition_struct_type" + _description, "1.0",
                 Arrays.asList(AtlasTypeUtil.createRequiredAttrDef("name", "string")));
@@ -615,6 +619,16 @@ public final class TestUtilsV2 {
         entity.setAttribute("tableType", "MANAGED");
         entity.setAttribute("database", dbId);
         entity.setAttribute("created", new Date());
+
+        Map<String, Object> partAttributes = new HashMap<String, Object>() {{
+            put("name", "part0");
+        }};
+        final AtlasStruct partitionStruct  = new AtlasStruct("partition_struct_type", partAttributes);
+
+        entity.setAttribute("partitions", new ArrayList<AtlasStruct>() {{ add(partitionStruct); }});
+        entity.setAttribute("parametersMap", new java.util.HashMap<String, String>() {{
+            put("key1", "value1");
+        }});
         return entity;
     }
 
