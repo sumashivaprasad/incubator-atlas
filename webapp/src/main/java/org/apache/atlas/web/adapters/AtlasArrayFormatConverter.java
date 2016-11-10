@@ -19,6 +19,7 @@ package org.apache.atlas.web.adapters;
 
 
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.type.AtlasArrayType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
@@ -51,8 +52,8 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public AtlasType.TypeCategory getTypeCategory() {
-        return AtlasType.TypeCategory.ARRAY;
+    public TypeCategory getTypeCategory() {
+        return TypeCategory.ARRAY;
     }
 
     @Override

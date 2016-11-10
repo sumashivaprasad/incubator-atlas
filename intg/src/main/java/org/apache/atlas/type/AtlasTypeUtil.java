@@ -40,6 +40,7 @@ import java.util.List;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.Arrays;
 
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_PREFIX;
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_SUFFIX;

@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.type.AtlasType;
@@ -63,7 +64,7 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
                 AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
 
                 //Resolve attributes
-                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, AtlasType.TypeCategory.STRUCT);
+                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, TypeCategory.STRUCT);
                 return new AtlasStruct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
             }
 
@@ -79,8 +80,8 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public AtlasType.TypeCategory getTypeCategory() {
-        return AtlasType.TypeCategory.STRUCT;
+    public TypeCategory getTypeCategory() {
+        return TypeCategory.STRUCT;
     }
 
     public Map<String, Object> convertAttributes(Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs, Object entity) throws AtlasBaseException {
@@ -88,7 +89,7 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
         for (AtlasStructDef.AtlasAttributeDef attrDef : attributeDefs) {
             String attrTypeName = attrDef.getTypeName();
             AtlasType attrType = typeRegistry.getType(attrTypeName);
-            AtlasType.TypeCategory typeCategory = attrType.getTypeCategory();
+            TypeCategory typeCategory = attrType.getTypeCategory();
 
             AtlasFormatAdapter attrConverter = registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2, typeCategory);
 

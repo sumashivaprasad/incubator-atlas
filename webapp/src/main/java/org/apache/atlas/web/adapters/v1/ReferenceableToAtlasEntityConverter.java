@@ -17,9 +17,8 @@
  */
 package org.apache.atlas.web.adapters.v1;
 
-
-import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
@@ -66,7 +65,7 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
                 AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
 
                 //Resolve attributes
-                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, AtlasType.TypeCategory.STRUCT);
+                StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, TypeCategory.STRUCT);
                 AtlasEntity result =  new AtlasEntity(entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
                 setId(entity, result);
                 return  result;
@@ -90,8 +89,8 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public AtlasType.TypeCategory getTypeCategory() {
-        return AtlasType.TypeCategory.ENTITY;
+    public TypeCategory getTypeCategory() {
+        return TypeCategory.ENTITY;
     }
 
 

@@ -129,8 +129,6 @@ public class TestAtlasEntitiesREST {
         Assert.assertNotNull(response);
         List<AtlasEntityHeader> entitiesMutated = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE);
         Assert.assertEquals(entitiesMutated.size(), 1);
-
-        verifyAttributes();
     }
 
     private void verifyAttributes(List<AtlasEntity> retrievedEntities) throws Exception {

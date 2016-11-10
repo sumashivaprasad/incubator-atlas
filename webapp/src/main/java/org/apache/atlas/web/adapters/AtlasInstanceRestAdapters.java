@@ -23,6 +23,7 @@ import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.instance.EntityMutationResponse;
@@ -64,7 +65,7 @@ public class AtlasInstanceRestAdapters {
     }
 
     public ITypedReferenceableInstance getITypedReferenceable(AtlasEntity entity) throws AtlasBaseException {
-        AtlasFormatAdapter entityFormatter = instanceFormatters.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.ENTITY);
+        AtlasFormatAdapter entityFormatter = instanceFormatters.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.ENTITY);
         AtlasType entityType = typeRegistry.getType(entity.getTypeName());
 
         Referenceable ref = (Referenceable) entityFormatter.convert(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, entityType, entity);
@@ -77,7 +78,7 @@ public class AtlasInstanceRestAdapters {
     }
 
     public AtlasEntity getAtlasEntity(IReferenceableInstance referenceable) throws AtlasBaseException {
-        AtlasFormatAdapter entityFormatter = instanceFormatters.getConverter(AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2, AtlasType.TypeCategory.ENTITY);
+        AtlasFormatAdapter entityFormatter = instanceFormatters.getConverter(AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2, TypeCategory.ENTITY);
         AtlasType entityType = typeRegistry.getType(referenceable.getTypeName());
 
         AtlasEntity result = (AtlasEntity) entityFormatter.convert(AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2, entityType, referenceable);

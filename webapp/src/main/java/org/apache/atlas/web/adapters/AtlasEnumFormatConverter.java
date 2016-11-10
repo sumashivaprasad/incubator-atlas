@@ -24,16 +24,14 @@ import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 
 import javax.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
 
-public class AtlasPrimitiveFormatConverter implements AtlasFormatAdapter {
+public class AtlasEnumFormatConverter implements AtlasFormatAdapter {
 
     protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
 
     @Inject
-    AtlasPrimitiveFormatConverter(AtlasTypeRegistry typeRegistry) {
+    AtlasEnumFormatConverter(AtlasTypeRegistry typeRegistry) {
         this.typeRegistry = typeRegistry;
     }
 
@@ -51,7 +49,7 @@ public class AtlasPrimitiveFormatConverter implements AtlasFormatAdapter {
 
     @Override
     public TypeCategory getTypeCategory() {
-        return TypeCategory.PRIMITIVE;
+        return TypeCategory.ENUM;
     }
 }
 

@@ -17,24 +17,17 @@
  */
 package org.apache.atlas.web.adapters;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.type.AtlasType;
-import org.apache.atlas.typesystem.types.DataTypes;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.atlas.model.TypeCategory;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.apache.atlas.type.AtlasType.TypeCategory.ENTITY;
-import static org.apache.atlas.type.AtlasType.TypeCategory.STRUCT;
 
 @Singleton
 public class AtlasFormatConverters {
@@ -48,7 +41,7 @@ public class AtlasFormatConverters {
         registry.put(getKey(sourceVersion, targetVersion, adapter.getTypeCategory()), adapter);
     }
 
-    public AtlasFormatAdapter getConverter(String sourceVersion, String targetVersion, AtlasType.TypeCategory typeCategory) throws AtlasBaseException {
+    public AtlasFormatAdapter getConverter(String sourceVersion, String targetVersion, TypeCategory typeCategory) throws AtlasBaseException {
         if (registry.containsKey(getKey(sourceVersion, targetVersion, typeCategory))) {
             return registry.get(getKey(sourceVersion, targetVersion, typeCategory));
         }
@@ -89,7 +82,7 @@ public class AtlasFormatConverters {
         return false;
     }
 
-    String getKey(String sourceVersion, String targetVersion, AtlasType.TypeCategory typeCategory) {
+    String getKey(String sourceVersion, String targetVersion, TypeCategory typeCategory) {
         return sourceVersion + "-to-" + targetVersion + "-" + typeCategory.name();
     }
 }

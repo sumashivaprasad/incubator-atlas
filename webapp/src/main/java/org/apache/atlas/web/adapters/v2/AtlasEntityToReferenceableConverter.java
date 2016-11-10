@@ -20,6 +20,7 @@ package org.apache.atlas.web.adapters.v2;
 
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.typedef.AtlasStructDef;
@@ -80,7 +81,7 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
 
                     final Map attrMap = (Map) srcMap.get(AtlasStructToStructConverter.ATTRIBUTES_PROPERTY_KEY);
                     //Resolve attributes
-                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
                     return new Referenceable(idStr, typeName, converter.convertAttributes(attributeDefs, attrMap));
 
                 }
@@ -91,7 +92,7 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
                     AtlasEntity entity = (AtlasEntity) source;
                     String id = entity.getGuid();
                     //Resolve attributes
-                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
                     return new Referenceable(id, entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
 
                 } else if (isTransientId(source)) {
@@ -117,7 +118,7 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public AtlasType.TypeCategory getTypeCategory() {
-        return AtlasType.TypeCategory.ENTITY;
+    public TypeCategory getTypeCategory() {
+        return TypeCategory.ENTITY;
     }
 }

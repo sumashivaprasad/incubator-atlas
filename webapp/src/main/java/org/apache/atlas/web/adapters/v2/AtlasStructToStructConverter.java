@@ -20,6 +20,7 @@ package org.apache.atlas.web.adapters.v2;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.type.AtlasStructType;
@@ -66,7 +67,7 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
 
                 if ( attrMap != null) {
                     //Resolve attributes
-                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                    AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
                     return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), attrMap));
                 }
 
@@ -76,7 +77,7 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
                 AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
 
                 //Resolve attributes
-                AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, AtlasType.TypeCategory.STRUCT);
+                AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
                 return new Struct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
             }
         }
@@ -93,8 +94,8 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
     }
 
     @Override
-    public AtlasType.TypeCategory getTypeCategory() {
-        return AtlasType.TypeCategory.STRUCT;
+    public TypeCategory getTypeCategory() {
+        return TypeCategory.STRUCT;
     }
 
     public Map<String, Object> convertAttributes(Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs, Object entity) throws AtlasBaseException {
@@ -102,7 +103,7 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
         for (AtlasStructDef.AtlasAttributeDef attrDef : attributeDefs) {
             String attrTypeName = attrDef.getTypeName();
             AtlasType attrType = typeRegistry.getType(attrTypeName);
-            AtlasType.TypeCategory typeCategory = attrType.getTypeCategory();
+            TypeCategory typeCategory = attrType.getTypeCategory();
 
             AtlasFormatAdapter attrConverter = registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, typeCategory);
 
