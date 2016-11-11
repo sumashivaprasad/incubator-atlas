@@ -23,7 +23,6 @@ import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasObjectId;
-import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
@@ -77,12 +76,10 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
                     return id;
                 } else {
                     AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(type.getTypeName());
-                    final Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs = entityType.getAllAttributeDefs().values();
-
                     final Map attrMap = (Map) srcMap.get(AtlasStructToStructConverter.ATTRIBUTES_PROPERTY_KEY);
                     //Resolve attributes
                     AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
-                    return new Referenceable(idStr, typeName, converter.convertAttributes(attributeDefs, attrMap));
+                    return new Referenceable(idStr, typeName, converter.convertAttributes(entityType, attrMap));
 
                 }
             } else {
@@ -93,7 +90,7 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
                     String id = entity.getGuid();
                     //Resolve attributes
                     AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
-                    return new Referenceable(id, entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
+                    return new Referenceable(id, entity.getTypeName(), converter.convertAttributes(entityType, entity));
 
                 } else if (isTransientId(source)) {
                     return new Referenceable((String) source, type.getTypeName(), null);

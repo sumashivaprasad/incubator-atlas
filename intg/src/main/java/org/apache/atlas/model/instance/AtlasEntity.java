@@ -83,7 +83,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
     public AtlasEntity(String typeName, Map<String, Object> attributes) {
         super(typeName, attributes);
 
-        setGuid(String.valueOf(nextNegativeLong()));
+        setGuid(nextInternalId());
         setStatus(null);
         setCreatedBy(null);
         setUpdatedBy(null);
@@ -247,18 +247,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         }
     }
 
-    private static long nextNegativeLong() {
-        long ret = s_nextId.getAndDecrement();
-
-        if (ret > 0) {
-            ret *= -1;
-        } else if (ret == 0) {
-            ret = Long.MIN_VALUE;
-        }
-
-        return ret;
-    }
-
     @JsonIgnore
     public boolean validate(String id) {
         try {
@@ -271,10 +259,7 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
 
     @JsonIgnore
     public boolean isUnassigned() {
-        if ( guid.startsWith("-")) {
-            return true;
-        }
-        return false;
+        return guid != null && guid.length() > 0 && guid.charAt(0) == '-';
     }
 
     @JsonIgnore
@@ -286,5 +271,9 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         }
 
         return true;
+    }
+
+    private String nextInternalId() {
+        return "-" + Long.toString(s_nextId.getAndIncrement());
     }
 }

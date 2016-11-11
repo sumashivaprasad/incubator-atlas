@@ -33,6 +33,7 @@ public class AtlasFormatConvertersModule extends AbstractModule {
       multibinder.addBinding().to(AtlasEntityToReferenceableConverter.class).asEagerSingleton();
 
       multibinder.addBinding().to(AtlasPrimitiveFormatConverter.class).asEagerSingleton();
+      multibinder.addBinding().to(AtlasEnumFormatConverter.class).asEagerSingleton();
       multibinder.addBinding().to(AtlasMapFormatConverter.class).asEagerSingleton();
       multibinder.addBinding().to(AtlasArrayFormatConverter.class).asEagerSingleton();
 

@@ -58,22 +58,18 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
 
     @Override
     public Object convert(String sourceVersion, String targetVersion, AtlasType type, final Object source) throws AtlasBaseException {
-        Object normalizedValue = source;
-        if ( AtlasFormatConverters.VERSION_V2.equals(sourceVersion) ) {
-            normalizedValue = type.getNormalizedValue(source);
-        }
         Collection newCollection = null;
-        if ( normalizedValue != null ) {
-            if (isArrayListType(normalizedValue.getClass())) {
+        if ( source != null ) {
+            if (AtlasFormatConverters.isArrayListType(source.getClass())) {
                 newCollection = new ArrayList();
-            } else if (isSetType(normalizedValue.getClass())) {
+            } else if (AtlasFormatConverters.isSetType(source.getClass())) {
                 newCollection = new LinkedHashSet();
             }
 
             AtlasArrayType arrType = (AtlasArrayType) type;
             AtlasType elemType = arrType.getElementType();
 
-            Collection originalList = (Collection) normalizedValue;
+            Collection originalList = (Collection) source;
             for (Object elem : originalList) {
                 AtlasFormatAdapter elemConverter = registry.getConverter(sourceVersion, targetVersion, elemType.getTypeCategory());
                 Object convertedVal = elemConverter.convert(sourceVersion, targetVersion, elemType, elem);
@@ -84,12 +80,5 @@ public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
         return newCollection;
     }
 
-    public static boolean isArrayListType(Class c) {
-        return List.class.isAssignableFrom(c);
-    }
-
-    public static boolean isSetType(Class c) {
-        return Set.class.isAssignableFrom(c);
-    }
 }
 
