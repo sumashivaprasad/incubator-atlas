@@ -264,6 +264,11 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
 
     @JsonIgnore
     public boolean isAssigned() {
+        return isAssigned(guid);
+    }
+
+    @JsonIgnore
+    public static boolean isAssigned(String guid) {
         try {
             UUID.fromString(guid);
         } catch (IllegalArgumentException e) {

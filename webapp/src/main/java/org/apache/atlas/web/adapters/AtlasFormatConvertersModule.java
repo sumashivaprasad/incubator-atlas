@@ -21,6 +21,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.atlas.web.adapters.v1.ReferenceableToAtlasEntityConverter;
 import org.apache.atlas.web.adapters.v1.StructToAtlasStructConverter;
+import org.apache.atlas.web.adapters.v1.TraitToAtlasClassificationConverter;
+import org.apache.atlas.web.adapters.v2.AtlasClassificationToTraitConverter;
 import org.apache.atlas.web.adapters.v2.AtlasEntityToReferenceableConverter;
 import org.apache.atlas.web.adapters.v2.AtlasStructToStructConverter;
 
@@ -31,6 +33,7 @@ public class AtlasFormatConvertersModule extends AbstractModule {
           = Multibinder.newSetBinder(binder(), AtlasFormatAdapter.class);
       multibinder.addBinding().to(AtlasStructToStructConverter.class).asEagerSingleton();
       multibinder.addBinding().to(AtlasEntityToReferenceableConverter.class).asEagerSingleton();
+      multibinder.addBinding().to(AtlasClassificationToTraitConverter.class).asEagerSingleton();
 
       multibinder.addBinding().to(AtlasPrimitiveFormatConverter.class).asEagerSingleton();
       multibinder.addBinding().to(AtlasEnumFormatConverter.class).asEagerSingleton();
@@ -39,6 +42,7 @@ public class AtlasFormatConvertersModule extends AbstractModule {
 
       multibinder.addBinding().to(ReferenceableToAtlasEntityConverter.class).asEagerSingleton();
       multibinder.addBinding().to(StructToAtlasStructConverter.class).asEagerSingleton();
+      multibinder.addBinding().to(TraitToAtlasClassificationConverter.class).asEagerSingleton();
   }
 
 }

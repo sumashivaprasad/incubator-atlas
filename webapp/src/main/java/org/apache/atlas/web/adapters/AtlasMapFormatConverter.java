@@ -30,13 +30,7 @@ import java.util.Map;
 
 public class AtlasMapFormatConverter implements AtlasFormatAdapter {
 
-    protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
-
-    @Inject
-    AtlasMapFormatConverter(AtlasTypeRegistry typeRegistry) {
-        this.typeRegistry = typeRegistry;
-    }
 
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {

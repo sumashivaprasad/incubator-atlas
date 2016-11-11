@@ -36,13 +36,7 @@ import static org.apache.atlas.web.adapters.AtlasFormatConverters.VERSION_V2;
 
 public class AtlasArrayFormatConverter implements AtlasFormatAdapter {
 
-    protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
-
-    @Inject
-    AtlasArrayFormatConverter(AtlasTypeRegistry typeRegistry) {
-        this.typeRegistry = typeRegistry;
-    }
 
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {

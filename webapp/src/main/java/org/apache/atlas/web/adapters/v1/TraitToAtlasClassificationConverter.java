@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,37 +15,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.web.adapters;
+package org.apache.atlas.web.adapters.v1;
 
-
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.model.instance.AtlasClassification;
+import org.apache.atlas.model.instance.AtlasStruct;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.type.AtlasClassificationType;
+import org.apache.atlas.type.AtlasEntityType;
+import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.IStruct;
+import org.apache.atlas.web.adapters.AtlasFormatAdapter;
+import org.apache.atlas.web.adapters.AtlasFormatConverters;
+import org.apache.atlas.web.adapters.AtlasInstanceRestAdapters;
 
-import javax.inject.Inject;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AtlasPrimitiveFormatConverter implements AtlasFormatAdapter {
+@Singleton
+public class TraitToAtlasClassificationConverter extends StructToAtlasStructConverter {
 
-    protected AtlasFormatConverters registry;
+    @Inject
+    TraitToAtlasClassificationConverter(AtlasTypeRegistry typeRegistry) {
+        super(typeRegistry);
+    }
 
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
-        this.registry = registry;
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2);
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1);
+        super.init(registry);
     }
 
     @Override
     public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
-       return type.getNormalizedValue(source);
+        AtlasStruct struct = (AtlasStruct) super.convert(sourceVersion, targetVersion, type, source);
+        return new AtlasClassification(struct.getTypeName(), struct.getAttributes());
     }
 
     @Override
     public TypeCategory getTypeCategory() {
-        return TypeCategory.PRIMITIVE;
+        return TypeCategory.CLASSIFICATION;
     }
 }
-

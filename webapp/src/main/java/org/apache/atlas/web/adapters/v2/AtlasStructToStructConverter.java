@@ -27,7 +27,6 @@ import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
-import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.web.adapters.AtlasFormatAdapter;
 import org.apache.atlas.web.adapters.AtlasFormatConverters;
@@ -40,15 +39,9 @@ import java.util.Map;
 @Singleton
 public class AtlasStructToStructConverter implements AtlasFormatAdapter {
 
-    protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
 
     public static final String ATTRIBUTES_PROPERTY_KEY = "attributes";
-
-    @Inject
-    AtlasStructToStructConverter(AtlasTypeRegistry typeRegistry) {
-        this.typeRegistry = typeRegistry;
-    }
 
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
@@ -64,8 +57,6 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
             if (AtlasFormatConverters.isMapType(source)) {
                 //Could be an entity or an Id
                 Map srcMap = (Map) source;
-                AtlasStructDef structDef = ((AtlasStructType) type).getStructDef();
-
                 final Map attrMap = (Map) srcMap.get(ATTRIBUTES_PROPERTY_KEY);
 
                 if ( attrMap != null) {
@@ -77,8 +68,6 @@ public class AtlasStructToStructConverter implements AtlasFormatAdapter {
             } else if (isStructType(source)) {
 
                 AtlasStruct entity = (AtlasStruct) source;
-                AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
-
                 //Resolve attributes
                 AtlasStructToStructConverter converter = (AtlasStructToStructConverter) registry.getConverter(AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1, TypeCategory.STRUCT);
                 return new Struct(type.getTypeName(), converter.convertAttributes((AtlasStructType) type, entity));

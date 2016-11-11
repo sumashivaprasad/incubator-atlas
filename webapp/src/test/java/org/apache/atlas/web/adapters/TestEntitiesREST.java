@@ -17,11 +17,11 @@
  */
 package org.apache.atlas.web.adapters;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.RepositoryMetadataModule;
+import org.apache.atlas.RequestContext;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
@@ -31,13 +31,12 @@ import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.store.AtlasTypeDefStore;
-import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.web.rest.EntitiesREST;
-import org.apache.atlas.web.rest.EntityREST;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -49,9 +48,9 @@ import java.util.List;
 import java.util.Map;
 
 @Guice(modules = {AtlasFormatConvertersModule.class, RepositoryMetadataModule.class})
-public class TestAtlasEntitiesREST {
+public class TestEntitiesREST {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TestAtlasEntitiesREST.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TestEntitiesREST.class);
 
     @Inject
     private AtlasTypeDefStore typeStore;
@@ -79,6 +78,11 @@ public class TestAtlasEntitiesREST {
         tableEntity.setAttribute("columns", columns);
     }
 
+    @AfterMethod
+    public void cleanup() throws Exception {
+        RequestContext.clear();
+    }
+
     @AfterClass
     public void tearDown() throws Exception {
         AtlasGraphProvider.cleanup();
@@ -92,23 +96,37 @@ public class TestAtlasEntitiesREST {
 
         EntityMutationResponse response = entitiesREST.createOrUpdate(entities);
         List<AtlasEntityHeader> guids = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE);
+
+        Assert.assertNotNull(guids);
         Assert.assertEquals(guids.size(), 3);
 
         for (AtlasEntityHeader header : guids) {
             createdGuids.add(header.getGuid());
         }
+    }
 
-        //Check with serialization and deserialization of entity attributes
+    @Test
+    public void testUpdateWithSerializedEntities() throws  Exception {
+        //Check with serialization and deserialization of entity attributes for the case
+        // where attributes which are de-serialized into a map
+        AtlasEntity dbEntity = TestUtilsV2.createDBEntity();
+
+        AtlasEntity tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+        final AtlasEntity colEntity = TestUtilsV2.createColumnEntity();
+        List<AtlasEntity> columns = new ArrayList<AtlasEntity>() {{ add(colEntity); }};
+        tableEntity.setAttribute("columns", columns);
+
         AtlasEntity newDBEntity = serDeserEntity(dbEntity);
         AtlasEntity newTableEntity = serDeserEntity(tableEntity);
 
         List<AtlasEntity> newEntities = new ArrayList<AtlasEntity>();
         newEntities.add(newDBEntity);
         newEntities.add(newTableEntity);
-        response = entitiesREST.createOrUpdate(newEntities);
+        EntityMutationResponse response2 = entitiesREST.createOrUpdate(newEntities);
 
-        guids = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE);
-        Assert.assertEquals(guids.size(), 3);
+        List<AtlasEntityHeader> newGuids = response2.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE);
+        Assert.assertNotNull(newGuids);
+        Assert.assertEquals(newGuids.size(), 3);
     }
 
     @Test(dependsOnMethods = "testCreateOrUpdateEntities")
@@ -117,8 +135,19 @@ public class TestAtlasEntitiesREST {
         final AtlasEntity.AtlasEntities response = entitiesREST.getById(createdGuids);
         final List<AtlasEntity> entities = response.getList();
 
+        Assert.assertNotNull(entities);
         Assert.assertEquals(entities.size(), 3);
         verifyAttributes(entities);
+    }
+
+    @Test(dependsOnMethods = "testGetEntities")
+    public void testDeleteEntities() throws Exception {
+
+        final EntityMutationResponse response = entitiesREST.deleteById(createdGuids);
+        final List<AtlasEntityHeader> entities = response.getEntitiesByOperation(EntityMutations.EntityOperation.DELETE);
+
+        Assert.assertNotNull(entities);
+        Assert.assertEquals(entities.size(), 3);
     }
 
     private void verifyAttributes(List<AtlasEntity> retrievedEntities) throws Exception {
@@ -178,9 +207,9 @@ public class TestAtlasEntitiesREST {
         //Convert from json to object and back to trigger the case where it gets translated to a map for attributes instead of AtlasEntity
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        String tableJsonInString = mapper.writeValueAsString(tableEntity);
+        String entityJson = mapper.writeValueAsString(entity);
         //JSON from String to Object
-        AtlasEntity newEntity = mapper.readValue(tableJsonInString, AtlasEntity.class);
+        AtlasEntity newEntity = mapper.readValue(entityJson, AtlasEntity.class);
         return newEntity;
     }
 }

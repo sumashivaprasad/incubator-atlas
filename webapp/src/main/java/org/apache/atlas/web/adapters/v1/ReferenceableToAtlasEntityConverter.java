@@ -19,18 +19,22 @@ package org.apache.atlas.web.adapters.v1;
 
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
+import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.IReferenceableInstance;
+import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.web.adapters.AtlasFormatAdapter;
 import org.apache.atlas.web.adapters.AtlasFormatConverters;
 
 import javax.inject.Inject;
-import java.util.Collection;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
 
@@ -50,28 +54,36 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
 
     @Override
     public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
-
+        AtlasEntityWithAssociations result = null;
         if ( source != null) {
-
             if ( isId(source)) {
-
                 Id idObj = (Id) source;
-                AtlasEntity result = new AtlasEntity(idObj.getTypeName());
+                result = new AtlasEntityWithAssociations(idObj.getTypeName());
                 setId(idObj, result);
-                return result;
-            } else if ( isEntityType(source) ) {
+            } else if (isEntityType(source) ) {
 
                 IReferenceableInstance entity = (IReferenceableInstance) source;
                 AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
 
                 //Resolve attributes
                 StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, TypeCategory.STRUCT);
-                AtlasEntity result =  new AtlasEntity(entity.getTypeName(), converter.convertAttributes(entityType.getAllAttributeDefs().values(), entity));
+                result =  new AtlasEntityWithAssociations(entity.getTypeName(), converter.convertAttributes(entityType, entity));
+
+                //Id
                 setId(entity, result);
-                return  result;
+
+                //Resolve traits
+                List<AtlasClassification> classifications = new ArrayList<>();
+                for (String traitName : entity.getTraits()) {
+                    IStruct trait = entity.getTrait(traitName);
+                    AtlasClassificationType traitType = (AtlasClassificationType) typeRegistry.getType(traitName);
+                    AtlasClassification clsInstance =  new AtlasClassification(traitType.getTypeName(), converter.convertAttributes(traitType, trait));
+                    classifications.add(clsInstance);
+                }
+                result.setClassifications(classifications);
             }
         }
-        return null;
+        return result;
     }
 
     private boolean isEntityType(Object o) {

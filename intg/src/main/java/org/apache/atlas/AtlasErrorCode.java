@@ -59,7 +59,10 @@ public enum AtlasErrorCode {
     PATCH_FOR_UNKNOWN_TYPE(500, "ATLAS5005E", "{0} - patch references unknown type {1}"),
 
     ENTITY_GUID_NOT_FOUND(404, "ATLAS4045E", "Given entity guid/transientId {0} was invalid"),
-    ENTITY_ALREADY_EXISTS(405, "ATLAS4051E", "Given entity with guid/name {0} already exists");
+    ENTITY_ALREADY_EXISTS(405, "ATLAS4051E", "Given entity with guid/name {0} already exists"),
+    ATTRIBUTE_UNIQUE_INVALID(400, "ATLAS40015E", "Type {0} with unique attribute {1} does not exist"),
+    TYPE_NAME_INVALID(400, "ATLAS40016E", "Type {0} with name {1} does not exist"),
+    TYPE_CATEGORY_INVALID(400, "ATLAS40017E", "Type Category {0} does not match {1} or is invalid");
 
     private String errorCode;
     private String errorMessage;

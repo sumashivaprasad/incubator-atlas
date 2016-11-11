@@ -19,6 +19,7 @@ package org.apache.atlas.web.rest;
 
 import com.google.inject.Inject;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
@@ -32,6 +33,8 @@ import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.web.adapters.AtlasFormatConverters;
 import org.apache.atlas.web.adapters.AtlasInstanceRestAdapters;
 import org.apache.atlas.web.util.Servlets;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +53,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -118,6 +122,11 @@ public class EntitiesREST {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public AtlasEntity.AtlasEntities getById(@QueryParam("guid") List<String> guids) throws AtlasBaseException {
+
+        if (CollectionUtils.isEmpty(guids)) {
+            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guids);
+        }
+
         AtlasEntity.AtlasEntities entities = new AtlasEntity.AtlasEntities();
 
         List<AtlasEntity> entityList = new ArrayList<>();
@@ -144,8 +153,17 @@ public class EntitiesREST {
     @Path("/guids")
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse deleteById(@QueryParam("guid") List<String> guids) throws AtlasBaseException {
-        return null;
+    public EntityMutationResponse deleteById(@QueryParam("guid") final List<String> guids) throws AtlasBaseException {
+
+        if (CollectionUtils.isEmpty(guids)) {
+            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guids);
+        }
+        try {
+            AtlasClient.EntityResult result = metadataService.deleteEntities(guids);
+            return toEntityMutationResponse(result);
+        } catch (AtlasException e) {
+            throw toAtlasBaseException(e);
+        }
     }
 
     /**

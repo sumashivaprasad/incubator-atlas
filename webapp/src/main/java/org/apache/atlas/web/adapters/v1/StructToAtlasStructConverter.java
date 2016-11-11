@@ -24,6 +24,9 @@ import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.type.AtlasClassificationType;
+import org.apache.atlas.type.AtlasEntityType;
+import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.IStruct;
@@ -32,6 +35,7 @@ import org.apache.atlas.web.adapters.AtlasFormatConverters;
 import org.apache.atlas.web.adapters.AtlasInstanceRestAdapters;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,15 +61,11 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
 
         if (source != null) {
             //Json unmarshalling gives us a Map instead of AtlasObjectId or AtlasEntity
-
             if (isStructType(source)) {
-
                 IStruct entity = (IStruct) source;
-                AtlasStructDef structDef = typeRegistry.getStructDefByName(entity.getTypeName());
-
                 //Resolve attributes
                 StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, TypeCategory.STRUCT);
-                return new AtlasStruct(type.getTypeName(), converter.convertAttributes(structDef.getAttributeDefs(), entity));
+                return new AtlasStruct(type.getTypeName(), converter.convertAttributes((AtlasStructType) type, entity));
             }
 
         }
@@ -84,14 +84,23 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
         return TypeCategory.STRUCT;
     }
 
-    public Map<String, Object> convertAttributes(Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs, Object entity) throws AtlasBaseException {
+    public Map<String, Object> convertAttributes(AtlasStructType structType, Object entity) throws AtlasBaseException {
+        Collection<AtlasStructDef.AtlasAttributeDef> attributeDefs;
+
+        if (structType.getTypeCategory() == TypeCategory.STRUCT) {
+            attributeDefs = structType.getStructDef().getAttributeDefs();
+        } else if (structType.getTypeCategory() == TypeCategory.CLASSIFICATION) {
+            attributeDefs = ((AtlasClassificationType)structType).getAllAttributeDefs().values();
+        } else if (structType.getTypeCategory() == TypeCategory.ENTITY) {
+            attributeDefs = ((AtlasEntityType)structType).getAllAttributeDefs().values();
+        } else {
+            attributeDefs = Collections.emptyList();
+        }
+
         Map<String, Object> newAttrMap = new HashMap<>();
         for (AtlasStructDef.AtlasAttributeDef attrDef : attributeDefs) {
-            String attrTypeName = attrDef.getTypeName();
-            AtlasType attrType = typeRegistry.getType(attrTypeName);
-            TypeCategory typeCategory = attrType.getTypeCategory();
-
-            AtlasFormatAdapter attrConverter = registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2, typeCategory);
+            AtlasType attrType = structType.getAttributeType(attrDef.getName());
+            AtlasFormatAdapter attrConverter = registry.getConverter(AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2, attrType.getTypeCategory());
 
             Object attrVal = null;
             if ( AtlasFormatConverters.isMapType(entity)) {

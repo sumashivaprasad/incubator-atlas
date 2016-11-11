@@ -112,6 +112,17 @@ public interface MetadataService {
 
     ITypedReferenceableInstance getEntityDefinition(String guid) throws AtlasException;
 
+
+    /**
+     * Return the definition given type and attribute. The attribute has to be unique attribute for the type
+     * @param entityType - type name
+     * @param attribute - attribute name
+     * @param value - attribute value
+     * @return
+     * @throws AtlasException
+     */
+    ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value) throws AtlasException;
+
     /**
      * Return the definition given type and attribute. The attribute has to be unique attribute for the type
      * @param entityType - type name

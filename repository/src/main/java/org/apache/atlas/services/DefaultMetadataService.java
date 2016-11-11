@@ -313,7 +313,8 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         return instance;
     }
 
-    private ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value)
+    @Override
+    public ITypedReferenceableInstance getEntityDefinitionReference(String entityType, String attribute, String value)
             throws AtlasException {
         validateTypeExists(entityType);
         validateUniqueAttribute(entityType, attribute);
