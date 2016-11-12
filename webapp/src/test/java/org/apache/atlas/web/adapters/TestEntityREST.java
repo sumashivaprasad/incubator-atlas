@@ -10,13 +10,16 @@ import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.web.rest.EntityREST;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import org.testng.internal.Invoker;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -43,6 +46,11 @@ public class TestEntityREST {
         AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
         typeStore.createTypesDef(typesDef);
         dbEntity = TestUtilsV2.createDBEntity();
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        AtlasGraphProvider.cleanup();
     }
 
     @AfterMethod

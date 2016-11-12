@@ -42,7 +42,7 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
     protected AtlasFormatConverters registry;
 
     @Inject
-    ReferenceableToAtlasEntityConverter(AtlasTypeRegistry typeRegistry) {
+    public ReferenceableToAtlasEntityConverter(AtlasTypeRegistry typeRegistry) {
         this.typeRegistry = typeRegistry;
     }
 
@@ -63,11 +63,10 @@ public class ReferenceableToAtlasEntityConverter implements AtlasFormatAdapter {
             } else if (isEntityType(source) ) {
 
                 IReferenceableInstance entity = (IReferenceableInstance) source;
-                AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
 
                 //Resolve attributes
                 StructToAtlasStructConverter converter = (StructToAtlasStructConverter) registry.getConverter(sourceVersion, targetVersion, TypeCategory.STRUCT);
-                result =  new AtlasEntityWithAssociations(entity.getTypeName(), converter.convertAttributes(entityType, entity));
+                result =  new AtlasEntityWithAssociations(entity.getTypeName(), converter.convertAttributes((AtlasEntityType) type, entity));
 
                 //Id
                 setId(entity, result);

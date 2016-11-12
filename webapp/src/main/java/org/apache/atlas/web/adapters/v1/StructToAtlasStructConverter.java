@@ -42,13 +42,7 @@ import java.util.Map;
 @Singleton
 public class StructToAtlasStructConverter implements AtlasFormatAdapter {
 
-    protected AtlasTypeRegistry typeRegistry;
     protected AtlasFormatConverters registry;
-
-    @Inject
-    StructToAtlasStructConverter(AtlasTypeRegistry typeRegistry) {
-        this.typeRegistry = typeRegistry;
-    }
 
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
