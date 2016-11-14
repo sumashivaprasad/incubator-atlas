@@ -143,7 +143,7 @@ public class AtlasInstanceRestAdapters {
 
     public static AtlasBaseException toAtlasBaseException(AtlasException e) {
         if ( e instanceof EntityNotFoundException) {
-            return new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, e);
+            return new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, e);
         }
 
         if ( e instanceof TypeNotFoundException) {

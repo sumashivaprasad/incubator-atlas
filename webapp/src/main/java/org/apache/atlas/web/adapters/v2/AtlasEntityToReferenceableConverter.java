@@ -57,7 +57,7 @@ public class AtlasEntityToReferenceableConverter implements AtlasFormatAdapter {
                 String typeName = type.getTypeName();
 
                 if (StringUtils.isEmpty(idStr)) {
-                    throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND);
+                    throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND);
                 }
 
                 if (MapUtils.isEmpty((Map)srcMap.get(AtlasStructToStructConverter.ATTRIBUTES_PROPERTY_KEY))) {

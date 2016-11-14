@@ -134,12 +134,13 @@ public class EntityREST {
     }
 
     /**
-     * Fetch the complete definition of an entity given its GUID.
+     * Fetch the complete definition of an entity given its GUID including its associations
+     * like classifications, terms etc.
      *
      * @param guid GUID for the entity
      */
     @GET
-    @Path("/guid/{guid}")
+    @Path("/guid/{guid}/associations")
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public AtlasEntityWithAssociations getWithAssociationsByGuid(@PathParam("guid") String guid) throws AtlasBaseException {
         try {
@@ -164,7 +165,7 @@ public class EntityREST {
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public EntityMutationResponse deleteByGuid(@PathParam("guid") final String guid) throws AtlasBaseException {
         if (StringUtils.isEmpty(guid)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guid);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guid);
         }
         try {
             AtlasClient.EntityResult result = metadataService.deleteEntities(new ArrayList<String>() {{ add(guid); }});
@@ -251,7 +252,7 @@ public class EntityREST {
     public AtlasClassification getClassification(@PathParam("guid") String guid, @PathParam("classificationName") String classificationName) throws AtlasBaseException {
 
         if (StringUtils.isEmpty(guid)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guid);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guid);
         }
 
         validateType(classificationName, TypeCategory.CLASSIFICATION);
@@ -278,7 +279,7 @@ public class EntityREST {
     public AtlasClassification.AtlasClassifications getClassifications(@PathParam("guid") String guid) throws AtlasBaseException {
 
         if (StringUtils.isEmpty(guid)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guid);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guid);
         }
 
         AtlasClassification.AtlasClassifications clss = new AtlasClassification.AtlasClassifications();
@@ -315,7 +316,7 @@ public class EntityREST {
     public void addClassifications(@PathParam("guid") final String guid, List<AtlasClassification> classifications) throws AtlasBaseException {
 
         if (StringUtils.isEmpty(guid)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guid);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guid);
         }
 
         for (AtlasClassification classification:  classifications) {
@@ -342,7 +343,7 @@ public class EntityREST {
         //Not supported in old API
 
         if (StringUtils.isEmpty(guid)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guid);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guid);
         }
     }
 
@@ -360,7 +361,7 @@ public class EntityREST {
         @PathParam("classificationName") String classificationName) throws AtlasBaseException {
 
         if (StringUtils.isEmpty(guid)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guid);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guid);
         }
 
         validateType(classificationName, TypeCategory.CLASSIFICATION);

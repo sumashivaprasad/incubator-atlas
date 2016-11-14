@@ -124,7 +124,7 @@ public class EntitiesREST {
     public AtlasEntity.AtlasEntities getById(@QueryParam("guid") List<String> guids) throws AtlasBaseException {
 
         if (CollectionUtils.isEmpty(guids)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guids);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guids);
         }
 
         AtlasEntity.AtlasEntities entities = new AtlasEntity.AtlasEntities();
@@ -156,7 +156,7 @@ public class EntitiesREST {
     public EntityMutationResponse deleteById(@QueryParam("guid") final List<String> guids) throws AtlasBaseException {
 
         if (CollectionUtils.isEmpty(guids)) {
-            throw new AtlasBaseException(AtlasErrorCode.ENTITY_GUID_NOT_FOUND, guids);
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guids);
         }
         try {
             AtlasClient.EntityResult result = metadataService.deleteEntities(guids);
