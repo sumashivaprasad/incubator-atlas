@@ -54,7 +54,6 @@ public class StructToAtlasStructConverter implements AtlasFormatAdapter {
     public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
 
         if (source != null) {
-            //Json unmarshalling gives us a Map instead of AtlasObjectId or AtlasEntity
             if (isStructType(source)) {
                 IStruct entity = (IStruct) source;
                 //Resolve attributes

@@ -214,31 +214,6 @@ public class EntityREST {
         return toEntityMutationResponse(result);
     }
 
-    private AtlasType validateType(String entityType, TypeCategory expectedCategory) throws AtlasBaseException {
-        if ( StringUtils.isEmpty(entityType) ) {
-            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_INVALID, entityType);
-        }
-
-        AtlasType type = typeRegistry.getType(entityType);
-        if (type.getTypeCategory() != expectedCategory) {
-            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, type.getTypeCategory().name(), expectedCategory.name());
-        }
-
-        return type;
-    }
-
-    /**
-     * Validate that attribute is unique attribute
-     * @param entityType     the entity type
-     * @param attributeName  the name of the attribute
-     */
-    private void validateUniqueAttribute(AtlasEntityType entityType, String attributeName) throws AtlasBaseException {
-        AtlasStructDef.AtlasAttributeDef attribute = entityType.getAttributeDef(attributeName);
-        if (!attribute.getIsUnique()) {
-            throw new AtlasBaseException(AtlasErrorCode.ATTRIBUTE_UNIQUE_INVALID, entityType.getTypeName(), attributeName);
-        }
-    }
-
     /**
      * Fetch the complete definition of an entity
      * which is identified by its type and unique attribute  eg: Referenceable.qualifiedName.
@@ -394,6 +369,31 @@ public class EntityREST {
             metadataService.deleteTrait(guid, classificationName);
         } catch (AtlasException e) {
             throw toAtlasBaseException(e);
+        }
+    }
+
+    private AtlasType validateType(String entityType, TypeCategory expectedCategory) throws AtlasBaseException {
+        if ( StringUtils.isEmpty(entityType) ) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_INVALID, entityType);
+        }
+
+        AtlasType type = typeRegistry.getType(entityType);
+        if (type.getTypeCategory() != expectedCategory) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, type.getTypeCategory().name(), expectedCategory.name());
+        }
+
+        return type;
+    }
+
+    /**
+     * Validate that attribute is unique attribute
+     * @param entityType     the entity type
+     * @param attributeName  the name of the attribute
+     */
+    private void validateUniqueAttribute(AtlasEntityType entityType, String attributeName) throws AtlasBaseException {
+        AtlasStructDef.AtlasAttributeDef attribute = entityType.getAttributeDef(attributeName);
+        if (!attribute.getIsUnique()) {
+            throw new AtlasBaseException(AtlasErrorCode.ATTRIBUTE_UNIQUE_INVALID, entityType.getTypeName(), attributeName);
         }
     }
 }

@@ -44,11 +44,6 @@ import java.util.Map;
 public class TraitToAtlasClassificationConverter extends StructToAtlasStructConverter {
 
     @Inject
-    TraitToAtlasClassificationConverter(AtlasTypeRegistry typeRegistry) {
-        super(typeRegistry);
-    }
-
-    @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         super.init(registry);
     }
@@ -56,7 +51,10 @@ public class TraitToAtlasClassificationConverter extends StructToAtlasStructConv
     @Override
     public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
         AtlasStruct struct = (AtlasStruct) super.convert(sourceVersion, targetVersion, type, source);
-        return new AtlasClassification(struct.getTypeName(), struct.getAttributes());
+        if ( struct != null) {
+            return new AtlasClassification(struct.getTypeName(), struct.getAttributes());
+        }
+        return null;
     }
 
     @Override

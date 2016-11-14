@@ -175,6 +175,7 @@ public class EntitiesREST {
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public AtlasEntityHeader.AtlasEntityHeaders searchEntities() throws AtlasBaseException {
         //SearchFilter searchFilter
+        //TODO: Need to handle getEntitiesByType for older API
         return null;
     }
 

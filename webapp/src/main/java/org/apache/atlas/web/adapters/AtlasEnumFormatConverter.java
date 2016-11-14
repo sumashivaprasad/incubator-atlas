@@ -27,8 +27,6 @@ import javax.inject.Inject;
 
 public class AtlasEnumFormatConverter extends AtlasPrimitiveFormatConverter {
 
-    protected AtlasFormatConverters registry;
-
     @Inject
     public void init(AtlasFormatConverters registry) throws AtlasBaseException {
         super.init(registry);
