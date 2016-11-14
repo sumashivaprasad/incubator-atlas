@@ -26,25 +26,29 @@ import com.google.inject.multibindings.Multibinder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.apache.atlas.discovery.DataSetLineageService;
 import org.apache.atlas.discovery.DiscoveryService;
+import org.apache.atlas.discovery.EntityLineageService;
 import org.apache.atlas.discovery.LineageService;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.listener.EntityChangeListener;
+import org.apache.atlas.listener.TypeDefChangeListener;
 import org.apache.atlas.listener.TypesChangeListener;
+import org.apache.atlas.model.lineage.AtlasLineageService;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.audit.EntityAuditListener;
 import org.apache.atlas.repository.audit.EntityAuditRepository;
 import org.apache.atlas.repository.graph.DeleteHandler;
 import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
+import org.apache.atlas.repository.store.graph.AtlasEntityStore;
+import org.apache.atlas.repository.store.graph.v1.AtlasEntityStoreV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasTypeDefGraphStoreV1;
 import org.apache.atlas.repository.typestore.GraphBackedTypeStore;
 import org.apache.atlas.repository.typestore.ITypeStore;
 import org.apache.atlas.service.Service;
 import org.apache.atlas.services.DefaultMetadataService;
-import org.apache.atlas.services.IBootstrapTypesRegistrar;
 import org.apache.atlas.services.MetadataService;
-import org.apache.atlas.services.ReservedTypesRegistrar;
 import org.apache.atlas.store.AtlasTypeDefStore;
+import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeSystemProvider;
 import org.apache.atlas.typesystem.types.cache.TypeCache;
@@ -68,6 +72,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         // bind the ITypeStore interface to an implementation
         bind(ITypeStore.class).to(GraphBackedTypeStore.class).asEagerSingleton();
         bind(AtlasTypeDefStore.class).to(AtlasTypeDefGraphStoreV1.class).asEagerSingleton();
+        bind(AtlasTypeRegistry.class).asEagerSingleton();
 
         //GraphBackedSearchIndexer must be an eager singleton to force the search index creation to happen before
         //we try to restore the type system (otherwise we'll end up running queries
@@ -76,15 +81,22 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
                 Multibinder.newSetBinder(binder(), TypesChangeListener.class);
         typesChangeListenerBinder.addBinding().to(GraphBackedSearchIndexer.class).asEagerSingleton();
 
+        // New typesdef/instance change listener should also be bound to the corresponding implementation
+        Multibinder<TypeDefChangeListener> typeDefChangeListenerMultibinder =
+                Multibinder.newSetBinder(binder(), TypeDefChangeListener.class);
+        typeDefChangeListenerMultibinder.addBinding().to(DefaultMetadataService.class);
+        typeDefChangeListenerMultibinder.addBinding().to(GraphBackedSearchIndexer.class).asEagerSingleton();
+
+        bind(AtlasEntityStore.class).to(AtlasEntityStoreV1.class);
+
         // bind the MetadataService interface to an implementation
         bind(MetadataService.class).to(DefaultMetadataService.class).asEagerSingleton();
-
-        bind(IBootstrapTypesRegistrar.class).to(ReservedTypesRegistrar.class);
 
         // bind the DiscoveryService interface to an implementation
         bind(DiscoveryService.class).to(GraphBackedDiscoveryService.class).asEagerSingleton();
 
         bind(LineageService.class).to(DataSetLineageService.class).asEagerSingleton();
+        bind(AtlasLineageService.class).to(EntityLineageService.class).asEagerSingleton();
 
         Configuration configuration = getConfiguration();
         bindAuditRepository(binder(), configuration);

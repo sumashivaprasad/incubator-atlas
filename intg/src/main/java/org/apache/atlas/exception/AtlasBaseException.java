@@ -17,27 +17,70 @@
  */
 package org.apache.atlas.exception;
 
+import org.apache.atlas.AtlasErrorCode;
+
+import javax.ws.rs.core.Response;
+import java.util.List;
+
 /**
  * Base Exception class for Atlas API.
  */
 public class AtlasBaseException extends Exception {
 
+    private AtlasErrorCode atlasErrorCode;
+
+    public AtlasBaseException(AtlasErrorCode errorCode, String ... params) {
+        super(errorCode.getFormattedErrorMessage(params));
+        this.atlasErrorCode = errorCode;
+    }
+
+    public AtlasBaseException(final AtlasErrorCode errorCode, final List<String> params) {
+        super(errorCode.getFormattedErrorMessage(params.toArray(new String[params.size()])));
+        this.atlasErrorCode = errorCode;
+    }
+
     public AtlasBaseException() {
+        this(AtlasErrorCode.INTERNAL_ERROR);
     }
 
     public AtlasBaseException(String message) {
         super(message);
+        this.atlasErrorCode = AtlasErrorCode.INTERNAL_ERROR;
+    }
+
+    public AtlasBaseException(AtlasErrorCode errorCode, Throwable cause, String... params) {
+        super(errorCode.getFormattedErrorMessage(params), cause);
+        this.atlasErrorCode = errorCode;
     }
 
     public AtlasBaseException(String message, Throwable cause) {
         super(message, cause);
+        this.atlasErrorCode = AtlasErrorCode.INTERNAL_ERROR;
     }
 
     public AtlasBaseException(Throwable cause) {
         super(cause);
+        this.atlasErrorCode = AtlasErrorCode.INTERNAL_ERROR;
     }
 
-    public AtlasBaseException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public AtlasBaseException(AtlasErrorCode errorCode, Throwable cause, boolean enableSuppression,
+                              boolean writableStackTrace, String ... params) {
+        super(errorCode.getFormattedErrorMessage(params), cause, enableSuppression, writableStackTrace);
+        this.atlasErrorCode = AtlasErrorCode.INTERNAL_ERROR;
+    }
+
+    public AtlasBaseException(String message, Throwable cause, boolean enableSuppression,
+                              boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
+        this.atlasErrorCode = AtlasErrorCode.INTERNAL_ERROR;
+    }
+
+    public AtlasBaseException(final AtlasErrorCode errorCode, Throwable cause, final List<String> params) {
+        super(errorCode.getFormattedErrorMessage(params.toArray(new String[params.size()])), cause);
+        this.atlasErrorCode = errorCode;
+    }
+
+    public AtlasErrorCode getAtlasErrorCode() {
+        return atlasErrorCode;
     }
 }

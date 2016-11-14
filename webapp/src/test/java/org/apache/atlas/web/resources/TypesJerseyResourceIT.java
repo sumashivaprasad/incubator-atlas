@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.typesystem.TypesDef;
@@ -52,6 +53,7 @@ import java.util.List;
 
 import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 /**
@@ -134,8 +136,10 @@ public class TypesJerseyResourceIT extends BaseResourceIT {
         assertEquals(typesUpdated.size(), 1);
         Assert.assertTrue(typesUpdated.contains(typeDefinition.typeName));
 
-        HierarchicalTypeDefinition<ClassType>
-                updatedType = serviceClient.getType(typeDefinition.typeName).classTypesAsJavaList().get(0);
+        TypesDef updatedTypeDef = serviceClient.getType(typeDefinition.typeName);
+        assertNotNull(updatedTypeDef);
+
+        HierarchicalTypeDefinition<ClassType> updatedType = updatedTypeDef.classTypesAsJavaList().get(0);
         assertEquals(updatedType.attributeDefinitions.length, 2);
     }
 

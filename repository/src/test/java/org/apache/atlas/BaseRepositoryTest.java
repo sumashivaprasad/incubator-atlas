@@ -17,16 +17,15 @@
  */
 package org.apache.atlas;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import javax.inject.Inject;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.services.MetadataService;
+import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
@@ -45,9 +44,14 @@ import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.testng.annotations.Guice;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import static org.apache.atlas.AtlasClient.PROCESS_ATTRIBUTE_INPUTS;
+import static org.apache.atlas.AtlasClient.PROCESS_ATTRIBUTE_OUTPUTS;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.inject.Inject;
 
 /**
  *  Base Class to set up hive types and instances for tests
@@ -66,8 +70,9 @@ public class BaseRepositoryTest {
     protected void setUp() throws Exception {
         //force graph initialization / built in type registration
         TestUtils.getGraph();
+        setUpDefaultTypes();
         setUpTypes();
-        new GraphBackedSearchIndexer();
+        new GraphBackedSearchIndexer(new AtlasTypeRegistry());
         TestUtils.resetRequestContext();
         setupInstances();
         TestUtils.dumpGraph(TestUtils.getGraph());
@@ -319,7 +324,7 @@ public class BaseRepositoryTest {
         List<Referenceable> columns, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(HIVE_TABLE_TYPE, traitNames);
         referenceable.set("name", name);
-        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
+        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, "qualified:" + name);
         referenceable.set("description", description);
         referenceable.set("owner", owner);
         referenceable.set("tableType", tableType);
@@ -393,5 +398,43 @@ public class BaseRepositoryTest {
 
         // return the reference to created instance with guid
         return new Id(guids.get(guids.size() - 1), 0, referenceable.getTypeName());
+    }
+
+    private void setUpDefaultTypes() throws Exception {
+        TypesDef typesDef = createDefaultTypeDefinitions();
+        String typesAsJSON = TypesSerialization.toJson(typesDef);
+        metadataService.createType(typesAsJSON);
+    }
+
+    TypesDef createDefaultTypeDefinitions() {
+        HierarchicalTypeDefinition<ClassType> referenceableType = TypesUtil
+                .createClassTypeDef(AtlasClient.REFERENCEABLE_SUPER_TYPE, ImmutableSet.<String>of(),
+                        new AttributeDefinition(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false, true, true, null));
+
+        HierarchicalTypeDefinition<ClassType> assetType = TypesUtil
+                .createClassTypeDef(AtlasClient.ASSET_TYPE, ImmutableSet.<String>of(),
+                        new AttributeDefinition(AtlasClient.NAME, DataTypes.STRING_TYPE.getName(), Multiplicity.REQUIRED, false, false, true, null),
+                        TypesUtil.createOptionalAttrDef(AtlasClient.DESCRIPTION, DataTypes.STRING_TYPE),
+                        new AttributeDefinition(AtlasClient.OWNER, DataTypes.STRING_TYPE.getName(), Multiplicity.OPTIONAL, false, false, true, null));
+
+        HierarchicalTypeDefinition<ClassType> infraType = TypesUtil
+                .createClassTypeDef(AtlasClient.INFRASTRUCTURE_SUPER_TYPE,
+                        ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE, AtlasClient.ASSET_TYPE));
+
+        HierarchicalTypeDefinition<ClassType> datasetType = TypesUtil
+                .createClassTypeDef(AtlasClient.DATA_SET_SUPER_TYPE,
+                        ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE, AtlasClient.ASSET_TYPE));
+
+        HierarchicalTypeDefinition<ClassType> processType = TypesUtil
+                .createClassTypeDef(AtlasClient.PROCESS_SUPER_TYPE,
+                        ImmutableSet.of(AtlasClient.REFERENCEABLE_SUPER_TYPE, AtlasClient.ASSET_TYPE),
+                        new AttributeDefinition(PROCESS_ATTRIBUTE_INPUTS, DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
+                                Multiplicity.OPTIONAL, false, null),
+                        new AttributeDefinition(PROCESS_ATTRIBUTE_OUTPUTS, DataTypes.arrayTypeName(AtlasClient.DATA_SET_SUPER_TYPE),
+                                Multiplicity.OPTIONAL, false, null));
+
+        return TypesUtil.getTypesDef(ImmutableList.<EnumTypeDefinition>of(), ImmutableList.<StructTypeDefinition>of(),
+                ImmutableList.<HierarchicalTypeDefinition<TraitType>>of(),
+                ImmutableList.of(referenceableType, assetType, infraType, datasetType, processType));
     }
 }

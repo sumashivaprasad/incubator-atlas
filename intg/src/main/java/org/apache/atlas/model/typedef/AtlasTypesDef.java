@@ -17,7 +17,9 @@
  */
 package org.apache.atlas.model.typedef;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
@@ -88,5 +90,13 @@ public class AtlasTypesDef {
 
     public void setEntityDefs(List<AtlasEntityDef> entityDefs) {
         this.entityDefs = entityDefs;
+    }
+
+    @JsonIgnore
+    public boolean isEmpty() {
+        return CollectionUtils.isEmpty(enumDefs) &&
+                CollectionUtils.isEmpty(structDefs) &&
+                CollectionUtils.isEmpty(classificationDefs) &&
+                CollectionUtils.isEmpty(entityDefs);
     }
 }

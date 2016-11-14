@@ -19,6 +19,7 @@ package org.apache.atlas.type;
 
 
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,16 +100,6 @@ public class AtlasArrayType extends AtlasType {
     @Override
     public void resolveReferences(AtlasTypeRegistry typeRegistry) throws AtlasBaseException {
         elementType = typeRegistry.getType(elementTypeName);
-
-        if (elementType == null) {
-            String msg = elementTypeName + ": unknown element-type for array";
-
-            LOG.error(msg);
-
-            throw new AtlasBaseException(msg);
-        }
-
-        elementType.resolveReferences(typeRegistry);
     }
 
     @Override

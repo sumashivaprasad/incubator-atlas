@@ -17,10 +17,15 @@
  */
 package org.apache.atlas.repository.store.graph;
 
+import org.apache.atlas.AtlasErrorCode;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
+import org.apache.atlas.GraphTransactionInterceptor;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.listener.ActiveStateChangeHandler;
+import org.apache.atlas.listener.ChangedTypeDefs;
+import org.apache.atlas.listener.TypeDefChangeListener;
 import org.apache.atlas.model.SearchFilter;
-import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
 import org.apache.atlas.model.typedef.AtlasClassificationDef.AtlasClassificationDefs;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
@@ -30,82 +35,78 @@ import org.apache.atlas.model.typedef.AtlasEnumDef.AtlasEnumDefs;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasStructDef.AtlasStructDefs;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
+import org.apache.atlas.repository.store.bootstrap.AtlasTypeDefStoreInitializer;
 import org.apache.atlas.repository.util.FilterUtil;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasTypeRegistry;
-import org.apache.atlas.util.TypeDefSorter;
+import org.apache.atlas.type.AtlasTypeRegistry.AtlasTransientTypeRegistry;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 
 /**
  * Abstract class for graph persistence store for TypeDef
  */
-public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
+public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore, ActiveStateChangeHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(AtlasTypeDefGraphStore.class);
 
-    private AtlasTypeRegistry           typeRegistry;
-    private AtlasEnumDefStore           enumDefStore;
-    private AtlasStructDefStore         structDefStore;
-    private AtlasClassificationDefStore classificationDefStore;
-    private AtlasEntityDefStore         entityDefStore;
+    private final AtlasTypeRegistry typeRegistry;
 
-    protected AtlasTypeDefGraphStore() {
+    private final Set<TypeDefChangeListener> typeDefChangeListeners;
+
+    protected AtlasTypeDefGraphStore(AtlasTypeRegistry typeRegistry,
+                                     Set<TypeDefChangeListener> typeDefChangeListeners) {
+        this.typeRegistry = typeRegistry;
+        this.typeDefChangeListeners = typeDefChangeListeners;
     }
 
-    protected void init(AtlasEnumDefStore           enumDefStore,
-                        AtlasStructDefStore         structDefStore,
-                        AtlasClassificationDefStore classificationDefStore,
-                        AtlasEntityDefStore         entityDefStore) throws AtlasBaseException {
-        AtlasTypeRegistry typeRegistry = new AtlasTypeRegistry();
+    protected abstract AtlasEnumDefStore getEnumDefStore(AtlasTypeRegistry typeRegistry);
 
-        typeRegistry.addTypesWithNoRefResolve(enumDefStore.getAll());
-        typeRegistry.addTypesWithNoRefResolve(structDefStore.getAll());
-        typeRegistry.addTypesWithNoRefResolve(classificationDefStore.getAll());
-        typeRegistry.addTypesWithNoRefResolve(entityDefStore.getAll());
+    protected abstract AtlasStructDefStore getStructDefStore(AtlasTypeRegistry typeRegistry);
 
-        typeRegistry.resolveReferences();
+    protected abstract AtlasClassificationDefStore getClassificationDefStore(AtlasTypeRegistry typeRegistry);
 
-        this.enumDefStore           = enumDefStore;
-        this.structDefStore         = structDefStore;
-        this.classificationDefStore = classificationDefStore;
-        this.entityDefStore         = entityDefStore;
-        this.typeRegistry           = typeRegistry;
-    }
-
-    public AtlasTypeRegistry getTypeRegistry() {
-        return typeRegistry;
-    }
+    protected abstract AtlasEntityDefStore getEntityDefStore(AtlasTypeRegistry typeRegistry);
 
     @Override
     public void init() throws AtlasBaseException {
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
+        AtlasTypesDef typesDef = new AtlasTypesDef(getEnumDefStore(ttr).getAll(),
+                                                   getStructDefStore(ttr).getAll(),
+                                                   getClassificationDefStore(ttr).getAll(),
+                                                   getEntityDefStore(ttr).getAll());
+
+        ttr.addTypes(typesDef);
+
+        typeRegistry.commitTransientTypeRegistry(ttr);
+
+        bootstrapTypes();
     }
 
     @Override
     @GraphTransaction
     public AtlasEnumDef createEnumDef(AtlasEnumDef enumDef) throws AtlasBaseException {
-        AtlasEnumDef ret = enumDefStore.create(enumDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.addType(ret);
+        ttr.addType(enumDef);
 
-        return ret;
-    }
+        AtlasEnumDef ret = getEnumDefStore(ttr).create(enumDef);
 
-    @Override
-    @GraphTransaction
-    public List<AtlasEnumDef> createEnumDefs(List<AtlasEnumDef> atlasEnumDefs) throws AtlasBaseException {
-        List<AtlasEnumDef> ret = enumDefStore.create(atlasEnumDefs);
+        ttr.updateGuid(ret.getName(), ret.getGuid());
 
-        typeRegistry.addTypes(ret);
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -117,9 +118,8 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
 
         Collection<AtlasEnumDef> enumDefs = typeRegistry.getAllEnumDefs();
 
-        if (enumDefs != null) {
-            ret = new ArrayList<>(enumDefs);
-        }
+        ret = CollectionUtils.isNotEmpty(enumDefs) ?
+                new ArrayList<>(enumDefs) : Collections.<AtlasEnumDef>emptyList();
 
         return ret;
     }
@@ -128,7 +128,9 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasEnumDef getEnumDefByName(String name) throws AtlasBaseException {
         AtlasEnumDef ret = typeRegistry.getEnumDefByName(name);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_NOT_FOUND, name);
+        }
         return ret;
     }
 
@@ -136,16 +138,22 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasEnumDef getEnumDefByGuid(String guid) throws AtlasBaseException {
         AtlasEnumDef ret = typeRegistry.getEnumDefByGuid(guid);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_GUID_NOT_FOUND, guid);
+        }
         return ret;
     }
 
     @Override
     @GraphTransaction
     public AtlasEnumDef updateEnumDefByName(String name, AtlasEnumDef enumDef) throws AtlasBaseException {
-        AtlasEnumDef ret = enumDefStore.updateByName(name, enumDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByName(name, ret);
+        ttr.updateTypeByName(name, enumDef);
+
+        AtlasEnumDef ret = getEnumDefStore(ttr).updateByName(name, enumDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -153,9 +161,13 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public AtlasEnumDef updateEnumDefByGuid(String guid, AtlasEnumDef enumDef) throws AtlasBaseException {
-        AtlasEnumDef ret = enumDefStore.updateByGuid(guid, enumDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByGuid(guid, ret);
+        ttr.updateTypeByGuid(guid, enumDef);
+
+        AtlasEnumDef ret = getEnumDefStore(ttr).updateByGuid(guid, enumDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -163,41 +175,53 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public void deleteEnumDefByName(String name) throws AtlasBaseException {
-        enumDefStore.deleteByName(name);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByName(name);
+        AtlasEnumDef byName = typeRegistry.getEnumDefByName(name);
+
+        ttr.removeTypeByName(name);
+
+        getEnumDefStore(ttr).deleteByName(name);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public void deleteEnumDefByGuid(String guid) throws AtlasBaseException {
-        enumDefStore.deleteByGuid(guid);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByGuid(guid);
+        AtlasEnumDef byGuid = typeRegistry.getEnumDefByGuid(guid);
+
+        ttr.removeTypeByGuid(guid);
+
+        getEnumDefStore(ttr).deleteByGuid(guid);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public AtlasEnumDefs searchEnumDefs(SearchFilter filter) throws AtlasBaseException {
-        return enumDefStore.search(filter);
+        AtlasEnumDefs search = getEnumDefStore(typeRegistry).search(filter);
+        if (search == null || search.getTotalCount() == 0) {
+            throw new AtlasBaseException(AtlasErrorCode.NO_SEARCH_RESULTS);
+        }
+        return search;
     }
 
     @Override
     @GraphTransaction
     public AtlasStructDef createStructDef(AtlasStructDef structDef) throws AtlasBaseException {
-        AtlasStructDef ret = structDefStore.create(structDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.addType(structDef);
+        ttr.addType(structDef);
 
-        return ret;
-    }
+        AtlasStructDef ret = getStructDefStore(ttr).create(structDef, null);
 
-    @Override
-    @GraphTransaction
-    public List<AtlasStructDef> createStructDefs(List<AtlasStructDef> structDefs) throws AtlasBaseException {
-        List<AtlasStructDef> ret = structDefStore.create(structDefs);
+        ttr.updateGuid(ret.getName(), ret.getGuid());
 
-        typeRegistry.addTypes(ret);
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -209,9 +233,8 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
 
         Collection<AtlasStructDef> structDefs = typeRegistry.getAllStructDefs();
 
-        if (structDefs != null) {
-            ret = new ArrayList<>(structDefs);
-        }
+        ret = CollectionUtils.isNotEmpty(structDefs) ?
+                new ArrayList<>(structDefs) : Collections.<AtlasStructDef>emptyList();
 
         return ret;
     }
@@ -220,7 +243,9 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasStructDef getStructDefByName(String name) throws AtlasBaseException {
         AtlasStructDef ret = typeRegistry.getStructDefByName(name);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_NOT_FOUND, name);
+        }
         return ret;
     }
 
@@ -228,16 +253,22 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasStructDef getStructDefByGuid(String guid) throws AtlasBaseException {
         AtlasStructDef ret = typeRegistry.getStructDefByGuid(guid);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_GUID_NOT_FOUND, guid);
+        }
         return ret;
     }
 
     @Override
     @GraphTransaction
     public AtlasStructDef updateStructDefByName(String name, AtlasStructDef structDef) throws AtlasBaseException {
-        AtlasStructDef ret = structDefStore.updateByName(name, structDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByName(name, ret);
+        ttr.updateTypeByName(name, structDef);
+
+        AtlasStructDef ret = getStructDefStore(ttr).updateByName(name, structDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -245,9 +276,13 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public AtlasStructDef updateStructDefByGuid(String guid, AtlasStructDef structDef) throws AtlasBaseException {
-        AtlasStructDef ret = structDefStore.updateByGuid(guid, structDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByGuid(guid, ret);
+        ttr.updateTypeByGuid(guid, structDef);
+
+        AtlasStructDef ret = getStructDefStore(ttr).updateByGuid(guid, structDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -255,43 +290,54 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public void deleteStructDefByName(String name) throws AtlasBaseException {
-        structDefStore.deleteByName(name);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByName(name);
+        AtlasStructDef byName = typeRegistry.getStructDefByName(name);
+
+        ttr.removeTypeByName(name);
+
+        getStructDefStore(ttr).deleteByName(name, null);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public void deleteStructDefByGuid(String guid) throws AtlasBaseException {
-        structDefStore.deleteByGuid(guid);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByGuid(guid);
+        AtlasStructDef byGuid = typeRegistry.getStructDefByGuid(guid);
+
+        ttr.removeTypeByGuid(guid);
+
+        getStructDefStore(ttr).deleteByGuid(guid, null);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public AtlasStructDefs searchStructDefs(SearchFilter filter) throws AtlasBaseException {
-        return structDefStore.search(filter);
+        AtlasStructDefs search = getStructDefStore(typeRegistry).search(filter);
+        if (search == null || search.getTotalCount() == 0) {
+            throw new AtlasBaseException(AtlasErrorCode.NO_SEARCH_RESULTS);
+        }
+        return search;
     }
 
     @Override
     @GraphTransaction
     public AtlasClassificationDef createClassificationDef(AtlasClassificationDef classificationDef)
         throws AtlasBaseException {
-        AtlasClassificationDef ret = classificationDefStore.create(classificationDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.addType(classificationDef);
+        ttr.addType(classificationDef);
 
-        return ret;
-    }
+        AtlasClassificationDef ret = getClassificationDefStore(ttr).create(classificationDef, null);
 
-    @Override
-    @GraphTransaction
-    public List<AtlasClassificationDef> createClassificationDefs(List<AtlasClassificationDef> classificationDefs)
-        throws AtlasBaseException {
-        List<AtlasClassificationDef> ret = classificationDefStore.create(classificationDefs);
+        ttr.updateGuid(ret.getName(), ret.getGuid());
 
-        typeRegistry.addTypes(ret);
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -303,9 +349,8 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
 
         Collection<AtlasClassificationDef> classificationDefs = typeRegistry.getAllClassificationDefs();
 
-        if (classificationDefs != null) {
-            ret = new ArrayList<>(classificationDefs);
-        }
+        ret = CollectionUtils.isNotEmpty(classificationDefs) ?
+                new ArrayList<>(classificationDefs) : Collections.<AtlasClassificationDef>emptyList();
 
         return ret;
     }
@@ -315,6 +360,9 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     public AtlasClassificationDef getClassificationDefByName(String name) throws AtlasBaseException {
         AtlasClassificationDef ret = typeRegistry.getClassificationDefByName(name);
 
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_NOT_FOUND, name);
+        }
         return ret;
     }
 
@@ -322,7 +370,9 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasClassificationDef getClassificationDefByGuid(String guid) throws AtlasBaseException {
         AtlasClassificationDef ret = typeRegistry.getClassificationDefByGuid(guid);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_GUID_NOT_FOUND, guid);
+        }
         return ret;
     }
 
@@ -330,9 +380,13 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasClassificationDef updateClassificationDefByName(String name, AtlasClassificationDef classificationDef)
         throws AtlasBaseException {
-        AtlasClassificationDef ret = classificationDefStore.updateByName(name, classificationDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByName(name, ret);
+        ttr.updateTypeByName(name, classificationDef);
+
+        AtlasClassificationDef ret = getClassificationDefStore(ttr).updateByName(name, classificationDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -341,9 +395,13 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasClassificationDef updateClassificationDefByGuid(String guid, AtlasClassificationDef classificationDef)
         throws AtlasBaseException {
-        AtlasClassificationDef ret = classificationDefStore.updateByGuid(guid, classificationDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByGuid(guid, ret);
+        ttr.updateTypeByGuid(guid, classificationDef);
+
+        AtlasClassificationDef ret = getClassificationDefStore(ttr).updateByGuid(guid, classificationDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -351,41 +409,53 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public void deleteClassificationDefByName(String name) throws AtlasBaseException {
-        classificationDefStore.deleteByName(name);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByName(name);
+        AtlasClassificationDef byName = typeRegistry.getClassificationDefByName(name);
+
+        ttr.removeTypeByName(name);
+
+        getClassificationDefStore(ttr).deleteByName(name, null);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public void deleteClassificationDefByGuid(String guid) throws AtlasBaseException {
-        classificationDefStore.deleteByGuid(guid);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByGuid(guid);
+        AtlasClassificationDef byGuid = typeRegistry.getClassificationDefByGuid(guid);
+
+        ttr.removeTypeByGuid(guid);
+
+        getClassificationDefStore(ttr).deleteByGuid(guid, null);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public AtlasClassificationDefs searchClassificationDefs(SearchFilter filter) throws AtlasBaseException {
-        return classificationDefStore.search(filter);
+        AtlasClassificationDefs search = getClassificationDefStore(typeRegistry).search(filter);
+        if (search == null || search.getTotalCount() == 0) {
+            throw new AtlasBaseException(AtlasErrorCode.NO_SEARCH_RESULTS);
+        }
+        return search;
     }
 
     @Override
     @GraphTransaction
     public AtlasEntityDef createEntityDef(AtlasEntityDef entityDef) throws AtlasBaseException {
-        AtlasEntityDef ret = entityDefStore.create(entityDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.addType(ret);
+        ttr.addType(entityDef);
 
-        return ret;
-    }
+        AtlasEntityDef ret = getEntityDefStore(ttr).create(entityDef, null);
 
-    @Override
-    @GraphTransaction
-    public List<AtlasEntityDef> createEntityDefs(List<AtlasEntityDef> entityDefs) throws AtlasBaseException {
-        List<AtlasEntityDef> ret = entityDefStore.create(entityDefs);
+        ttr.updateGuid(ret.getName(), ret.getGuid());
 
-        typeRegistry.addTypes(ret);
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -397,9 +467,8 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
 
         Collection<AtlasEntityDef> entityDefs = typeRegistry.getAllEntityDefs();
 
-        if (entityDefs != null) {
-            ret = new ArrayList<>(entityDefs);
-        }
+        ret = CollectionUtils.isNotEmpty(entityDefs) ?
+                new ArrayList<>(entityDefs) : Collections.<AtlasEntityDef>emptyList();
 
         return ret;
     }
@@ -408,7 +477,9 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasEntityDef getEntityDefByName(String name) throws AtlasBaseException {
         AtlasEntityDef ret = typeRegistry.getEntityDefByName(name);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_NOT_FOUND, name);
+        }
         return ret;
     }
 
@@ -416,16 +487,22 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @GraphTransaction
     public AtlasEntityDef getEntityDefByGuid(String guid) throws AtlasBaseException {
         AtlasEntityDef ret = typeRegistry.getEntityDefByGuid(guid);
-
+        if (ret == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_GUID_NOT_FOUND, guid);
+        }
         return ret;
     }
 
     @Override
     @GraphTransaction
     public AtlasEntityDef updateEntityDefByName(String name, AtlasEntityDef entityDef) throws AtlasBaseException {
-        AtlasEntityDef ret = entityDefStore.updateByName(name, entityDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByName(name, ret);
+        ttr.updateTypeByName(name, entityDef);
+
+        AtlasEntityDef ret = getEntityDefStore(ttr).updateByName(name, entityDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -433,9 +510,13 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public AtlasEntityDef updateEntityDefByGuid(String guid, AtlasEntityDef entityDef) throws AtlasBaseException {
-        AtlasEntityDef ret = entityDefStore.updateByGuid(guid, entityDef);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.updateTypeByGuid(guid, ret);
+        ttr.updateTypeByGuid(guid, entityDef);
+
+        AtlasEntityDef ret = getEntityDefStore(ttr).updateByGuid(guid, entityDef);
+
+        updateTypeRegistryPostCommit(ttr);
 
         return ret;
     }
@@ -443,43 +524,140 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public void deleteEntityDefByName(String name) throws AtlasBaseException {
-        entityDefStore.deleteByName(name);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByName(name);
+        AtlasEntityDef byName = typeRegistry.getEntityDefByName(name);
+
+        ttr.removeTypeByName(name);
+
+        getEntityDefStore(ttr).deleteByName(name, null);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public void deleteEntityDefByGuid(String guid) throws AtlasBaseException {
-        entityDefStore.deleteByGuid(guid);
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        typeRegistry.removeTypeByGuid(guid);
+        AtlasEntityDef byGuid = typeRegistry.getEntityDefByGuid(guid);
+
+        ttr.removeTypeByGuid(guid);
+
+        getEntityDefStore(ttr).deleteByGuid(guid, null);
+
+        updateTypeRegistryPostCommit(ttr);
     }
 
     @Override
     @GraphTransaction
     public AtlasEntityDefs searchEntityDefs(SearchFilter filter) throws AtlasBaseException {
-        return entityDefStore.search(filter);
+        AtlasEntityDefs search = getEntityDefStore(typeRegistry).search(filter);
+        if (search == null || search.getTotalCount() == 0) {
+            throw new AtlasBaseException(AtlasErrorCode.NO_SEARCH_RESULTS);
+        }
+        return search;
     }
 
     @Override
     @GraphTransaction
     public AtlasTypesDef createTypesDef(AtlasTypesDef typesDef) throws AtlasBaseException {
-        LOG.info("Creating EnumDefs");
-        List<AtlasEnumDef>           enumDefs     = enumDefStore.create(typesDef.getEnumDefs());
-        List<AtlasStructDef>         structDefs   = structDefStore.create(typesDef.getStructDefs());
-        List<AtlasClassificationDef> classifiDefs = classificationDefStore.create(typesDef.getClassificationDefs());
-        List<AtlasEntityDef>         entityDefs   = entityDefStore.create(typesDef.getEntityDefs());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("==> AtlasTypeDefGraphStore.createTypesDef(enums={}, structs={}, classfications={}, entities={})",
+                      CollectionUtils.size(typesDef.getEnumDefs()),
+                      CollectionUtils.size(typesDef.getStructDefs()),
+                      CollectionUtils.size(typesDef.getClassificationDefs()),
+                      CollectionUtils.size(typesDef.getEntityDefs()));
+        }
 
-        // typeRegistry should be updated only after resovleReferences() returns success; until then use a temp registry
-        typeRegistry.addTypes(enumDefs);
-        typeRegistry.addTypes(structDefs);
-        typeRegistry.addTypes(classifiDefs);
-        typeRegistry.addTypes(entityDefs);
+        AtlasTypesDef ret = new AtlasTypesDef();
 
-        typeRegistry.resolveReferences();
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        AtlasTypesDef ret = new AtlasTypesDef(enumDefs, structDefs, classifiDefs, entityDefs);
+        ttr.addTypes(typesDef);
+
+        AtlasEnumDefStore           enumDefStore     = getEnumDefStore(ttr);
+        AtlasStructDefStore         structDefStore   = getStructDefStore(ttr);
+        AtlasClassificationDefStore classifiDefStore = getClassificationDefStore(ttr);
+        AtlasEntityDefStore         entityDefStore   = getEntityDefStore(ttr);
+
+        List<Object> preCreateStructDefs   = new ArrayList<>();
+        List<Object> preCreateClassifiDefs = new ArrayList<>();
+        List<Object> preCreateEntityDefs   = new ArrayList<>();
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEnumDefs())) {
+            for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
+                AtlasEnumDef createdDef = enumDefStore.create(enumDef);
+
+                ttr.updateGuid(createdDef.getName(), createdDef.getGuid());
+
+                ret.getEnumDefs().add(createdDef);
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getStructDefs())) {
+            for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+                preCreateStructDefs.add(structDefStore.preCreate(structDef));
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getClassificationDefs())) {
+            for (AtlasClassificationDef classifiDef : typesDef.getClassificationDefs()) {
+                preCreateClassifiDefs.add(classifiDefStore.preCreate(classifiDef));
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEntityDefs())) {
+            for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+                preCreateEntityDefs.add(entityDefStore.preCreate(entityDef));
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getStructDefs())) {
+            int i = 0;
+            for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+                AtlasStructDef createdDef = structDefStore.create(structDef, preCreateStructDefs.get(i));
+
+                ttr.updateGuid(createdDef.getName(), createdDef.getGuid());
+
+                ret.getStructDefs().add(createdDef);
+                i++;
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getClassificationDefs())) {
+            int i = 0;
+            for (AtlasClassificationDef classifiDef : typesDef.getClassificationDefs()) {
+                AtlasClassificationDef createdDef = classifiDefStore.create(classifiDef, preCreateClassifiDefs.get(i));
+
+                ttr.updateGuid(createdDef.getName(), createdDef.getGuid());
+
+                ret.getClassificationDefs().add(createdDef);
+                i++;
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEntityDefs())) {
+            int i = 0;
+            for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+                AtlasEntityDef createdDef = entityDefStore.create(entityDef, preCreateEntityDefs.get(i));
+
+                ttr.updateGuid(createdDef.getName(), createdDef.getGuid());
+
+                ret.getEntityDefs().add(createdDef);
+                i++;
+            }
+        }
+
+        updateTypeRegistryPostCommit(ttr);
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("<== AtlasTypeDefGraphStore.createTypesDef(enums={}, structs={}, classfications={}, entities={})",
+                    CollectionUtils.size(typesDef.getEnumDefs()),
+                    CollectionUtils.size(typesDef.getStructDefs()),
+                    CollectionUtils.size(typesDef.getClassificationDefs()),
+                    CollectionUtils.size(typesDef.getEntityDefs()));
+        }
 
         return ret;
     }
@@ -487,24 +665,172 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
     @Override
     @GraphTransaction
     public AtlasTypesDef updateTypesDef(AtlasTypesDef typesDef) throws AtlasBaseException {
-        LOG.info("Updating EnumDefs");
-        List<AtlasEnumDef>           enumDefs     = enumDefStore.update(typesDef.getEnumDefs());
-        List<AtlasStructDef>         structDefs   = structDefStore.update(typesDef.getStructDefs());
-        List<AtlasClassificationDef> classifiDefs = classificationDefStore.update(typesDef.getClassificationDefs());
-        List<AtlasEntityDef>         entityDefs   = entityDefStore.update(typesDef.getEntityDefs());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("==> AtlasTypeDefGraphStore.updateTypesDef(enums={}, structs={}, classfications={}, entities={})",
+                    CollectionUtils.size(typesDef.getEnumDefs()),
+                    CollectionUtils.size(typesDef.getStructDefs()),
+                    CollectionUtils.size(typesDef.getClassificationDefs()),
+                    CollectionUtils.size(typesDef.getEntityDefs()));
+        }
 
-        // typeRegistry should be updated only after resovleReferences() returns success; until then use a temp registry
-        typeRegistry.updateTypes(enumDefs);
-        typeRegistry.updateTypes(structDefs);
-        typeRegistry.updateTypes(classifiDefs);
-        typeRegistry.updateTypes(entityDefs);
+        AtlasTypesDef ret = new AtlasTypesDef();
 
-        typeRegistry.resolveReferences();
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
 
-        AtlasTypesDef ret = new AtlasTypesDef(enumDefs, structDefs, classifiDefs, entityDefs);
+        ttr.updateTypes(typesDef);
+
+        AtlasEnumDefStore           enumDefStore     = getEnumDefStore(ttr);
+        AtlasStructDefStore         structDefStore   = getStructDefStore(ttr);
+        AtlasClassificationDefStore classifiDefStore = getClassificationDefStore(ttr);
+        AtlasEntityDefStore         entityDefStore   = getEntityDefStore(ttr);
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEnumDefs())) {
+            for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
+                ret.getEnumDefs().add(enumDefStore.update(enumDef));
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getStructDefs())) {
+            for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+                ret.getStructDefs().add(structDefStore.update(structDef));
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getClassificationDefs())) {
+            for (AtlasClassificationDef classifiDef : typesDef.getClassificationDefs()) {
+                ret.getClassificationDefs().add(classifiDefStore.update(classifiDef));
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEntityDefs())) {
+            for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+                ret.getEntityDefs().add(entityDefStore.update(entityDef));
+            }
+        }
+
+        updateTypeRegistryPostCommit(ttr);
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("<== AtlasTypeDefGraphStore.updateTypesDef(enums={}, structs={}, classfications={}, entities={})",
+                    CollectionUtils.size(typesDef.getEnumDefs()),
+                    CollectionUtils.size(typesDef.getStructDefs()),
+                    CollectionUtils.size(typesDef.getClassificationDefs()),
+                    CollectionUtils.size(typesDef.getEntityDefs()));
+        }
 
         return ret;
 
+    }
+
+    @Override
+    @GraphTransaction
+    public void deleteTypesDef(AtlasTypesDef typesDef) throws AtlasBaseException {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("==> AtlasTypeDefGraphStore.deleteTypesDef(enums={}, structs={}, classfications={}, entities={})",
+                    CollectionUtils.size(typesDef.getEnumDefs()),
+                    CollectionUtils.size(typesDef.getStructDefs()),
+                    CollectionUtils.size(typesDef.getClassificationDefs()),
+                    CollectionUtils.size(typesDef.getEntityDefs()));
+        }
+
+        AtlasTransientTypeRegistry ttr = typeRegistry.createTransientTypeRegistry();
+
+        ttr.addTypes(typesDef);
+
+        AtlasEnumDefStore           enumDefStore     = getEnumDefStore(ttr);
+        AtlasStructDefStore         structDefStore   = getStructDefStore(ttr);
+        AtlasClassificationDefStore classifiDefStore = getClassificationDefStore(ttr);
+        AtlasEntityDefStore         entityDefStore   = getEntityDefStore(ttr);
+
+        List<Object> preDeleteStructDefs   = new ArrayList<>();
+        List<Object> preDeleteClassifiDefs = new ArrayList<>();
+        List<Object> preDeleteEntityDefs   = new ArrayList<>();
+
+        if (CollectionUtils.isNotEmpty(typesDef.getStructDefs())) {
+            for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+                if (StringUtils.isNotBlank(structDef.getGuid())) {
+                    preDeleteStructDefs.add(structDefStore.preDeleteByGuid(structDef.getGuid()));
+                } else {
+                    preDeleteStructDefs.add(structDefStore.preDeleteByName(structDef.getName()));
+                }
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getClassificationDefs())) {
+            for (AtlasClassificationDef classifiDef : typesDef.getClassificationDefs()) {
+                if (StringUtils.isNotBlank(classifiDef.getGuid())) {
+                    preDeleteClassifiDefs.add(classifiDefStore.preDeleteByGuid(classifiDef.getGuid()));
+                } else {
+                    preDeleteClassifiDefs.add(classifiDefStore.preDeleteByName(classifiDef.getName()));
+                }
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEntityDefs())) {
+            for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+                if (StringUtils.isNotBlank(entityDef.getGuid())) {
+                    preDeleteEntityDefs.add(entityDefStore.preDeleteByGuid(entityDef.getGuid()));
+                } else {
+                    preDeleteEntityDefs.add(entityDefStore.preDeleteByName(entityDef.getName()));
+                }
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getStructDefs())) {
+            int i = 0;
+            for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+                if (StringUtils.isNotBlank(structDef.getGuid())) {
+                    structDefStore.deleteByGuid(structDef.getGuid(), preDeleteStructDefs.get(i));
+                } else {
+                    structDefStore.deleteByName(structDef.getName(), preDeleteStructDefs.get(i));
+                }
+                i++;
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getClassificationDefs())) {
+            int i = 0;
+            for (AtlasClassificationDef classifiDef : typesDef.getClassificationDefs()) {
+                if (StringUtils.isNotBlank(classifiDef.getGuid())) {
+                    classifiDefStore.deleteByGuid(classifiDef.getGuid(), preDeleteClassifiDefs.get(i));
+                } else {
+                    classifiDefStore.deleteByName(classifiDef.getName(), preDeleteClassifiDefs.get(i));
+                }
+                i++;
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEntityDefs())) {
+            int i = 0;
+            for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+                if (StringUtils.isNotBlank(entityDef.getGuid())) {
+                    entityDefStore.deleteByGuid(entityDef.getGuid(), preDeleteEntityDefs.get(i));
+                } else {
+                    entityDefStore.deleteByName(entityDef.getName(), preDeleteEntityDefs.get(i));
+                }
+                i++;
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(typesDef.getEnumDefs())) {
+            for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
+                if (StringUtils.isNotBlank(enumDef.getGuid())) {
+                    enumDefStore.deleteByGuid(enumDef.getGuid());
+                } else {
+                    enumDefStore.deleteByName(enumDef.getName());
+                }
+            }
+        }
+
+        updateTypeRegistryPostCommit(ttr);
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("<== AtlasTypeDefGraphStore.deleteTypesDef(enums={}, structs={}, classfications={}, entities={})",
+                    CollectionUtils.size(typesDef.getEnumDefs()),
+                    CollectionUtils.size(typesDef.getStructDefs()),
+                    CollectionUtils.size(typesDef.getClassificationDefs()),
+                    CollectionUtils.size(typesDef.getEntityDefs()));
+        }
     }
 
     @Override
@@ -513,7 +839,7 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
         AtlasTypesDef typesDef = new AtlasTypesDef();
         Predicate searchPredicates = FilterUtil.getPredicateFromSearchFilter(searchFilter);
         try {
-            List<AtlasEnumDef> enumDefs = enumDefStore.getAll();
+            List<AtlasEnumDef> enumDefs = getEnumDefStore(typeRegistry).getAll();
             CollectionUtils.filter(enumDefs, searchPredicates);
             typesDef.setEnumDefs(enumDefs);
         } catch (AtlasBaseException ex) {
@@ -521,7 +847,7 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
         }
 
         try {
-            List<AtlasStructDef> structDefs = structDefStore.getAll();
+            List<AtlasStructDef> structDefs = getStructDefStore(typeRegistry).getAll();
             CollectionUtils.filter(structDefs, searchPredicates);
             typesDef.setStructDefs(structDefs);
         } catch (AtlasBaseException ex) {
@@ -529,7 +855,7 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
         }
 
         try {
-            List<AtlasClassificationDef> classificationDefs = classificationDefStore.getAll();
+            List<AtlasClassificationDef> classificationDefs = getClassificationDefStore(typeRegistry).getAll();
             CollectionUtils.filter(classificationDefs, searchPredicates);
             typesDef.setClassificationDefs(classificationDefs);
         } catch (AtlasBaseException ex) {
@@ -537,13 +863,86 @@ public abstract class AtlasTypeDefGraphStore implements AtlasTypeDefStore {
         }
 
         try {
-            List<AtlasEntityDef> entityDefs = entityDefStore.getAll();
+            List<AtlasEntityDef> entityDefs = getEntityDefStore(typeRegistry).getAll();
             CollectionUtils.filter(entityDefs, searchPredicates);
             typesDef.setEntityDefs(entityDefs);
         } catch (AtlasBaseException ex) {
             LOG.error("Failed to retrieve the EntityDefs", ex);
         }
 
+        if (typesDef.isEmpty()) {
+            throw new AtlasBaseException(AtlasErrorCode.NO_SEARCH_RESULTS);
+        }
         return typesDef;
+    }
+
+    @Override
+    public void instanceIsActive() throws AtlasException {
+        try {
+            init();
+        } catch (AtlasBaseException e) {
+            LOG.error("Failed to init after becoming active", e);
+        }
+    }
+
+    @Override
+    public void instanceIsPassive() throws AtlasException {
+        LOG.info("Not reacting to a Passive state change");
+    }
+
+    private void bootstrapTypes() {
+        AtlasTypeDefStoreInitializer storeInitializer = new AtlasTypeDefStoreInitializer();
+
+        String atlasHomeDir = System.getProperty("atlas.home");
+        String typesDirName = (StringUtils.isEmpty(atlasHomeDir) ? "." : atlasHomeDir) + File.separator + "models";
+
+        storeInitializer.initializeStore(this, typeRegistry, typesDirName);
+    }
+
+    private void updateTypeRegistryPostCommit(AtlasTransientTypeRegistry ttr) {
+        new TypeRegistryUpdateHook(ttr);
+    }
+
+    private class TypeRegistryUpdateHook extends GraphTransactionInterceptor.PostTransactionHook {
+        private final AtlasTransientTypeRegistry ttr;
+
+        private TypeRegistryUpdateHook(AtlasTransientTypeRegistry ttr) {
+            super();
+
+            this.ttr = ttr;
+        }
+
+        @Override
+        public void onComplete(boolean isSuccess) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("==> TypeRegistryUpdateHook.onComplete({})", isSuccess);
+            }
+
+            if (isSuccess) {
+                typeRegistry.commitTransientTypeRegistry(ttr);
+
+                notifyListeners(ttr);
+            }
+
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("<== TypeRegistryUpdateHook.onComplete({})", isSuccess);
+            }
+        }
+
+        private void notifyListeners(AtlasTransientTypeRegistry ttr) {
+            if (CollectionUtils.isNotEmpty(typeDefChangeListeners)) {
+                ChangedTypeDefs changedTypeDefs = new ChangedTypeDefs(ttr.getAddedTypes(),
+                                                                      ttr.getUpdatedTypes(),
+                                                                      ttr.getDeleteedTypes());
+
+                for (TypeDefChangeListener changeListener : typeDefChangeListeners) {
+                    try {
+                        changeListener.onChange(changedTypeDefs);
+                    } catch (Throwable t) {
+                        LOG.error("OnChange failed for listener {}", changeListener.getClass().getName(), t);
+                    }
+                }
+            }
+        }
     }
 }

@@ -34,6 +34,7 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 
 import org.apache.atlas.model.PList;
 import org.apache.atlas.model.SearchFilter.SortType;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
@@ -75,7 +76,11 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
     }
 
     public AtlasStructDef(String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs) {
-        super(name, description, typeVersion);
+        this(TypeCategory.STRUCT, name, description, typeVersion, attributeDefs);
+    }
+
+    protected AtlasStructDef(TypeCategory category, String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs) {
+        super(category, name, description, typeVersion);
 
         setAttributeDefs(attributeDefs);
     }
@@ -279,12 +284,12 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
                                  List<AtlasConstraintDef> constraintDefs) {
             setName(name);
             setTypeName(typeName);
-            setOptional(isOptional);
+            setIsOptional(isOptional);
             setCardinality(cardinality);
             setValuesMinCount(valuesMinCount);
             setValuesMaxCount(valuesMaxCount);
-            setUnique(isUnique);
-            setIndexable(isIndexable);
+            setIsUnique(isUnique);
+            setIsIndexable(isIndexable);
             setConstraintDefs(constraintDefs);
         }
 
@@ -292,12 +297,12 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
             if (other != null) {
                 setName(other.getName());
                 setTypeName(other.getTypeName());
-                setOptional(other.isOptional());
+                setIsOptional(other.getIsOptional());
                 setCardinality(other.getCardinality());
                 setValuesMinCount(other.getValuesMinCount());
                 setValuesMaxCount(other.getValuesMaxCount());
-                setUnique(other.isUnique());
-                setIndexable(other.isIndexable());
+                setIsUnique(other.getIsUnique());
+                setIsIndexable(other.getIsIndexable());
                 setConstraintDefs(other.getConstraintDefs());
             }
         }
@@ -318,11 +323,11 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
             this.typeName = typeName;
         }
 
-        public boolean isOptional() {
+        public boolean getIsOptional() {
             return isOptional;
         }
 
-        public void setOptional(boolean optional) { isOptional = optional; }
+        public void setIsOptional(boolean optional) { isOptional = optional; }
 
         public void setCardinality(Cardinality cardinality) {
             this.cardinality = cardinality;
@@ -348,19 +353,19 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
             this.valuesMaxCount = valuesMaxCount;
         }
 
-        public boolean isUnique() {
+        public boolean getIsUnique() {
             return isUnique;
         }
 
-        public void setUnique(boolean unique) {
+        public void setIsUnique(boolean unique) {
             isUnique = unique;
         }
 
-        public boolean isIndexable() {
+        public boolean getIsIndexable() {
             return isIndexable;
         }
 
-        public void setIndexable(boolean idexable) {
+        public void setIsIndexable(boolean idexable) {
             isIndexable = idexable;
         }
 
@@ -399,7 +404,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
             sb.append("AtlasAttributeDef{");
             sb.append("name='").append(name).append('\'');
             sb.append(", typeName='").append(typeName).append('\'');
-            sb.append(", isOptional=").append(isOptional);
+            sb.append(", getIsOptional=").append(isOptional);
             sb.append(", cardinality=").append(cardinality);
             sb.append(", valuesMinCount=").append(valuesMinCount);
             sb.append(", valuesMaxCount=").append(valuesMaxCount);

@@ -17,17 +17,35 @@
  */
 package org.apache.atlas.type;
 
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
-import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_PREFIX;
-import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_SUFFIX;
-import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_PREFIX;
-import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_SUFFIX;
-import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_KEY_VAL_SEP;
+import org.apache.atlas.model.typedef.AtlasClassificationDef;
+import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.model.typedef.AtlasEnumDef;
+import org.apache.atlas.model.typedef.AtlasEnumDef.AtlasEnumElementDef;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef;
+import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef.Cardinality;
+import org.apache.atlas.model.typedef.AtlasTypeDefHeader;
+import org.apache.atlas.model.typedef.AtlasTypesDef;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+
 import java.util.Map;
 import java.util.Set;
+import java.util.Arrays;
+
+import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_PREFIX;
+import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_ARRAY_SUFFIX;
+import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_KEY_VAL_SEP;
+import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_PREFIX;
+import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_MAP_SUFFIX;
 
 /**
  * Utility methods for AtlasType/AtlasTypeDef.
@@ -36,9 +54,7 @@ public class AtlasTypeUtil {
     private static final Set<String> ATLAS_BUILTIN_TYPENAMES = new HashSet<String>();
 
     static {
-        for (String typeName : AtlasBaseTypeDef.ATLAS_BUILTIN_TYPES) {
-            ATLAS_BUILTIN_TYPENAMES.add(typeName);
-        }
+        Collections.addAll(ATLAS_BUILTIN_TYPENAMES, AtlasBaseTypeDef.ATLAS_BUILTIN_TYPES);
     }
 
     public static Set<String> getReferencedTypeNames(String typeName) {
@@ -60,8 +76,9 @@ public class AtlasTypeUtil {
 
     public static boolean isMapType(String typeName) {
         return StringUtils.startsWith(typeName, ATLAS_TYPE_MAP_PREFIX)
-                && StringUtils.endsWith(typeName, ATLAS_TYPE_MAP_SUFFIX);
+            && StringUtils.endsWith(typeName, ATLAS_TYPE_MAP_SUFFIX);
     }
+
 
     public static String getStringValue(Map map, Object key) {
         Object ret = map != null ? map.get(key) : null;
@@ -91,5 +108,119 @@ public class AtlasTypeUtil {
             }
         }
 
+    }
+
+    public static AtlasAttributeDef createOptionalAttrDef(String name, AtlasType dataType) {
+        return new AtlasAttributeDef(name, dataType.getTypeName(), true,
+            Cardinality.SINGLE, 0, 1,
+            false, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createOptionalAttrDef(String name, String dataType) {
+        return new AtlasAttributeDef(name, dataType, true,
+            Cardinality.SINGLE, 0, 1,
+            false, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createRequiredAttrDef(String name, String dataType) {
+        return new AtlasAttributeDef(name, dataType, false,
+            Cardinality.SINGLE, 1, 1,
+            false, true,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createUniqueRequiredAttrDef(String name, AtlasType dataType) {
+        return new AtlasAttributeDef(name, dataType.getTypeName(), false,
+            Cardinality.SINGLE, 1, 1,
+            true, true,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createUniqueRequiredAttrDef(String name, String typeName) {
+        return new AtlasAttributeDef(name, typeName, false,
+            Cardinality.SINGLE, 1, 1,
+            true, true,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasAttributeDef createRequiredAttrDef(String name, AtlasType dataType) {
+        return new AtlasAttributeDef(name, dataType.getTypeName(), false,
+            Cardinality.SINGLE, 1, 1,
+            false, true,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList());
+    }
+
+    public static AtlasEnumDef createEnumTypeDef(String name, String description, AtlasEnumElementDef... enumValues) {
+        return new AtlasEnumDef(name, description, "1.0", Arrays.asList(enumValues));
+    }
+
+    public static AtlasClassificationDef createTraitTypeDef(String name, ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createTraitTypeDef(name, null, superTypes, attrDefs);
+    }
+
+    public static AtlasClassificationDef createTraitTypeDef(String name, String description, ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createTraitTypeDef(name, description, "1.0", superTypes, attrDefs);
+    }
+
+    public static AtlasClassificationDef createTraitTypeDef(String name, String description, String version, ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return new AtlasClassificationDef(name, description, "1.0", Arrays.asList(attrDefs), superTypes);
+    }
+
+    public static AtlasStructDef createStructTypeDef(String name, AtlasAttributeDef... attrDefs) {
+        return createStructTypeDef(name, null, attrDefs);
+    }
+
+    public static AtlasStructDef createStructTypeDef(String name, String description, AtlasAttributeDef... attrDefs) {
+        return new AtlasStructDef(name, description, "1.0", Arrays.asList(attrDefs));
+    }
+
+    public static AtlasEntityDef createClassTypeDef(String name,
+        ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createClassTypeDef(name, null, "1.0", superTypes, attrDefs);
+    }
+
+    public static AtlasEntityDef createClassTypeDef(String name, String description,
+        ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return createClassTypeDef(name, description, "1.0", superTypes, attrDefs);
+    }
+
+    public static AtlasEntityDef createClassTypeDef(String name, String description, String version,
+        ImmutableSet<String> superTypes, AtlasAttributeDef... attrDefs) {
+        return new AtlasEntityDef(name, description, "1.0", Arrays.asList(attrDefs), superTypes);
+    }
+
+    public static AtlasTypesDef getTypesDef(List<AtlasEnumDef> enums,
+        List<AtlasStructDef> structs,
+        List<AtlasClassificationDef> traits,
+        List<AtlasEntityDef> classes) {
+        return new AtlasTypesDef(enums, structs, traits, classes);
+    }
+
+    public static List<AtlasTypeDefHeader> toTypeDefHeader(AtlasTypesDef typesDef) {
+        List<AtlasTypeDefHeader> headerList = new LinkedList<>();
+        if (CollectionUtils.isNotEmpty(typesDef.getEnumDefs())) {
+            for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
+                headerList.add(new AtlasTypeDefHeader(enumDef));
+            }
+        }
+        if (CollectionUtils.isNotEmpty(typesDef.getStructDefs())) {
+            for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+                headerList.add(new AtlasTypeDefHeader(structDef));
+            }
+        }
+        if (CollectionUtils.isNotEmpty(typesDef.getClassificationDefs())) {
+            for (AtlasClassificationDef classificationDef : typesDef.getClassificationDefs()) {
+                headerList.add(new AtlasTypeDefHeader(classificationDef));
+            }
+        }
+        if (CollectionUtils.isNotEmpty(typesDef.getEntityDefs())) {
+            for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+                headerList.add(new AtlasTypeDefHeader(entityDef));
+            }
+        }
+
+        return headerList;
     }
 }

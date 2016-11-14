@@ -402,6 +402,27 @@
             </roles>
             <organization></organization>
         </developer>
+        <developer>
+            <id>svimal2106</id>
+            <name>Vimal Sharma</name>
+            <email>svimal2106@apache.org</email>
+            <timezone>Asia/Kolkata</timezone>
+            <roles>
+                <role>committer</role>
+            </roles>
+            <organization></organization>
+        </developer>
+        <developer>
+            <id>jnhagelberg</id>
+            <name>Jeffrey Hagelberg</name>
+            <email>jnhagelberg@apache.org</email>
+            <timezone>America/New_York</timezone>
+            <roles>
+                <role>committer</role>
+            </roles>
+            <organization>IBM Corporation</organization>
+            <!--<organizationUrl>http://www.ibm.com</organizationUrl>-->
+        </developer>
     </developers>
 
     <properties>
@@ -1065,6 +1086,14 @@
                 <groupId>org.apache.atlas</groupId>
                 <artifactId>atlas-intg</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.atlas</groupId>
+                <artifactId>atlas-intg</artifactId>
+                <version>${project.version}</version>
+                <classifier>tests</classifier>
+                <scope>test</scope>
             </dependency>
 
             <dependency>

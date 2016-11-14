@@ -18,29 +18,9 @@
 
 package org.apache.atlas.service;
 
-import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
-import static org.apache.atlas.TestUtils.COLUMN_TYPE;
-import static org.apache.atlas.TestUtils.PII;
-import static org.apache.atlas.TestUtils.TABLE_TYPE;
-import static org.apache.atlas.TestUtils.createColumnEntity;
-import static org.apache.atlas.TestUtils.createDBEntity;
-import static org.apache.atlas.TestUtils.createInstance;
-import static org.apache.atlas.TestUtils.createTableEntity;
-import static org.apache.atlas.TestUtils.randomString;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
@@ -49,12 +29,15 @@ import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
+import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.listener.ChangedTypeDefs;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.query.QueryParams;
 import org.apache.atlas.repository.audit.EntityAuditRepository;
 import org.apache.atlas.repository.audit.HBaseBasedAuditRepository;
 import org.apache.atlas.repository.audit.HBaseTestUtils;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.apache.atlas.services.DefaultMetadataService;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.IStruct;
@@ -75,6 +58,7 @@ import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.ValueConversionException;
+import org.apache.atlas.typesystem.types.cache.TypeCache;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.lang.RandomStringUtils;
@@ -87,9 +71,30 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Collections;
+
+import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
+import static org.apache.atlas.TestUtils.COLUMN_TYPE;
+import static org.apache.atlas.TestUtils.PII;
+import static org.apache.atlas.TestUtils.TABLE_TYPE;
+import static org.apache.atlas.TestUtils.createColumnEntity;
+import static org.apache.atlas.TestUtils.createDBEntity;
+import static org.apache.atlas.TestUtils.createInstance;
+import static org.apache.atlas.TestUtils.createTableEntity;
+import static org.apache.atlas.TestUtils.randomString;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 @Guice(modules = RepositoryMetadataModule.class)
 public class DefaultMetadataServiceTest {
@@ -216,7 +221,7 @@ public class DefaultMetadataServiceTest {
 
         //Verify that get entity definition returns actual values with reserved characters
         Referenceable instance =
-                InstanceSerialization.fromJsonReferenceable(metadataService.getEntityDefinition(id), true);
+                InstanceSerialization.fromJsonReferenceable(metadataService.getEntityDefinitionJson(id), true);
         assertReferenceableEquals(instance, entity);
 
         //Verify that search with reserved characters works - for string attribute
@@ -688,7 +693,7 @@ public class DefaultMetadataServiceTest {
         serdeInstance.setNull("description");
         updateInstance(table);
         tableDefinitionJson =
-            metadataService.getEntityDefinition(tableId._getId());
+            metadataService.getEntityDefinitionJson(tableId._getId());
         tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
         Assert.assertNull(((Struct) tableDefinition.get("serde1")).get("description"));
     }
@@ -728,7 +733,7 @@ public class DefaultMetadataServiceTest {
         metadataService.updateEntityAttributeByGuid(tableId._getId(), "database", dbId);
 
         String tableDefinitionJson =
-            metadataService.getEntityDefinition(tableId._getId());
+            metadataService.getEntityDefinitionJson(tableId._getId());
         Referenceable tableDefinition = InstanceSerialization.fromJsonReferenceable(tableDefinitionJson, true);
 
         assertEquals(dbId, (((Id) tableDefinition.get("database"))._getId()));
@@ -1128,6 +1133,27 @@ public class DefaultMetadataServiceTest {
         } catch(IllegalArgumentException e) {
             //expected IllegalArgumentException
             assertEquals(e.getMessage(), "count should be > 0, current value -1");
+        }
+    }
+
+    @Test
+    public void testOnChangeRefresh() {
+        try {
+            List<String> beforeChangeTypeNames = new ArrayList<>();
+            beforeChangeTypeNames.addAll(metadataService.getTypeNames(new HashMap<TypeCache.TYPE_FILTER, String>()));
+
+            ((DefaultMetadataService)metadataService).onChange(new ChangedTypeDefs());
+
+            List<String> afterChangeTypeNames = new ArrayList<>();
+            afterChangeTypeNames.addAll(metadataService.getTypeNames(new HashMap<TypeCache.TYPE_FILTER, String>()));
+
+            Collections.sort(beforeChangeTypeNames);
+            Collections.sort(afterChangeTypeNames);
+            assertEquals(afterChangeTypeNames, beforeChangeTypeNames);
+        } catch (AtlasBaseException e) {
+            fail("Should've succeeded", e);
+        } catch (AtlasException e) {
+            fail("getTypeNames should've succeeded", e);
         }
     }
 

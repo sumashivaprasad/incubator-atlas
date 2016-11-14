@@ -19,6 +19,7 @@ package org.apache.atlas.type;
 
 
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,25 +89,6 @@ public class AtlasMapType extends AtlasType {
     public void resolveReferences(AtlasTypeRegistry typeRegistry) throws AtlasBaseException {
         this.keyType   = typeRegistry.getType(keyTypeName);
         this.valueType = typeRegistry.getType(valueTypeName);
-
-        if (keyType == null) {
-            String msg = keyTypeName + ": unknown key-type for map";
-
-            LOG.error(msg);
-
-            throw new AtlasBaseException(msg);
-        }
-
-        if (valueType == null) {
-            String msg = valueTypeName + ": unknown value-type for map";
-
-            LOG.error(msg);
-
-            throw new AtlasBaseException(msg);
-        }
-
-        keyType.resolveReferences(typeRegistry);
-        valueType.resolveReferences(typeRegistry);
     }
 
     @Override
