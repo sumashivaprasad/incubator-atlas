@@ -471,6 +471,8 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
         }
     }
 
+
+
     /**
      * class that captures details of a constraint.
      */

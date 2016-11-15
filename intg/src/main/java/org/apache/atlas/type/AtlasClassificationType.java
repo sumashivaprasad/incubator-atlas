@@ -285,4 +285,10 @@ public class AtlasClassificationType extends AtlasStructType {
             }
         }
     }
+
+    public String getQualifiedAttributeName(String attrName) {
+        AtlasAttributeDef attrDef = getAttributeDef(attrName);
+        final String typeName = attrDef.getTypeName();
+        return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
+    }
 }

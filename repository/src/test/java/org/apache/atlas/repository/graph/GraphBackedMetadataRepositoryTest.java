@@ -253,7 +253,7 @@ public class GraphBackedMetadataRepositoryTest {
 
         //Reuse the same database instance without id, with the same unique attribute
         ITypedReferenceableInstance table = createHiveTableInstance(databaseInstance);
-        List<String> guids = createEntities(db, table);
+        List<String> guids = createEntities(table);
         Assert.assertEquals(guids.size(), 7);   //1 db + 5 columns + 1 table. Shouldn't create db again
         System.out.println("added db = " + guids.get(0));
         System.out.println("added table = " + guids.get(6));

@@ -1,63 +1,83 @@
 package org.apache.atlas.repository.store.graph;
 
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasEntityType;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
 
-/**
- * Created by sshivaprasad on 10/19/16.
- */
 public final class DiscoveredEntities {
 
-    List<AtlasEntity> rootEntities;
+    private List<AtlasEntity> rootEntities;
 
-    Map<AtlasEntity, AtlasVertex> resolvedReferences = new LinkedHashMap<>();
+    //Key can be a guid or an AtlasEntity with its qualifiedName
+    private Map<Object, AtlasVertex> repositoryResolvedReferences = new LinkedHashMap<>();
 
-    List<AtlasEntity> unresolvedReferences = new ArrayList<>();
+//    private List<String> resolvedLocalReferences = new ArrayList<>();
 
-    public void addResolvedReference(AtlasEntity entity, AtlasVertex vertex) {
-        this.resolvedReferences.put(entity, vertex);
+    private List<AtlasEntity> unresolvedEntityReferences = new ArrayList<>();
+
+    private List<AtlasObjectId> unresolvedIdReferences = new ArrayList<>();
+
+    public void addRepositoryResolvedReference(Object entity, AtlasVertex vertex) {
+        repositoryResolvedReferences.put(entity, vertex);
     }
 
-    public void addUnResolvedReference(AtlasEntity entity) {
-        this.unresolvedReferences.add(entity);
+    public void addUnResolvedEntityReference(AtlasEntity entity) {
+        this.unresolvedEntityReferences.add(entity);
     }
 
-    boolean isResolved(AtlasEntity entity) {
-        return resolvedReferences.containsKey(entity);
+    public void addUnResolvedIdReference(AtlasEntityType entityType, String id) {
+        this.unresolvedIdReferences.add(new AtlasObjectId(entityType.getTypeName(), id));
     }
 
-    AtlasVertex getVertex(AtlasEntity entity) {
-        return resolvedReferences.get(entity);
+    public List<AtlasObjectId> getUnresolvedIdReferences() {
+        return unresolvedIdReferences;
     }
 
-    public Set<AtlasEntity> getResolvedReferences() {
-        return resolvedReferences.keySet();
+    boolean isResolved(Object entity) {
+        return repositoryResolvedReferences.containsKey(entity);
     }
 
-    public List<AtlasEntity> getUnResolvedReferences() {
-        return unresolvedReferences;
+    AtlasVertex getResolvedVertex(AtlasEntity entity) {
+        return repositoryResolvedReferences.get(entity);
+    }
+
+//    public Collection<AtlasEntity> getResolvedReferences() {
+//        return repositoryResolvedReferences.keySet();
+//    }
+
+    public List<AtlasEntity> getUnResolvedEntityReferences() {
+        return unresolvedEntityReferences;
     }
 
     public void setRootEntities(List<AtlasEntity> rootEntities) {
         this.rootEntities = rootEntities;
     }
 
+    public void addRootEntity(AtlasEntity rootEntity) {
+        this.rootEntities.add(rootEntity);
+    }
+
     public List<AtlasEntity> getRootEntities() {
         return rootEntities;
     }
 
-    public boolean removeUnResolvedReference(final AtlasEntity entity) {
-        return unresolvedReferences.remove(entity);
+    public boolean removeUnResolvedEntityReference(final AtlasEntity entity) {
+        return unresolvedEntityReferences.remove(entity);
     }
 
-    public boolean hasDiscoveredEntities() {
-        return unresolvedReferences.size() > 0;
+    public boolean removeUnResolvedEntityReferences(final List<AtlasEntity> entities) {
+        return unresolvedEntityReferences.removeAll(entities);
+    }
+
+    public boolean hasUnresolvedReferences() {
+        return unresolvedEntityReferences.size() > 0 || unresolvedIdReferences.size() > 0;
     }
 }
