@@ -1,6 +1,7 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
@@ -42,9 +43,12 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
     @Override
     public DiscoveredEntities discoverEntities(final List<AtlasEntity> entities) throws AtlasBaseException {
 
+        //walk teh graph and discover entity references
         discover(entities);
 
+        //resolve root and referred entities
         resolveReferences();
+
         return discoveredEntities;
     }
 
@@ -52,35 +56,30 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
         for (EntityResolver resolver : entityResolvers ) {
             resolver.resolveEntityReferences(discoveredEntities);
         }
-
-        if (discoveredEntities.hasUnresolvedReferences()) {
-
-        }
     }
 
 
     private void discover(final List<AtlasEntity> entities) throws AtlasBaseException {
-        discoveredEntities.setRootEntities(entities);
+
         for (AtlasEntity entity : entities) {
             AtlasType type = typeRegistry.getType(entity.getTypeName());
+
+            discoveredEntities.addRootEntity(entity);
             walkEntityGraph(type, entity);
         }
     }
 
-    private void visitReference(AtlasEntityType type, Object entity, boolean isComposite) {
-
+    private void visitReference(AtlasEntityType type, Object entity, boolean isManagedEntity) {
         if ( entity != null) {
             if ( entity instanceof String ) {
                 String entityId = (String) entity;
                 discoveredEntities.addUnResolvedIdReference(type, entityId);
-
             } else if ( entity instanceof  AtlasEntity ) {
-
                 AtlasEntity entityObj = ( AtlasEntity ) entity;
                 if (!processedIds.contains(entityObj.getGuid())) {
                     processedIds.add(entityObj.getGuid());
 
-                    if ( isComposite ) {
+                    if ( isManagedEntity ) {
                         discoveredEntities.addRootEntity(entityObj);
                     } else {
                         discoveredEntities.addUnResolvedEntityReference(entityObj);
@@ -88,8 +87,6 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
                 }
             }
         }
-
-
     }
 
     void visitAttribute(AtlasType type, Object val) throws AtlasBaseException {

@@ -19,8 +19,6 @@ public final class DiscoveredEntities {
     //Key can be a guid or an AtlasEntity with its qualifiedName
     private Map<Object, AtlasVertex> repositoryResolvedReferences = new LinkedHashMap<>();
 
-//    private List<String> resolvedLocalReferences = new ArrayList<>();
-
     private List<AtlasEntity> unresolvedEntityReferences = new ArrayList<>();
 
     private List<AtlasObjectId> unresolvedIdReferences = new ArrayList<>();
@@ -41,7 +39,7 @@ public final class DiscoveredEntities {
         return unresolvedIdReferences;
     }
 
-    boolean isResolved(Object entity) {
+    public boolean isResolved(Object entity) {
         return repositoryResolvedReferences.containsKey(entity);
     }
 
@@ -74,6 +72,10 @@ public final class DiscoveredEntities {
     }
 
     public boolean removeUnResolvedEntityReferences(final List<AtlasEntity> entities) {
+        return unresolvedEntityReferences.removeAll(entities);
+    }
+
+    public boolean removeUnResolvedIdReferences(final List<AtlasObjectId> entities) {
         return unresolvedEntityReferences.removeAll(entities);
     }
 

@@ -408,7 +408,7 @@ public final class GraphHelper {
         return edge.getProperty(actualPropertyName, Object.class);
     }    
     
-    private static <T extends AtlasElement> String string(T element) {
+    public static <T extends AtlasElement> String string(T element) {
         if (element instanceof AtlasVertex) {
             return string((AtlasVertex) element);
         } else if (element instanceof AtlasEdge) {

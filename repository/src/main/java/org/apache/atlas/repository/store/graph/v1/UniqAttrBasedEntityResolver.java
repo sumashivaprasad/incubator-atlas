@@ -25,23 +25,10 @@ import java.util.Map;
 public class UniqAttrBasedEntityResolver implements EntityResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(UniqAttrBasedEntityResolver.class);
-//    private Map<TypeAttributeTuple, AtlasEntity> uniqAttributeToEntityMap = new LinkedHashMap<>();
 
     private AtlasTypeRegistry typeRegistry;
 
     private GraphHelper graphHelper = GraphHelper.getInstance();
-
-//    private class TypeAttributeTuple {
-//        public final String typeName;
-//        public final String attrName;
-//        public final String attrVal;
-//
-//        public TypeAttributeTuple(String typeName, String attrName, String attrVal) {
-//            this.typeName = typeName;
-//            this.attrName = attrName;
-//            this.attrVal = attrVal;
-//        }
-//    }
 
     @Inject
     public UniqAttrBasedEntityResolver(AtlasTypeRegistry typeRegistry) {
@@ -50,9 +37,8 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
 
     @Override
     public DiscoveredEntities resolveEntityReferences(DiscoveredEntities entities) throws AtlasBaseException {
-//        addToUniqueList(entities.getRootEntities());
-//        addToUniqueList(entities.getUnResolvedReferences());
 
+        //Resolve attribute references
         List<AtlasEntity> resolvedReferences = new ArrayList<>();
 
         for (AtlasEntity entity : entities.getUnResolvedEntityReferences()) {
@@ -69,6 +55,14 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         if (entities.getUnResolvedEntityReferences().size() > 0) {
             //TODO - format error
             throw new AtlasBaseException("Could not find an entity with the specified entity references " + entities.getUnResolvedEntityReferences() + " in Atlas ");
+        }
+
+        //Resolve root references
+        for (AtlasEntity entity : entities.getRootEntities()) {
+            Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
+            if (vertex.isPresent()) {
+                entities.addRepositoryResolvedReference(entity, vertex.get());
+            }
         }
 
         return entities;
@@ -98,40 +92,5 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         }
         return Optional.absent();
     }
-
-    private void addToUniqueList(List<AtlasEntity> rootReferences) throws AtlasBaseException {
-
-//        Predicate<AtlasStructDef.AtlasAttributeDef> filterUnique = new Predicate<AtlasStructDef.AtlasAttributeDef>() {
-//            public boolean apply(AtlasStructDef.AtlasAttributeDef attributeDef) {
-//                AtlasType attrType = typeRegistry.getType(attributeDef.getTypeName());
-//                if ( attributeDef.getIsUnique() && attrType.getTypeCategory() == TypeCategory.PRIMITIVE) {
-//                    return true;
-//                }
-//                return false;
-//            }
-//        };
-
-//        for (AtlasEntity entity : rootReferences) {
-//            AtlasEntityType typeDef = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
-//            for (AtlasStructDef.AtlasAttributeDef attrDef : typeDef.getAllAttributeDefs().values()) {
-//                if (attrDef.getIsUnique() && typeDef.getAttributeType(attrDef.getName()).getTypeCategory() == TypeCategory.PRIMITIVE) {
-//                    Object attrVal = entity.getAttribute(attrDef.getName());
-//                    if (attrVal != null) {
-//                        uniqAttributeToEntityMap.put(new TypeAttributeTuple(entity.getTypeName(), attrDef.getName(), String.valueOf(attrVal)), entity);
-//                    }
-//                }
-//            }
-//            final UnmodifiableIterator<AtlasStructDef.AtlasAttributeDef> iter = Iterators.filter(typeDef.get.iterator(), filterUnique);
-
-//            while(iter.hasNext()) {
-//                AtlasStructDef.AtlasAttributeDef attrDef = iter.next();
-//                Object attrVal = entity.getAttribute(attrDef.getTypeName());
-//                if ( attrVal != null) {
-//                    uniqAttributeToEntityMap.put(new TypeAttributeTuple(entity.getTypeName(), attrDef.getName(), String.valueOf(attrVal)), entity);
-//                }
-//            }
-//        }
-    }
-
 }
 

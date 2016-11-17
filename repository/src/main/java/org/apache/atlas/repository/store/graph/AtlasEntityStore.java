@@ -25,6 +25,7 @@ import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.instance.EntityMutationResponse;
+import org.apache.atlas.type.AtlasTypeRegistry;
 
 import java.util.List;
 
@@ -36,7 +37,7 @@ public interface AtlasEntityStore {
     /**
      * Initialization
      */
-    void init() throws AtlasBaseException;
+    void init(AtlasTypeRegistry typeRegistry, EntityGraphDiscovery graphDiscovery) throws AtlasBaseException;
 
     /**
      * Create or update an entity if it already exists.

@@ -40,8 +40,14 @@ import org.apache.atlas.repository.graph.DeleteHandler;
 import org.apache.atlas.repository.graph.GraphBackedMetadataRepository;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
+import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
+import org.apache.atlas.repository.store.graph.EntityResolver;
+import org.apache.atlas.repository.store.graph.v1.AtlasEntityGraphDiscoveryV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasEntityStoreV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasTypeDefGraphStoreV1;
+import org.apache.atlas.repository.store.graph.v1.EntityVertexMapper;
+import org.apache.atlas.repository.store.graph.v1.IDBasedEntityResolver;
+import org.apache.atlas.repository.store.graph.v1.UniqAttrBasedEntityResolver;
 import org.apache.atlas.repository.typestore.GraphBackedTypeStore;
 import org.apache.atlas.repository.typestore.ITypeStore;
 import org.apache.atlas.service.Service;
@@ -113,6 +119,15 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         MethodInterceptor interceptor = new GraphTransactionInterceptor();
         requestInjection(interceptor);
         bindInterceptor(Matchers.any(), Matchers.annotatedWith(GraphTransaction.class), interceptor);
+
+        bind(EntityGraphDiscovery.class).to(AtlasEntityGraphDiscoveryV1.class).asEagerSingleton();
+
+        Multibinder<EntityResolver> entityRefResolver =
+            Multibinder.newSetBinder(binder(), EntityResolver.class);
+        entityRefResolver.addBinding().to(IDBasedEntityResolver.class);
+        entityRefResolver.addBinding().to(UniqAttrBasedEntityResolver.class);
+
+        bind(EntityVertexMapper.class).asEagerSingleton();
     }
 
     protected Configuration getConfiguration() {

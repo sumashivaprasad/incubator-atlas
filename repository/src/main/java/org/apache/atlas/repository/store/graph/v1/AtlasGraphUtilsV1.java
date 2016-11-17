@@ -22,6 +22,7 @@ import com.google.common.collect.HashBiMap;
 
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.apache.atlas.repository.Constants;
+import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasElement;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
@@ -102,6 +103,22 @@ public class AtlasGraphUtilsV1 {
         }
 
         return ret;
+    }
+
+    /**
+     * Adds an additional value to a multi-property.
+     *
+     * @param vertex
+     * @param propertyName
+     * @param value
+     */
+    public static AtlasVertex addProperty(AtlasVertex element, String propertyName, Object value) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("==> addProperty({}, {}, {})", toString(element), propertyName, value);
+        }
+        propertyName = encodePropertyKey(propertyName);
+        element.addProperty(propertyName, value);
+        return element;
     }
 
     public static <T extends AtlasElement> void setProperty(T element, String propertyName, Object value) {

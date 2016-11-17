@@ -20,7 +20,7 @@ public interface EntityGraphDiscovery {
     /*
      * Return list of resolved and unresolved references.
      * Resolved references already exist in the ATLAS repository and have an assigned unique GUID
-     * Unresolved references are not found in the repository or have a temporary GUID
+     * Unresolved attribute references result in an error if they are not composite (managed by a parent entity)
      */
     DiscoveredEntities discoverEntities(List<AtlasEntity> entities) throws AtlasBaseException;
 

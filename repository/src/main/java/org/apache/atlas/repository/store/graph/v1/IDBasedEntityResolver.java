@@ -15,6 +15,7 @@ import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,13 +26,14 @@ public class IDBasedEntityResolver implements EntityResolver {
 
     private GraphHelper graphHelper = GraphHelper.getInstance();
 
+
     public DiscoveredEntities resolveEntityReferences(DiscoveredEntities entities) throws AtlasBaseException {
-        for (AtlasEntity entity : entities.getRootEntities()) {
-            idToEntityMap.put(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), entity);
-        }
+
+        init(entities);
+
+        List<AtlasObjectId> resolvedReferences = new ArrayList<>();
 
         for (AtlasObjectId typeIdPair : entities.getUnresolvedIdReferences()) {
-
             if ( AtlasEntity.isAssigned(typeIdPair.getGuid())) {
                 //validate in graph repo that given guid, typename exists
                 AtlasVertex vertex = null;
@@ -44,6 +46,7 @@ public class IDBasedEntityResolver implements EntityResolver {
                 }
                 if ( vertex != null ) {
                     entities.addRepositoryResolvedReference(typeIdPair, vertex);
+                    resolvedReferences.add(typeIdPair);
                 } else {
                     throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, "Could not find an entity with the specified guid " + typeIdPair.getGuid() + " in Atlas respository");
                 }
@@ -56,11 +59,14 @@ public class IDBasedEntityResolver implements EntityResolver {
             }
         }
 
-
-
+        entities.removeUnResolvedIdReferences(resolvedReferences);
         return entities;
     }
 
-
+    private void init(DiscoveredEntities entities) throws AtlasBaseException {
+        for (AtlasEntity entity : entities.getRootEntities()) {
+            idToEntityMap.put(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), entity);
+        }
+    }
 
 }
