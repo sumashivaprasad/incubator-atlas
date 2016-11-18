@@ -47,9 +47,13 @@ public final class DiscoveredEntities {
         return repositoryResolvedReferences.get(entity);
     }
 
-//    public Collection<AtlasEntity> getResolvedReferences() {
-//        return repositoryResolvedReferences.keySet();
-//    }
+    public Map<Object, AtlasVertex> getResolvedReferences() {
+        return repositoryResolvedReferences;
+    }
+
+    public AtlasVertex getResolvedReference(Object ref) {
+        return repositoryResolvedReferences.get(ref);
+    }
 
     public List<AtlasEntity> getUnResolvedEntityReferences() {
         return unresolvedEntityReferences;

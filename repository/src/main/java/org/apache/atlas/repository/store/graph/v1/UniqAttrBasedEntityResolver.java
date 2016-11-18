@@ -59,9 +59,11 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
 
         //Resolve root references
         for (AtlasEntity entity : entities.getRootEntities()) {
-            Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
-            if (vertex.isPresent()) {
-                entities.addRepositoryResolvedReference(entity, vertex.get());
+            if ( !entities.isResolved(entity) ) {
+                Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
+                if (vertex.isPresent()) {
+                    entities.addRepositoryResolvedReference(entity, vertex.get());
+                }
             }
         }
 

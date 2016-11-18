@@ -11,7 +11,7 @@ import org.apache.atlas.type.AtlasType;
 import java.util.UUID;
 
 @Singleton
-public class EntityVertexMapper extends AbstractInstanceVertexMapper {
+public class EntityVertexMapper extends StructVertexMapper {
 
     public AtlasVertex createVertex(AtlasEntity entity, AtlasEntityType type) {
         AtlasEntityType entityType = (AtlasEntityType) type;
@@ -30,8 +30,6 @@ public class EntityVertexMapper extends AbstractInstanceVertexMapper {
         // add version information
         AtlasGraphUtilsV1.setProperty(vertex, Constants.VERSION_PROPERTY_KEY, entity.getVersion());
 
-
-        
         return vertex;
     }
 }

@@ -60,7 +60,6 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
 
 
     private void discover(final List<AtlasEntity> entities) throws AtlasBaseException {
-
         for (AtlasEntity entity : entities) {
             AtlasType type = typeRegistry.getType(entity.getTypeName());
 

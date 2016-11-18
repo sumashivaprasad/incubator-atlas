@@ -26,6 +26,7 @@ import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasElement;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasType;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +80,11 @@ public class AtlasGraphUtilsV1 {
 
     public static String getEdgeLabel(String fromNode, String toNode) {
         return PROPERTY_PREFIX + "edge." + fromNode + "." + toNode;
+    }
+
+    public static String getAttributeEdgeLabel(AtlasType parentType, String attributeName) {
+        final String qualifiedName = attributeName.contains(".") ? attributeName : String.format("%s.%s", parentType.getTypeName(), attributeName);
+        return GraphHelper.EDGE_LABEL_PREFIX + qualifiedName;
     }
 
     public static String encodePropertyKey(String key) {
