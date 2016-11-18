@@ -8,14 +8,11 @@ import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.repository.store.graph.DiscoveredEntities;
+import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.repository.store.graph.EntityResolver;
-import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.commons.lang3.tuple.Pair;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +25,7 @@ public class IDBasedEntityResolver implements EntityResolver {
     private GraphHelper graphHelper = GraphHelper.getInstance();
 
 
-    public DiscoveredEntities resolveEntityReferences(DiscoveredEntities entities) throws AtlasBaseException {
+    public EntityGraphDiscoveryContext resolveEntityReferences(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
 
         init(entities);
 
@@ -66,7 +63,7 @@ public class IDBasedEntityResolver implements EntityResolver {
         return entities;
     }
 
-    private void init(DiscoveredEntities entities) throws AtlasBaseException {
+    private void init(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
         for (AtlasEntity entity : entities.getRootEntities()) {
             idToEntityMap.put(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), entity);
         }

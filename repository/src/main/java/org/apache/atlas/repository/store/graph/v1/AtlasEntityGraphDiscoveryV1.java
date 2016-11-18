@@ -1,13 +1,12 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
-import org.apache.atlas.repository.store.graph.DiscoveredEntities;
+import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
 import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.type.AtlasArrayType;
@@ -31,7 +30,7 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
 
     List<String> processedIds = new ArrayList<>();
 
-    DiscoveredEntities discoveredEntities = new DiscoveredEntities();
+    EntityGraphDiscoveryContext discoveredEntities = new EntityGraphDiscoveryContext();
 
     List<EntityResolver> entityResolvers = new ArrayList<>();
 
@@ -41,7 +40,7 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
     }
 
     @Override
-    public DiscoveredEntities discoverEntities(final List<AtlasEntity> entities) throws AtlasBaseException {
+    public EntityGraphDiscoveryContext discoverEntities(final List<AtlasEntity> entities) throws AtlasBaseException {
 
         //walk teh graph and discover entity references
         discover(entities);
@@ -169,6 +168,7 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
                 for (AtlasStructDef.AtlasConstraintDef constraintDef : attributeDef.getConstraintDefs()) {
                     //Attribute mapped from references - isComposite
                     if (AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF.equals(constraintDef.getType())) {
+                        //TODO - How should we handle foreign keys on referring entities eg: partitionKeys
                         visitReference((AtlasEntityType) type,  val, true);
                     }
                 }

@@ -18,7 +18,6 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 
-import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.GraphTransaction;
@@ -30,24 +29,20 @@ import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
-import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
-import org.apache.atlas.repository.store.graph.DiscoveredEntities;
+import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
-import org.apache.atlas.typesystem.types.DataTypes;
-import org.apache.atlas.typesystem.types.Multiplicity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -123,7 +118,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
         EntityMutationContext context = new EntityMutationContext();
 
-        DiscoveredEntities discoveredEntities = graphDiscoverer.discoverEntities(atlasEntities);
+        EntityGraphDiscoveryContext discoveredEntities = graphDiscoverer.discoverEntities(atlasEntities);
 
         for (AtlasEntity entity : discoveredEntities.getRootEntities()) {
 
@@ -144,7 +139,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
             }
 
             //Map only primitive attributes
-            vertexMapper.mapByCategory(vertex, entity, entityType, new HashSet<TypeCategory>() {{ add(TypeCategory.PRIMITIVE); add(TypeCategory.ENUM); }});
+//            vertexMapper.mapByCategory(vertex, entity, entityType, new HashSet<TypeCategory>() {{ add(TypeCategory.PRIMITIVE); add(TypeCategory.ENUM); }});
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("<== AtlasEntityStoreV1.preCreate({}): {}", entity, vertex);
@@ -187,7 +182,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
         }
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("<== AtlasStructDefStoreV1.createOrUpdate({}, {}): {}", entities, vertex);
+            LOG.debug("<== AtlasStructDefStoreV1.createOrUpdate({}, {}): {}", entities);
         }
 
         return resp;

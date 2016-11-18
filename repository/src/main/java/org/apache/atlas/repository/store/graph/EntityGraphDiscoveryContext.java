@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class DiscoveredEntities {
+public final class EntityGraphDiscoveryContext {
 
     private List<AtlasEntity> rootEntities;
 

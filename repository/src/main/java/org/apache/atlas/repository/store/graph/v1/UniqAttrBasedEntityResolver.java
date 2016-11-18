@@ -7,7 +7,7 @@ import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.repository.store.graph.DiscoveredEntities;
+import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasTypeRegistry;
@@ -16,11 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.swing.text.html.Option;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class UniqAttrBasedEntityResolver implements EntityResolver {
 
@@ -36,7 +33,7 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
     }
 
     @Override
-    public DiscoveredEntities resolveEntityReferences(DiscoveredEntities entities) throws AtlasBaseException {
+    public EntityGraphDiscoveryContext resolveEntityReferences(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
 
         //Resolve attribute references
         List<AtlasEntity> resolvedReferences = new ArrayList<>();

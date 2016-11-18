@@ -20,6 +20,9 @@ package org.apache.atlas.repository.store.graph.v1;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
+import org.apache.atlas.AtlasException;
+import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.GraphHelper;
@@ -27,10 +30,13 @@ import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasElement;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasType;
+import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -54,19 +60,19 @@ public class AtlasGraphUtilsV1 {
             }});
 
 
-    public static String getPropertyKey(AtlasBaseTypeDef typeDef) {
-        return getPropertyKey(typeDef.getName());
+    public static String getTypeDefPropertyKey(AtlasBaseTypeDef typeDef) {
+        return getTypeDefPropertyKey(typeDef.getName());
     }
 
-    public static String getPropertyKey(AtlasBaseTypeDef typeDef, String child) {
-        return getPropertyKey(typeDef.getName(), child);
+    public static String getTypeDefPropertyKey(AtlasBaseTypeDef typeDef, String child) {
+        return getTypeDefPropertyKey(typeDef.getName(), child);
     }
 
-    public static String getPropertyKey(String typeName) {
+    public static String getTypeDefPropertyKey(String typeName) {
         return PROPERTY_PREFIX + typeName;
     }
 
-    public static String getPropertyKey(String typeName, String child) {
+    public static String getTypeDefPropertyKey(String typeName, String child) {
         return PROPERTY_PREFIX + typeName + "." + child;
     }
 
@@ -83,8 +89,18 @@ public class AtlasGraphUtilsV1 {
     }
 
     public static String getAttributeEdgeLabel(AtlasType parentType, String attributeName) {
-        final String qualifiedName = attributeName.contains(".") ? attributeName : String.format("%s.%s", parentType.getTypeName(), attributeName);
-        return GraphHelper.EDGE_LABEL_PREFIX + qualifiedName;
+        return GraphHelper.EDGE_LABEL_PREFIX + getQualifiedAttributePropertyKey(parentType, attributeName);
+    }
+
+    public static String getQualifiedAttributePropertyKey(AtlasType parentType, String attributeName) {
+        return attributeName.contains(".") ? attributeName : String.format("%s.%s", parentType.getTypeName(), attributeName);
+    }
+
+    public static boolean isReference(AtlasType type) {
+
+        return type.getTypeCategory() == TypeCategory.STRUCT ||
+            type.getTypeCategory() == TypeCategory.ENTITY;
+
     }
 
     public static String encodePropertyKey(String key) {
@@ -114,7 +130,6 @@ public class AtlasGraphUtilsV1 {
     /**
      * Adds an additional value to a multi-property.
      *
-     * @param vertex
      * @param propertyName
      * @param value
      */
