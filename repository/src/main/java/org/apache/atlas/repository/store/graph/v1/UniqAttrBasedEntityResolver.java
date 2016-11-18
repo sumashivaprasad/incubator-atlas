@@ -1,6 +1,7 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.base.Optional;
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.typedef.AtlasStructDef;
@@ -50,8 +51,7 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         entities.removeUnResolvedEntityReferences(resolvedReferences);
 
         if (entities.getUnResolvedEntityReferences().size() > 0) {
-            //TODO - format error
-            throw new AtlasBaseException("Could not find an entity with the specified entity references " + entities.getUnResolvedEntityReferences() + " in Atlas ");
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_BY_UNIQUE_ATTRIBUTE_NOT_FOUND, entities.getUnResolvedEntityReferences().toString());
         }
 
         //Resolve root references

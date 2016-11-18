@@ -38,10 +38,10 @@ public class MapVertexMapper {
         this.deleteHandler = deleteHandler;
     }
 
-    Map<String, Object> mapToVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasMapType mapType, Object val, AtlasVertex vertex) throws AtlasBaseException {
+    public Map<String, Object> createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasMapType mapType, Object val, AtlasVertex vertex, String vertexPropertyName) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Mapping instance to vertex {} for map type {}", mapType.getTypeName(), string(vertex));
+            LOG.debug("Mapping instance to vertex {} for map type {}", string(vertex), mapType.getTypeName());
         }
 
         @SuppressWarnings("unchecked") Map<Object, Object> newVal =
@@ -49,17 +49,15 @@ public class MapVertexMapper {
 
         boolean newAttributeEmpty = MapUtils.isEmpty(newVal);
 
-        String propertyName = AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(parentType, attributeDef.getName());
-
         Map<String, Object> currentMap = new HashMap<>();
         Map<String, Object> newMap = new HashMap<>();
 
         try {
 
-            List<String> currentKeys = GraphHelper.getListProperty(vertex, propertyName);
+            List<String> currentKeys = GraphHelper.getListProperty(vertex, vertexPropertyName);
             if (currentKeys != null && !currentKeys.isEmpty()) {
                 for (String key : currentKeys) {
-                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(propertyName, key);
+                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, key);
                     Object propertyValueForKey = getMapValueProperty(mapType.getValueType(), vertex, propertyNameForKey);
                     currentMap.put(key, propertyValueForKey);
                 }
@@ -68,27 +66,28 @@ public class MapVertexMapper {
             if (!newAttributeEmpty) {
                 for (Map.Entry<Object, Object> entry : newVal.entrySet()) {
                     String keyStr = entry.getKey().toString();
-                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(propertyName, keyStr);
+                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, keyStr);
 
-                    Object newEntry = structVertexMapper.mapToVertexByTypeCategory(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex);
-
-                    //Add/Update/Remove property value
-                    setMapValueProperty(mapType.getValueType(), vertex, propertyNameForKey, newEntry);
+                    Object newEntry = structVertexMapper.mapToVertexByTypeCategory(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey);
                     newMap.put(keyStr, newEntry);
                 }
             }
 
             Map<String, Object> additionalMap =
-                removeUnusedMapEntries(vertex, propertyName, currentMap, newMap, mapType, attributeDef);
+                removeUnusedMapEntries(vertex, vertexPropertyName, currentMap, newMap, mapType, attributeDef);
 
             Set<String> newKeys = new HashSet<>(newMap.keySet());
             newKeys.addAll(additionalMap.keySet());
 
             // for dereference on way out
 
-            GraphHelper.setListProperty(vertex, propertyName, new ArrayList<>(newKeys));
+            GraphHelper.setListProperty(vertex, vertexPropertyName, new ArrayList<>(newKeys));
         } catch (AtlasException e) {
             throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
+        }
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Map values set in vertex {} {}", mapType.getTypeName(), newMap);
         }
 
         return newMap;

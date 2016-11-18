@@ -5,7 +5,6 @@ import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
-import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.Constants;
@@ -14,7 +13,6 @@ import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
@@ -23,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 
 public class StructVertexMapper {
 
@@ -69,6 +65,14 @@ public class StructVertexMapper {
 //        return vertex;
 //    }
 
+    /**
+     * Map attributes for entity, struct or trait
+     * @param structType
+     * @param struct
+     * @param vertex
+     * @return
+     * @throws AtlasBaseException
+     */
     public AtlasVertex mapAttributestoVertex(AtlasStructType structType, AtlasStruct struct, AtlasVertex vertex) throws AtlasBaseException {
 
         if (struct.getAttributes() != null) {
@@ -78,35 +82,40 @@ public class StructVertexMapper {
 
                 final AtlasStructDef.AtlasAttributeDef attributeDef = structType.getStructDef().getAttribute(attrName);
 
-                mapToVertexByTypeCategory(structType, attributeDef, attributeType, value, vertex);
-
-
+                mapToVertexByTypeCategory(structType, attributeDef, attributeType, value, vertex, AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(structType, attrName));
             }
         }
         return vertex;
     }
 
-    public Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex) throws AtlasBaseException {
+    public Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName) throws AtlasBaseException {
         switch(attrType.getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
-            return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex);
+            return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
         case STRUCT:
             return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex);
+        case ENTITY:
+
         case MAP:
-            return mapVertexMapper.mapToVertex((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex);
+            return mapVertexMapper.createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
+
         default:
             throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, attrType.getTypeCategory().name());
         }
 
     }
 
-    public Object createOrUpdatePrimitives(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object val, AtlasVertex vertex) {
-        AtlasGraphUtilsV1.setProperty(vertex, parentType.getTypeName(), val);
+    public Object createOrUpdatePrimitives(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object val, AtlasVertex vertex, String vertexPropertyName) {
+        if ( parentType.getTypeCategory() == TypeCategory.MAP ) {
+            MapVertexMapper.setMapValueProperty(((AtlasMapType)parentType).getValueType(), vertex, vertexPropertyName, val);
+        } else {
+            AtlasGraphUtilsV1.setProperty(vertex, vertexPropertyName, val);
+        }
         return val;
     }
 
-    public AtlasEdge createVertex(AtlasVertex referringVertex, AtlasStruct struct, AtlasStructType structAttributeType, String edgeLabel) throws AtlasBaseException {
+    public AtlasEdge createVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct struct, AtlasVertex referringVertex, String edgeLabel) throws AtlasBaseException {
         AtlasVertex vertex = createVertexTemplate(struct, structAttributeType);
         mapAttributestoVertex(structAttributeType, struct, vertex);
 
@@ -117,8 +126,8 @@ public class StructVertexMapper {
         }
     }
 
-    public void updateVertex(AtlasStruct struct, AtlasStructType structAttributeType, AtlasVertex structVertex) throws AtlasBaseException {
-        mapAttributestoVertex(structAttributeType, struct, structVertex);
+    public void updateVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct value, AtlasVertex structVertex) throws AtlasBaseException {
+        mapAttributestoVertex(structAttributeType, value, structVertex);
     }
 
     public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex) throws AtlasBaseException {
@@ -129,10 +138,10 @@ public class StructVertexMapper {
 
         if ( currentEdgeIter.hasNext() ) {
             AtlasEdge existingEdge = currentEdgeIter.next();
-            updateVertex((AtlasStruct) value, attrType, existingEdge.getOutVertex());
+            updateVertex(parentType, attrType, attributeDef, (AtlasStruct) value, existingEdge.getOutVertex());
             result = existingEdge;
         } else {
-            result = createVertex(referringVertex, (AtlasStruct) value, attrType, edgeLabel);
+            result = createVertex(parentType, attrType, attributeDef, (AtlasStruct) value, referringVertex, edgeLabel);
         }
 
         return result;
