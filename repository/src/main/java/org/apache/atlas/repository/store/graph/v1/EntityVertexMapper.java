@@ -1,12 +1,16 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 
+import com.google.common.base.Optional;
 import com.google.inject.Singleton;
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.Constants;
+import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
@@ -16,17 +20,23 @@ import org.apache.atlas.type.AtlasStructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.text.html.Option;
 import java.util.Iterator;
 import java.util.UUID;
 
 import static org.apache.atlas.repository.graph.GraphHelper.string;
 
-@Singleton
 public class EntityVertexMapper extends StructVertexMapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(EntityVertexMapper.class);
 
-    private GraphHelper graphHelper;
+    private GraphHelper graphHelper = GraphHelper.getInstance();
+
+    EntityGraphDiscoveryContext context;
+
+    public EntityVertexMapper(EntityGraphDiscoveryContext context) {
+        this.context = context;
+    }
 
     @Override
     public AtlasVertex createVertexTemplate(final AtlasStruct instance, final AtlasStructType structType) {
@@ -54,7 +64,7 @@ public class EntityVertexMapper extends StructVertexMapper {
     }
 
 
-    public void updateEdge(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, Object value, AtlasEdge existingEdge) throws AtlasBaseException {
+    public AtlasEdge updateEdge(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, Object value, AtlasEdge existingEdge, final AtlasVertex entityVertex) throws AtlasBaseException {
 
         LOG.debug("Updating entity reference {} for reference attribute {}",  attributeDef.getName());
         // Update edge if it exists
@@ -65,33 +75,46 @@ public class EntityVertexMapper extends StructVertexMapper {
         AtlasEdge newEdge = existingEdge;
         if (!currentEntityId.equals(newEntityId)) {
             // add an edge to the class vertex from the instance
-            if (newVertex != null) {
-                newEdge = graphHelper.getOrCreateEdge(instanceVertex, newVertex, edgeLabel);
+            if (entityVertex != null) {
+                try {
+                    newEdge = graphHelper.getOrCreateEdge(existingEdge.getInVertex(), entityVertex, existingEdge.getLabel());
+                } catch (RepositoryException e) {
+                    throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
+                }
 
             }
         }
-
         return newEdge;
     }
 
     @Override
-    public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex) throws AtlasBaseException {
+    public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
         AtlasEdge result = null;
 
-        AtlasVertex newReferenceVertex = context.getResolvedReference(newAttributeValue);
-
-
+        AtlasVertex entityVertex = context.getResolvedReference(new AtlasObjectId(attrType.getTypeName(), (String) value));
         String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
-        Iterator<AtlasEdge> currentEdgeIter = graphHelper.getOutGoingEdgesByLabel(referringVertex, edgeLabel);
-
-        if ( currentEdgeIter.hasNext() ) {
-            AtlasEdge existingEdge = currentEdgeIter.next();
-            updateEdge(parentType, attrType, attributeDef, value, existingEdge);
-            result = existingEdge;
+        if ( existingEdge.isPresent() ) {
+            updateEdge(parentType, attrType, attributeDef, value, existingEdge.get(), entityVertex);
+            result = existingEdge.get();
         } else {
-            result = createEdge(parentType, attrType, attributeDef, (AtlasStruct) value, referringVertex, edgeLabel);
+            try {
+                result = graphHelper.getOrCreateEdge(referringVertex, entityVertex, edgeLabel);
+            } catch (RepositoryException e) {
+                throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
+            }
         }
 
         return result;
+    }
+
+    String getId(Object value) throws AtlasBaseException {
+        if ( value != null) {
+            if (value instanceof String) {
+                return (String) value;
+            } else {
+                return ((AtlasEntity) value).getGuid();
+            }
+        }
+        throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, (String) value);
     }
 }

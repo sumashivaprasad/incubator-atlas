@@ -1,6 +1,7 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 
+import com.google.common.base.Optional;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -82,21 +83,20 @@ public class StructVertexMapper {
 
                 final AtlasStructDef.AtlasAttributeDef attributeDef = structType.getStructDef().getAttribute(attrName);
 
-                mapToVertexByTypeCategory(structType, attributeDef, attributeType, value, vertex, AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(structType, attrName));
+                mapToVertexByTypeCategory(structType, attributeDef, attributeType, value, vertex, AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(structType, attrName), Optional.<AtlasEdge>absent());
             }
         }
         return vertex;
     }
 
-    public Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName) throws AtlasBaseException {
+    public Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
         switch(attrType.getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
             return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
         case STRUCT:
-            return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex);
+            return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
         case ENTITY:
-
         case MAP:
             return mapVertexMapper.createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
 
@@ -130,16 +130,14 @@ public class StructVertexMapper {
         mapAttributestoVertex(structAttributeType, value, structVertex);
     }
 
-    public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex) throws AtlasBaseException {
+    public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
         AtlasEdge result = null;
 
         String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
-        Iterator<AtlasEdge> currentEdgeIter = graphHelper.getOutGoingEdgesByLabel(referringVertex, edgeLabel);
 
-        if ( currentEdgeIter.hasNext() ) {
-            AtlasEdge existingEdge = currentEdgeIter.next();
-            updateVertex(parentType, attrType, attributeDef, (AtlasStruct) value, existingEdge.getOutVertex());
-            result = existingEdge;
+        if ( existingEdge.isPresent() ) {
+            updateVertex(parentType, attrType, attributeDef, (AtlasStruct) value, existingEdge.get().getOutVertex());
+            result = existingEdge.get();
         } else {
             result = createVertex(parentType, attrType, attributeDef, (AtlasStruct) value, referringVertex, edgeLabel);
         }

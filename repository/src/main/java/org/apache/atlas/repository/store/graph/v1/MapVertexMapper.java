@@ -1,10 +1,12 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 
+import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
@@ -68,7 +70,11 @@ public class MapVertexMapper {
                     String keyStr = entry.getKey().toString();
                     String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, keyStr);
 
-                    Object newEntry = structVertexMapper.mapToVertexByTypeCategory(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey);
+                    Optional<AtlasEdge> existingEdge = Optional.absent();
+                    if ( mapType.getValueType().getTypeCategory() == TypeCategory.STRUCT || mapType.getValueType().getTypeCategory() == TypeCategory.ENTITY ) {
+                        existingEdge = Optional.of((AtlasEdge) currentMap.get(keyStr));
+                    }
+                    Object newEntry = structVertexMapper.mapToVertexByTypeCategory(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
                     newMap.put(keyStr, newEntry);
                 }
             }
