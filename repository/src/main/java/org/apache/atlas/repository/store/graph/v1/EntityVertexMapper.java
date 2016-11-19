@@ -59,7 +59,6 @@ public class EntityVertexMapper extends StructVertexMapper {
         // add version information
         AtlasGraphUtilsV1.setProperty(vertex, Constants.VERSION_PROPERTY_KEY, entity.getVersion());
 
-        //TODO - Set system properties like createdBy, createdTime etc
         return vertex;
     }
 

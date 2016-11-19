@@ -14,6 +14,7 @@ import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
@@ -30,6 +31,8 @@ public class StructVertexMapper {
     private GraphHelper graphHelper;
 
     private MapVertexMapper mapVertexMapper;
+
+    private EntityVertexMapper entityVertexMapper;
 
     private static final Logger LOG = LoggerFactory.getLogger(StructVertexMapper.class);
 
@@ -97,6 +100,7 @@ public class StructVertexMapper {
         case STRUCT:
             return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
         case ENTITY:
+            return entityVertexMapper.createOrUpdate((AtlasEntityType)parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
         case MAP:
             return mapVertexMapper.createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
 
