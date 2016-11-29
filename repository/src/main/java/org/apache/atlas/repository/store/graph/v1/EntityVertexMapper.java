@@ -4,6 +4,7 @@ package org.apache.atlas.repository.store.graph.v1;
 import com.google.common.base.Optional;
 import com.google.inject.Singleton;
 import org.apache.atlas.AtlasErrorCode;
+import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasObjectId;
@@ -58,6 +59,14 @@ public class EntityVertexMapper extends StructVertexMapper {
 
         // add version information
         AtlasGraphUtilsV1.setProperty(vertex, Constants.VERSION_PROPERTY_KEY, entity.getVersion());
+
+        AtlasGraphUtilsV1.setProperty(vertex, Constants.CREATED_BY_KEY, RequestContext.get().getUser());
+
+        GraphHelper.setProperty(vertex, Constants.MODIFIED_BY_KEY, RequestContext.get().getUser());
+
+        AtlasGraphUtilsV1.setProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, RequestContext.get().getUser());
+
+
 
         return vertex;
     }

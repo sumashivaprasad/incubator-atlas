@@ -54,21 +54,6 @@ public class StructVertexMapper {
         return vertexWithoutIdentity;
     }
 
-//    public AtlasVertex mapByCategory(AtlasStruct struct, AtlasVertex vertex, AtlasStructType structType, Set<TypeCategory> typeCategories) {
-//
-//        if (struct.getAttributes() != null) {
-//            for (String attrName : struct.getAttributes().keySet()) {
-//                Object value = struct.getAttribute(attrName);
-//
-//                AtlasType type = structType.getAttributeType(attrName);
-//                if (typeCategories.contains(type.getTypeCategory())) {
-//                    AtlasGraphUtilsV1.setProperty(vertex, attrName, value);
-//                }
-//            }
-//        }
-//        return vertex;
-//    }
-
     /**
      * Map attributes for entity, struct or trait
      * @param structType
@@ -149,7 +134,7 @@ public class StructVertexMapper {
         return result;
     }
 
-    public static boolean shouldManageChildReferences(AtlasStructDef.AtlasAttributeDef attributeDef) {
-        return attributeDef.getConstraintDefs().contains(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF);
+    public static boolean shouldManageChildReferences(AtlasEntityType type, String attributeName) {
+        return type.isMappedFromRefAttribute(attributeName);
     }
 }

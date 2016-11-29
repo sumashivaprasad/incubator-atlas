@@ -80,7 +80,7 @@ public class MapVertexMapper {
             }
 
             Map<String, Object> additionalMap =
-                removeUnusedMapEntries(vertex, vertexPropertyName, currentMap, newMap, mapType, attributeDef);
+                removeUnusedMapEntries(parentType, mapType, attributeDef, vertex, vertexPropertyName, currentMap, newMap, );
 
             Set<String> newKeys = new HashSet<>(newMap.keySet());
             newKeys.addAll(additionalMap.keySet());
@@ -137,7 +137,8 @@ public class MapVertexMapper {
                 AtlasEdge currentEdge = (AtlasEdge)currentMap.get(currentKey);
 
                 if (!newMap.values().contains(currentEdge)) {
-                    boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(attributeDef);
+                    //TODO _ pass parentTYpe
+                    boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(mapType, attributeDef.getName());
                     boolean deleted =
                         deleteHandler.deleteEdgeReference(currentEdge, mapType.getValueType().getTypeCategory(), deleteChildReferences, true);
                     if (!deleted) {
