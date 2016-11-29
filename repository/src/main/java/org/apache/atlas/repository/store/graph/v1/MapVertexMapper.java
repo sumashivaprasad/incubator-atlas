@@ -11,6 +11,7 @@ import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
@@ -55,7 +56,6 @@ public class MapVertexMapper {
         Map<String, Object> newMap = new HashMap<>();
 
         try {
-
             List<String> currentKeys = GraphHelper.getListProperty(vertex, vertexPropertyName);
             if (currentKeys != null && !currentKeys.isEmpty()) {
                 for (String key : currentKeys) {
@@ -74,13 +74,13 @@ public class MapVertexMapper {
                     if ( mapType.getValueType().getTypeCategory() == TypeCategory.STRUCT || mapType.getValueType().getTypeCategory() == TypeCategory.ENTITY ) {
                         existingEdge = Optional.of((AtlasEdge) currentMap.get(keyStr));
                     }
-                    Object newEntry = structVertexMapper.mapToVertexByTypeCategory(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
+                    Object newEntry = structVertexMapper.mapCollectionElementsToVertex(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
                     newMap.put(keyStr, newEntry);
                 }
             }
 
             Map<String, Object> additionalMap =
-                removeUnusedMapEntries(parentType, mapType, attributeDef, vertex, vertexPropertyName, currentMap, newMap, );
+                removeUnusedMapEntries(parentType, mapType, attributeDef, vertex, vertexPropertyName, currentMap, newMap);
 
             Set<String> newKeys = new HashSet<>(newMap.keySet());
             newKeys.addAll(additionalMap.keySet());
@@ -122,9 +122,11 @@ public class MapVertexMapper {
 
     //Remove unused entries from map
     private Map<String, Object> removeUnusedMapEntries(
+        AtlasStructType entityType,
+        AtlasMapType mapType, AtlasStructDef.AtlasAttributeDef attributeDef,
         AtlasVertex instanceVertex, String propertyName,
         Map<String, Object> currentMap,
-        Map<String, Object> newMap, AtlasMapType mapType, AtlasStructDef.AtlasAttributeDef attributeDef)
+        Map<String, Object> newMap)
         throws AtlasException {
 
         Map<String, Object> additionalMap = new HashMap<>();
@@ -137,8 +139,7 @@ public class MapVertexMapper {
                 AtlasEdge currentEdge = (AtlasEdge)currentMap.get(currentKey);
 
                 if (!newMap.values().contains(currentEdge)) {
-                    //TODO _ pass parentTYpe
-                    boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(mapType, attributeDef.getName());
+                    boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(entityType, attributeDef.getName());
                     boolean deleted =
                         deleteHandler.deleteEdgeReference(currentEdge, mapType.getValueType().getTypeCategory(), deleteChildReferences, true);
                     if (!deleted) {
@@ -155,5 +156,4 @@ public class MapVertexMapper {
         }
         return additionalMap;
     }
-
 }

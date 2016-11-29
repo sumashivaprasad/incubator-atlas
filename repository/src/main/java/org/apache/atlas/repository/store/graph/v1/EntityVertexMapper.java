@@ -66,8 +66,6 @@ public class EntityVertexMapper extends StructVertexMapper {
 
         AtlasGraphUtilsV1.setProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, RequestContext.get().getUser());
 
-
-
         return vertex;
     }
 

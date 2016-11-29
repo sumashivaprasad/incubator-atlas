@@ -2,10 +2,12 @@ package org.apache.atlas.repository.store.graph.v1;
 
 
 import com.google.common.base.Optional;
+import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.Constants;
@@ -14,6 +16,7 @@ import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasArrayType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
@@ -31,6 +34,8 @@ public class StructVertexMapper {
     private GraphHelper graphHelper;
 
     private MapVertexMapper mapVertexMapper;
+
+    private ArrayVertexMapper arrVertexMapper;
 
     private EntityVertexMapper entityVertexMapper;
 
@@ -88,7 +93,8 @@ public class StructVertexMapper {
             return entityVertexMapper.createOrUpdate((AtlasEntityType)parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
         case MAP:
             return mapVertexMapper.createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
-
+        case ARRAY:
+            return arrVertexMapper.toVertex((AtlasStructType) parentType, attributeDef, (AtlasArrayType) attrType, value, vertex, vertexPropertyName);
         default:
             throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, attrType.getTypeCategory().name());
         }
@@ -134,7 +140,23 @@ public class StructVertexMapper {
         return result;
     }
 
-    public static boolean shouldManageChildReferences(AtlasEntityType type, String attributeName) {
+    public static boolean shouldManageChildReferences(AtlasStructType type, String attributeName) {
         return type.isMappedFromRefAttribute(attributeName);
+    }
+
+    protected Object mapCollectionElementsToVertex(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
+        switch(attrType.getTypeCategory()) {
+        case PRIMITIVE:
+        case ENUM:
+            return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
+        case STRUCT:
+            return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
+        case ENTITY:
+            return entityVertexMapper.createOrUpdate((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
+        case MAP:
+        case ARRAY:
+        default:
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, attrType.getTypeCategory().name());
+        }
     }
 }
