@@ -36,9 +36,6 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.ql.QueryPlan;
-import org.apache.hadoop.hive.ql.exec.ExplainTask;
-import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.hooks.*;
 import org.apache.hadoop.hive.ql.hooks.Entity;
 import org.apache.hadoop.hive.ql.hooks.Entity.Type;
@@ -59,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -73,6 +71,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -170,14 +169,12 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     public void run(final HookContext hookContext) throws Exception {
         // clone to avoid concurrent access
         try {
-            final HiveConf conf = new HiveConf(hookContext.getConf());
-
             final HiveEventContext event = new HiveEventContext();
             event.setInputs(hookContext.getInputs());
             event.setOutputs(hookContext.getOutputs());
             event.setHookType(hookContext.getHookType());
             event.setUgi(hookContext.getUgi());
-            event.setUser(getUser(hookContext.getUserName()));
+            event.setUser(getUser(hookContext.getUserName(), hookContext.getUgi()));
             event.setOperation(OPERATION_MAP.get(hookContext.getOperationName()));
             event.setQueryId(hookContext.getQueryPlan().getQueryId());
             event.setQueryStr(hookContext.getQueryPlan().getQueryStr());
@@ -188,11 +185,20 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             if (executor == null) {
                 fireAndForget(event);
             } else {
+
+                final UserGroupInformation ugi = hookContext.getUgi() == null ? UserGroupInformation.getCurrentUser() : hookContext.getUgi();
+
                 executor.submit(new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            fireAndForget(event);
+                            ugi.doAs(new PrivilegedExceptionAction<Object>() {
+                                @Override
+                                public Object run() throws Exception {
+                                    fireAndForget(event);
+                                    return event;
+                                }
+                            });
                         } catch (Throwable e) {
                             LOG.error("Atlas hook failed due to error ", e);
                         }
@@ -208,7 +214,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         assert event.getHookType() == HookContext.HookType.POST_EXEC_HOOK : "Non-POST_EXEC_HOOK not supported!";
 
-        LOG.info("Entered Atlas hook for hook type {} operation {}", event.getHookType(), event.getOperation());
+        LOG.info("Entered Atlas hook for hook type {}, operation {} , user {} as {}", event.getHookType(), event.getOperation(), event.getUgi().getRealUser(), event.getUgi().getShortUserName());
 
         HiveMetaStoreBridge dgiBridge = new HiveMetaStoreBridge(atlasProperties, hiveConf);
 
@@ -1087,13 +1093,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     static final class EntityComparator implements Comparator<Entity> {
         @Override
         public int compare(Entity o1, Entity o2) {
-            String s1 = o1.getName();
-            String s2 = o2.getName();
-            if (s1 == null || s2 == null){
-                s1 = o1.getD().toString();
-                s2 = o2.getD().toString();
-            }
-            return s1.toLowerCase().compareTo(s2.toLowerCase());
+            return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
         }
     }
 
