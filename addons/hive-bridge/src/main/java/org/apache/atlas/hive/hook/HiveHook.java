@@ -186,7 +186,8 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             event.setLineageInfo(hookContext.getLinfo());
 
             if (executor == null) {
-                fireAndForget(event);
+                collect(event);
+                notifyAsPrivilegedAction(event);
             } else {
                 executor.submit(new Runnable() {
                     @Override
@@ -195,10 +196,25 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                             ugi.doAs(new PrivilegedExceptionAction<Object>() {
                                 @Override
                                 public Object run() throws Exception {
-                                    fireAndForget(event);
+                                    collect(event);
                                     return event;
                                 }
                             });
+
+                            //Notify as 'hive' service user in Kerberos mode else will default to the current user - doAs mode
+                            UserGroupInformation realUser = ugi.getRealUser();
+                            if (realUser != null) {
+                                if ( LOG.isDebugEnabled()) {
+                                    LOG.debug("Sending notification as service user {} ", realUser.getShortUserName());
+                                }
+                                realUser.doAs(notifyAsPrivilegedAction(event));
+                            } else {
+                                //Unsecure or without doAs
+                                if ( LOG.isDebugEnabled()) {
+                                    LOG.debug("Sending notification as current user {} ", ugi.getShortUserName());
+                                }
+                                ugi.doAs(notifyAsPrivilegedAction(event));
+                            }
                         } catch (Throwable e) {
                             LOG.error("Atlas hook failed due to error ", e);
                         }
@@ -210,7 +226,17 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
         }
     }
 
-    private void fireAndForget(HiveEventContext event) throws Exception {
+    PrivilegedExceptionAction<Object> notifyAsPrivilegedAction(final HiveEventContext event) {
+        return new PrivilegedExceptionAction<Object>() {
+            @Override
+            public Object run() throws Exception {
+                notifyEntities(event.getMessages());
+                return event;
+            }
+        };
+    }
+
+    private void collect(HiveEventContext event) throws Exception {
 
         assert event.getHookType() == HookContext.HookType.POST_EXEC_HOOK : "Non-POST_EXEC_HOOK not supported!";
 
@@ -286,8 +312,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         default:
         }
-
-        notifyEntities(event.getMessages());
     }
 
     private void deleteTable(HiveMetaStoreBridge dgiBridge, HiveEventContext event) {
