@@ -47,6 +47,7 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
+import org.apache.hadoop.hive.shims.Utils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.json.JSONObject;
@@ -173,7 +174,9 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             event.setInputs(hookContext.getInputs());
             event.setOutputs(hookContext.getOutputs());
             event.setHookType(hookContext.getHookType());
-            event.setUgi(hookContext.getUgi());
+
+            final UserGroupInformation ugi = hookContext.getUgi() == null ? Utils.getUGI() : hookContext.getUgi();
+            event.setUgi(ugi);
             event.setUser(getUser(hookContext.getUserName(), hookContext.getUgi()));
             event.setOperation(OPERATION_MAP.get(hookContext.getOperationName()));
             event.setQueryId(hookContext.getQueryPlan().getQueryId());
@@ -185,9 +188,6 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
             if (executor == null) {
                 fireAndForget(event);
             } else {
-
-                final UserGroupInformation ugi = hookContext.getUgi() == null ? UserGroupInformation.getCurrentUser() : hookContext.getUgi();
-
                 executor.submit(new Runnable() {
                     @Override
                     public void run() {
@@ -1093,7 +1093,13 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
     static final class EntityComparator implements Comparator<Entity> {
         @Override
         public int compare(Entity o1, Entity o2) {
-            return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
+            String s1 = o1.getName();
+            String s2 = o2.getName();
+            if (s1 == null || s2 == null){
+                s1 = o1.getD().toString();
+                s2 = o2.getD().toString();
+            }
+            return s1.toLowerCase().compareTo(s2.toLowerCase());
         }
     }
 
