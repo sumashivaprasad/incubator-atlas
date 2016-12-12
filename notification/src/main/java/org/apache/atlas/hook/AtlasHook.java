@@ -190,14 +190,14 @@ public abstract class AtlasHook {
     public static String getUser(String userName, UserGroupInformation ugi) {
         if (StringUtils.isNotEmpty(userName)) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Returning userName : " + userName);
+                LOG.debug("Returning userName {}", userName);
             }
             return userName;
         }
 
         if (ugi != null && StringUtils.isNotEmpty(ugi.getShortUserName())) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Returning ugi.getShortUserName : " + userName);
+                LOG.debug("Returning ugi.getShortUserName {}", userName);
             }
             return ugi.getShortUserName();
         }

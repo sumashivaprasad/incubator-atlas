@@ -204,15 +204,11 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
                             //Notify as 'hive' service user in Kerberos mode else will default to the current user - doAs mode
                             UserGroupInformation realUser = ugi.getRealUser();
                             if (realUser != null) {
-                                if ( LOG.isDebugEnabled()) {
-                                    LOG.debug("Sending notification as service user {} ", realUser.getShortUserName());
-                                }
+                                LOG.info("Sending notification for event {} as service user {} ", event.getOperation(), realUser.getShortUserName());
                                 realUser.doAs(notifyAsPrivilegedAction(event));
                             } else {
                                 //Unsecure or without doAs
-                                if ( LOG.isDebugEnabled()) {
-                                    LOG.debug("Sending notification as current user {} ", ugi.getShortUserName());
-                                }
+                                LOG.info("Sending notification for event {} as current user {} ", event.getOperation(), ugi.getShortUserName());
                                 ugi.doAs(notifyAsPrivilegedAction(event));
                             }
                         } catch (Throwable e) {
