@@ -32,15 +32,19 @@ import scala.collection.JavaConversions.bufferAsJavaList
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+
 import org.apache.atlas.gremlin.GremlinExpressionFactory
+import org.apache.atlas.gremlin.optimizer.GremlinQueryOptimizer
 import org.apache.atlas.groovy.CastExpression
-import org.apache.atlas.groovy.CodeBlockExpression
+import org.apache.atlas.groovy.ClosureExpression
+import org.apache.atlas.groovy.LabeledExpression
 import org.apache.atlas.groovy.FunctionCallExpression
 import org.apache.atlas.groovy.GroovyExpression
 import org.apache.atlas.groovy.GroovyGenerationContext
 import org.apache.atlas.groovy.IdentifierExpression
 import org.apache.atlas.groovy.ListExpression
 import org.apache.atlas.groovy.LiteralExpression
+import org.apache.atlas.groovy.TraversalStepType
 import org.apache.atlas.query.Expressions.AliasExpression
 import org.apache.atlas.query.Expressions.ArithmeticExpression
 import org.apache.atlas.query.Expressions.BackReference
@@ -78,7 +82,10 @@ import org.apache.atlas.query.Expressions.MaxExpression
 import org.apache.atlas.query.Expressions.MinExpression
 import org.apache.atlas.query.Expressions.SumExpression
 import org.apache.atlas.query.Expressions.CountExpression
+
+import org.apache.atlas.util.AtlasRepositoryConfiguration
 import java.util.HashSet
+
 trait IntSequence {
     def next: Int
 }
@@ -620,25 +627,32 @@ class GremlinTranslator(expr: Expression,
 
     def genFullQuery(expr: Expression, hasSelect: Boolean): String = {
 
-        var q : GroovyExpression = new FunctionCallExpression(new IdentifierExpression("g"),"V");
-
+        var q : GroovyExpression = new FunctionCallExpression(TraversalStepType.START, new IdentifierExpression(TraversalStepType.SOURCE, "g"),"V");
 
         val debug:Boolean = false
         if(gPersistenceBehavior.addGraphVertexPrefix(preStatements)) {
             q = gPersistenceBehavior.addInitialQueryCondition(q);
         }
-
+    
         q = genQuery(q, expr, false)
 
-        q = new FunctionCallExpression(q, "toList");
+        q = new FunctionCallExpression(TraversalStepType.END, q, "toList");
         q = gPersistenceBehavior.getGraph().addOutputTransformationPredicate(q, hasSelect, expr.isInstanceOf[PathExpression]);
+        
 
-        var overallExpression = new CodeBlockExpression();
-        overallExpression.addStatements(preStatements);
-        overallExpression.addStatement(q)
-        overallExpression.addStatements(postStatements);
+        if(AtlasRepositoryConfiguration.isGremlinOptimizerEnabled()) {
+            q = GremlinQueryOptimizer.getInstance().optimize(q);
+        }
+        
+	    val closureExpression = new ClosureExpression();
 
-        var qryStr = generateGremlin(overallExpression);
+        closureExpression.addStatements(preStatements);
+        closureExpression.addStatement(q)
+        closureExpression.addStatements(postStatements);
+	
+	    val overallExpression = new LabeledExpression("L", closureExpression);		     
+	      
+        val qryStr = generateGremlin(overallExpression);
 
         if(debug) {
           println(" query " + qryStr)

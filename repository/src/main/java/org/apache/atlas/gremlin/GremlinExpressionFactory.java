@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.groovy.ArithmeticExpression;
+import org.apache.atlas.groovy.ArithmeticExpression.ArithmeticOperator;
 import org.apache.atlas.groovy.CastExpression;
 import org.apache.atlas.groovy.ClosureExpression;
 import org.apache.atlas.groovy.FieldExpression;
@@ -31,16 +32,18 @@ import org.apache.atlas.groovy.GroovyExpression;
 import org.apache.atlas.groovy.IdentifierExpression;
 import org.apache.atlas.groovy.ListExpression;
 import org.apache.atlas.groovy.LiteralExpression;
+import org.apache.atlas.groovy.TraversalStepType;
 import org.apache.atlas.groovy.TypeCoersionExpression;
 import org.apache.atlas.groovy.VariableAssignmentExpression;
-import org.apache.atlas.groovy.ArithmeticExpression.ArithmeticOperator;
 import org.apache.atlas.query.GraphPersistenceStrategies;
 import org.apache.atlas.query.IntSequence;
 import org.apache.atlas.query.TypeUtils.FieldInfo;
+import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graphdb.AtlasEdgeDirection;
 import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.atlas.util.AtlasRepositoryConfiguration;
 
 /**
  * Factory to generate Groovy expressions representing Gremlin syntax that that
@@ -52,7 +55,8 @@ public abstract class GremlinExpressionFactory {
     private static final String G_VARIABLE = "g";
     private static final String IT_VARIABLE = "it";
 
-    private static final String SET_CLASS = "Set";
+    protected static final String SET_CLASS = "Set";
+    
 
     private static final String OBJECT_FIELD = "object";
 
@@ -60,11 +64,11 @@ public abstract class GremlinExpressionFactory {
     protected static final String FILTER_METHOD = "filter";
     private static final String PATH_METHOD = "path";
     private static final String AS_METHOD = "as";
-    private static final String FILL_METHOD = "fill";
     protected static final String HAS_METHOD = "has";
     protected static final String TO_LOWER_CASE_METHOD = "toLowerCase";
     protected static final String SELECT_METHOD = "select";
     protected static final String ORDER_METHOD = "order";
+    protected static final String FILL_METHOD = "fill";
 
     public static final GremlinExpressionFactory INSTANCE = AtlasGraphProvider.getGraphInstance()
             .getSupportedGremlinVersion() == GremlinVersion.THREE ? new Gremlin3ExpressionFactory()
@@ -207,13 +211,20 @@ public abstract class GremlinExpressionFactory {
      */
     public abstract GroovyExpression getFieldInSelect();
 
+//    /**
+//     * Returns an expression representing
+//     *
+//     * @return
+//     */
+//    public abstract GroovyExpression getFunctionGenerator();
+
     /**
      * Generates the expression the serves as the root of the Gremlin query.
-     * @param s
      * @param varExpr variable containing the vertices to traverse
      * @return
      */
-    protected abstract GroovyExpression initialExpression(GraphPersistenceStrategies s, GroovyExpression varExpr);
+    protected abstract GroovyExpression initialExpression(GroovyExpression varExpr, GraphPersistenceStrategies s);
+
 
     /**
      * Generates an expression that tests whether the vertex represented by the 'toTest'
@@ -229,19 +240,37 @@ public abstract class GremlinExpressionFactory {
             GroovyExpression vertexExpr);
 
     /**
+    /**
      * Generates a sequence of groovy expressions that filter the vertices to only
      * those that match the specified type.  If GraphPersistenceStrategies.collectTypeInstancesIntoVar()
-     * is set, the vertices are put into a variable whose name is geneated from the specified IntSequence.
-     * The last item in the result will be a graph traversal restricted to only the matching vertices.
+     * is set and the gremlin optimizer is disabled, the vertices are put into a variable whose name is generated 
+     * from the specified IntSequence.  The last item in the result will be a graph traversal restricted to only
+     * the matching vertices.
      */
     public List<GroovyExpression> generateTypeTestExpression(GraphPersistenceStrategies s, GroovyExpression parent,
-            String typeName, IntSequence intSeq) {
-        if (s.collectTypeInstancesIntoVar()) {
-            return typeTestExpressionMultiStep(s, typeName, intSeq);
-        } else {
-            return typeTestExpressionUsingFilter(s, parent, typeName);
+                                                             String typeName, IntSequence intSeq) {
+        if(AtlasRepositoryConfiguration.isGremlinOptimizerEnabled()) {
+            GroovyExpression superTypeAttributeNameExpr = new LiteralExpression(s.superTypeAttributeName());
+            GroovyExpression typeNameExpr = new LiteralExpression(typeName);
+            GroovyExpression superTypeMatchesExpr = new FunctionCallExpression(TraversalStepType.FILTER, HAS_METHOD, superTypeAttributeNameExpr,
+                    typeNameExpr);
+            
+            GroovyExpression typeAttributeNameExpr = new LiteralExpression(s.typeAttributeName());
+            
+            GroovyExpression typeMatchesExpr = new FunctionCallExpression(TraversalStepType.FILTER, HAS_METHOD, typeAttributeNameExpr,
+                    typeNameExpr);
+            GroovyExpression result = new FunctionCallExpression(TraversalStepType.FILTER, parent, "or", typeMatchesExpr, superTypeMatchesExpr);
+            return Collections.singletonList(result);
+        }
+        else {
+            if (s.collectTypeInstancesIntoVar()) {
+                return typeTestExpressionMultiStep(s, typeName, intSeq);
+            } else {
+                return typeTestExpressionUsingFilter(s, parent, typeName);
+            }
         }
     }
+
 
     private List<GroovyExpression> typeTestExpressionMultiStep(GraphPersistenceStrategies s, String typeName,
             IntSequence intSeq) {
@@ -253,7 +282,7 @@ public abstract class GremlinExpressionFactory {
         result.add(newSetVar(varName));
         result.add(fillVarWithTypeInstances(s, typeName, varName));
         result.add(fillVarWithSubTypeInstances(s, typeName, varName));
-        result.add(initialExpression(s, varExpr));
+        result.add(initialExpression(varExpr, s));
 
         return result;
     }
@@ -293,7 +322,6 @@ public abstract class GremlinExpressionFactory {
         return Collections.singletonList(filterExpr);
     }
 
-
     /**
      * Generates an expression which checks whether the vertices in the query have
      * a field with the given name.
@@ -303,7 +331,7 @@ public abstract class GremlinExpressionFactory {
      * @return
      */
     public GroovyExpression generateUnaryHasExpression(GroovyExpression parent, String fieldName) {
-        return new FunctionCallExpression(parent, HAS_METHOD, new LiteralExpression(fieldName));
+        return new FunctionCallExpression(TraversalStepType.FILTER, parent, HAS_METHOD, new LiteralExpression(fieldName));
     }
 
     /**
@@ -313,7 +341,7 @@ public abstract class GremlinExpressionFactory {
      * @return
      */
     public GroovyExpression generatePathExpression(GroovyExpression parent) {
-        return new FunctionCallExpression(parent, PATH_METHOD);
+        return new FunctionCallExpression(TraversalStepType.MAP_TO_VALUE, parent, PATH_METHOD);
     }
 
     /**
@@ -334,7 +362,7 @@ public abstract class GremlinExpressionFactory {
      * @return
      */
     public GroovyExpression generateAliasExpression(GroovyExpression parent, String alias) {
-        return new FunctionCallExpression(parent, AS_METHOD, new LiteralExpression(alias));
+        return new FunctionCallExpression(TraversalStepType.SIDE_EFFECT, parent, AS_METHOD, new LiteralExpression(alias));
     }
 
     /**
@@ -346,19 +374,19 @@ public abstract class GremlinExpressionFactory {
      * @return
      */
     public GroovyExpression generateAdjacentVerticesExpression(GroovyExpression parent, AtlasEdgeDirection dir) {
-        return new FunctionCallExpression(parent, getGremlinFunctionName(dir));
+        return new FunctionCallExpression(TraversalStepType.FLAT_MAP_TO_ELEMENTS, parent, getGremlinFunctionName(dir));
     }
 
     private String getGremlinFunctionName(AtlasEdgeDirection dir) {
         switch(dir) {
-            case IN:
-              return "in";
-            case OUT:
-                return "out";
-            case BOTH:
-                return "both";
-            default:
-                throw new RuntimeException("Unknown Atlas Edge Direction: " + dir);
+        case IN:
+            return "in";
+        case OUT:
+            return "out";
+        case BOTH:
+            return "both";
+        default:
+            throw new RuntimeException("Unknown Atlas Edge Direction: " + dir);
         }
     }
 
@@ -372,7 +400,7 @@ public abstract class GremlinExpressionFactory {
      */
     public GroovyExpression generateAdjacentVerticesExpression(GroovyExpression parent, AtlasEdgeDirection dir,
             String label) {
-        return new FunctionCallExpression(parent, getGremlinFunctionName(dir), new LiteralExpression(label));
+        return new FunctionCallExpression(TraversalStepType.FLAT_MAP_TO_ELEMENTS, parent, getGremlinFunctionName(dir), new LiteralExpression(label));
     }
 
     /**
@@ -392,17 +420,19 @@ public abstract class GremlinExpressionFactory {
     }
 
     protected GroovyExpression getAllVerticesExpr() {
-        GroovyExpression gExpr = getGraph();
-        return new FunctionCallExpression(gExpr, V_METHOD);
+        GroovyExpression gExpr = getGraphExpression();
+        return new FunctionCallExpression(TraversalStepType.START, gExpr, V_METHOD);
     }
 
-    protected IdentifierExpression getGraph() {
-        return new IdentifierExpression(G_VARIABLE);
+    protected IdentifierExpression getGraphExpression() {
+        return new IdentifierExpression(TraversalStepType.SOURCE, G_VARIABLE);
     }
+
 
     protected GroovyExpression getCurrentObjectExpression() {
         return new FieldExpression(getItVariable(), OBJECT_FIELD);
     }
+
     //assumes cast already performed
     public GroovyExpression generateCountExpression(GroovyExpression itExpr) {
         GroovyExpression collectionExpr = new CastExpression(itExpr,"Collection");
@@ -423,11 +453,9 @@ public abstract class GremlinExpressionFactory {
 
     private GroovyExpression getAggregrationExpression(GroovyExpression itExpr,
             GroovyExpression mapFunction, String functionName) {
-        GroovyExpression collectionExpr = new CastExpression(itExpr,
-                "Collection");
+        GroovyExpression collectionExpr = new CastExpression(itExpr,"Collection");
         ClosureExpression collectFunction = new ClosureExpression(mapFunction);
-        GroovyExpression transformedList = new FunctionCallExpression(
-                collectionExpr, "collect", collectFunction);
+        GroovyExpression transformedList = new FunctionCallExpression(collectionExpr, "collect", collectFunction);
         return new FunctionCallExpression(transformedList, functionName);
     }
 
@@ -436,4 +464,23 @@ public abstract class GremlinExpressionFactory {
     }
 
     public abstract GroovyExpression getGroupBySelectFieldParent();
+
+    public GroovyExpression generateFillExpression(GroovyExpression parent, GroovyExpression variable) {
+        return new FunctionCallExpression(TraversalStepType.END,parent , "fill", variable);
+    }
+    
+    public abstract GroovyExpression generateSeededTraversalExpresssion(boolean isMap, GroovyExpression valueCollection);
+
+    public GroovyExpression getCurrentTraverserObject(GroovyExpression traverser) {
+        return new FunctionCallExpression(traverser, "get");
+    }
+
+    /**
+     * @param closureExpression
+     * @return
+     */
+    public GroovyExpression generateMapExpression(GroovyExpression parent, ClosureExpression closureExpression) {
+        return new FunctionCallExpression(TraversalStepType.MAP_TO_ELEMENT, parent, "map", closureExpression);
+    }
+    
 }

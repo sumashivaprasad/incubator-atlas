@@ -15,43 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.atlas.groovy;
 
-import java.util.Collections;
-import java.util.List;
-
 /**
- * Groovy expression that accesses a field in an object.
+ * Base class for all expression that can have a caller.
  */
-public class FieldExpression extends AbstractGroovyExpression {
+public abstract class AbstractFunctionExpression extends AbstractGroovyExpression {
 
-    private GroovyExpression target;
-    private String fieldName;
+    // null for global functions
+    private GroovyExpression caller;
+    private TraversalStepType type = TraversalStepType.NONE;
 
-    public FieldExpression(GroovyExpression target, String fieldName) {
-        this.target = target;
-        this.fieldName = fieldName;
+    public AbstractFunctionExpression(GroovyExpression target) {
+        this.caller = target;
+    }
+
+    public AbstractFunctionExpression(TraversalStepType type, GroovyExpression target) {
+        this.caller = target;
+        this.type = type;
+    }
+
+    public  GroovyExpression getCaller() {
+        return caller;
+    }
+
+    public void setCaller(GroovyExpression expr) {
+        caller = expr;
+    }
+
+
+    public void setType(TraversalStepType type) {
+        this.type = type;
     }
 
     @Override
-    public void generateGroovy(GroovyGenerationContext context) {
-
-        target.generateGroovy(context);
-        context.append(".'");
-
-        context.append(fieldName);
-        context.append("'");
+    public TraversalStepType getType() {
+        return type;
     }
 
-    @Override
-    public List<GroovyExpression> getChildren() {
-        return Collections.singletonList(target);
-    }
 
-    @Override
-    public GroovyExpression copy(List<GroovyExpression> newChildren) {
-        assert newChildren.size() == 1;
-        return new FieldExpression(newChildren.get(0), fieldName);
-    }
 }

@@ -21,10 +21,11 @@ import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.audit.EntityAuditRepository;
 import org.apache.atlas.repository.audit.HBaseBasedAuditRepository;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graph.DeleteHandler;
 import org.apache.atlas.repository.graph.SoftDeleteHandler;
 import org.apache.atlas.repository.graphdb.GraphDatabase;
-import org.apache.atlas.repository.typestore.GraphBackedTypeStore;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.typesystem.types.cache.DefaultTypeCache;
 import org.apache.atlas.typesystem.types.cache.TypeCache;
 import org.apache.commons.configuration.Configuration;
@@ -91,6 +92,26 @@ public class AtlasRepositoryConfiguration {
                     GRAPH_DATABASE_IMPLEMENTATION_PROPERTY, DEFAULT_GRAPH_DATABASE_IMPLEMENTATION_CLASS, GraphDatabase.class);
         } catch (AtlasException e) {
             throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * This optimization is configurable because it changes the way entities are stored in a way that
+     * is not compatible with existing Atlas installations.  It is recommended that new installations 
+     * set this to true.
+     */
+    public static final String GREMLIN_OPTIMIZER_ENABLED_PROPERTY = "atlas.query.gremlinOptimizerEnabled";
+    private static final boolean DEFAULT_GREMLIN_OPTIMZER_ENABLED = true;
+    
+    public static boolean isGremlinOptimizerEnabled() {
+        try {
+//            if(AtlasGraphProvider.getGraphInstance().getSupportedGremlinVersion() == GremlinVersion.TWO) {
+//                return false;
+//            }
+            return ApplicationProperties.get().getBoolean(GREMLIN_OPTIMIZER_ENABLED_PROPERTY, DEFAULT_GREMLIN_OPTIMZER_ENABLED);
+        } catch (AtlasException e) {
+            LOG.error("Could not determine value of " + GREMLIN_OPTIMIZER_ENABLED_PROPERTY + ".  Defaulting to " + DEFAULT_GREMLIN_OPTIMZER_ENABLED, e);
+            return DEFAULT_GREMLIN_OPTIMZER_ENABLED;
         }
     }
    

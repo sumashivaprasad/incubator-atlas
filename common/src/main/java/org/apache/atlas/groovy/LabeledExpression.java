@@ -22,36 +22,33 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Groovy expression that accesses a field in an object.
+ * Groovy expression that represents a Groovy labaled expression.
  */
-public class FieldExpression extends AbstractGroovyExpression {
+public class LabeledExpression extends AbstractGroovyExpression {
 
-    private GroovyExpression target;
-    private String fieldName;
+    private String label;
+    private GroovyExpression expr;
 
-    public FieldExpression(GroovyExpression target, String fieldName) {
-        this.target = target;
-        this.fieldName = fieldName;
+    public LabeledExpression(String label, GroovyExpression expr) {
+        this.label = label;
+        this.expr = expr;
     }
 
     @Override
     public void generateGroovy(GroovyGenerationContext context) {
-
-        target.generateGroovy(context);
-        context.append(".'");
-
-        context.append(fieldName);
-        context.append("'");
+        context.append(label);
+        context.append(":");
+        expr.generateGroovy(context);
     }
 
     @Override
     public List<GroovyExpression> getChildren() {
-        return Collections.singletonList(target);
+        return Collections.singletonList(expr);
     }
 
     @Override
     public GroovyExpression copy(List<GroovyExpression> newChildren) {
         assert newChildren.size() == 1;
-        return new FieldExpression(newChildren.get(0), fieldName);
+        return new LabeledExpression(label, newChildren.get(0));
     }
 }

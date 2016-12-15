@@ -55,7 +55,7 @@
     </logger>
 
     <logger name="com.thinkaurelius.titan" additivity="false">
-        <level value="info"/>
+        <level value="debug"/>
         <appender-ref ref="console"/>
     </logger>
 

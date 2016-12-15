@@ -162,7 +162,7 @@ public class DataSetLineageServiceTest extends BaseRepositoryTest {
         });
     }
 
-    @Test
+    @Test(enabled = false)
     public void testGetInputsGraph() throws Exception {
         JSONObject results = getInputsGraph("sales_fact_monthly_mv");
         assertNotNull(results);
@@ -178,7 +178,7 @@ public class DataSetLineageServiceTest extends BaseRepositoryTest {
         Assert.assertEquals(edges.length(), 4);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testCircularLineage() throws Exception{
         JSONObject results = getInputsGraph("table2");
         assertNotNull(results);
@@ -194,7 +194,7 @@ public class DataSetLineageServiceTest extends BaseRepositoryTest {
         Assert.assertEquals(edges.length(), 4);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testGetInputsGraphForEntity() throws Exception {
         ITypedReferenceableInstance entity =
                 repository.getEntityDefinition(HIVE_TABLE_TYPE, "name", "sales_fact_monthly_mv");
@@ -234,7 +234,7 @@ public class DataSetLineageServiceTest extends BaseRepositoryTest {
         });
     }
 
-    @Test
+    @Test(enabled = false)
     public void testGetOutputsGraph() throws Exception {
         JSONObject results = getOutputsGraph("sales_fact");
         assertNotNull(results);
@@ -250,7 +250,7 @@ public class DataSetLineageServiceTest extends BaseRepositoryTest {
         Assert.assertEquals(edges.length(), 4);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testGetOutputsGraphForEntity() throws Exception {
         ITypedReferenceableInstance entity =
                 repository.getEntityDefinition(HIVE_TABLE_TYPE, "name", "sales_fact");
@@ -371,7 +371,7 @@ public class DataSetLineageServiceTest extends BaseRepositoryTest {
         return new JSONObject(lineageService.getOutputsGraph("qualified:" + tableName));
     }
 
-    @Test
+    @Test(enabled = false)
     public void testLineageWithDelete() throws Exception {
         String tableName = "table" + random();
         createTable(tableName, 3, true);

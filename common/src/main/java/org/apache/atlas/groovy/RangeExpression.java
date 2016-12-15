@@ -18,28 +18,48 @@
 
 package org.apache.atlas.groovy;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Represents an "exclusive" range expression, e.g. [0..&lt;10].
  */
-public class RangeExpression extends AbstractGroovyExpression {
+public class RangeExpression extends AbstractFunctionExpression {
 
-    private GroovyExpression parent;
+    private TraversalStepType stepType;
     private int offset;
     private int count;
 
-    public RangeExpression(GroovyExpression parent, int offset, int count) {
-        this.parent = parent;
+    public RangeExpression(TraversalStepType stepType, GroovyExpression parent, int offset, int count) {
+        super(parent);
         this.offset = offset;
         this.count = count;
+        this.stepType = stepType;
     }
 
     @Override
     public void generateGroovy(GroovyGenerationContext context) {
-        parent.generateGroovy(context);
+        getCaller().generateGroovy(context);
         context.append(" [");
         new LiteralExpression(offset).generateGroovy(context);
         context.append("..<");
         new LiteralExpression(count).generateGroovy(context);
         context.append("]");
+    }
+
+    @Override
+    public List<GroovyExpression> getChildren() {
+        return Collections.singletonList(getCaller());
+    }
+
+    @Override
+    public GroovyExpression copy(List<GroovyExpression> newChildren) {
+        assert newChildren.size() == 1;
+        return new RangeExpression(stepType, newChildren.get(0), offset, count);
+    }
+
+    @Override
+    public TraversalStepType getType() {
+        return stepType;
     }
 }

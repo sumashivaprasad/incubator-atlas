@@ -80,9 +80,10 @@ public class GraphTransactionInterceptor implements MethodInterceptor {
     }
 
     boolean logException(Throwable t) {
-        return !(t instanceof NotFoundException) &&
-                ((t instanceof AtlasBaseException) &&
-                        ((AtlasBaseException) t).getAtlasErrorCode().getHttpCode() != Response.Status.NOT_FOUND);
+//        return !(t instanceof NotFoundException) &&
+//                ((t instanceof AtlasBaseException) &&
+//            (((AtlasBaseException) t).getAtlasErrorCode().getHttpCode() != Response.Status.NOT_FOUND);
+        return !(t instanceof NotFoundException);
     }
 
     public static abstract class PostTransactionHook {
