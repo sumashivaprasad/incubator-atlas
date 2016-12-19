@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -60,27 +61,31 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
     private List<AtlasAttributeDef> attributeDefs;
 
     public AtlasStructDef() {
-        this(null, null, null, null);
+        this(null, null, null, null, null);
     }
 
     public AtlasStructDef(String name) {
-        this(name, null, null, null);
+        this(name, null, null, null, null);
     }
 
     public AtlasStructDef(String name, String description) {
-        this(name, description, null, null);
+        this(name, description, null, null, null);
     }
 
     public AtlasStructDef(String name, String description, String typeVersion) {
-        this(name, description, typeVersion, null);
+        this(name, description, typeVersion, null, null);
     }
 
     public AtlasStructDef(String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs) {
-        this(TypeCategory.STRUCT, name, description, typeVersion, attributeDefs);
+        this(name, description, typeVersion, attributeDefs, null);
     }
 
-    protected AtlasStructDef(TypeCategory category, String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs) {
-        super(category, name, description, typeVersion);
+    public AtlasStructDef(String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs, Map<String, String> options) {
+        this(TypeCategory.STRUCT, name, description, typeVersion, attributeDefs, options);
+    }
+
+    protected AtlasStructDef(TypeCategory category, String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs, Map<String, String> options) {
+        super(category, name, description, typeVersion, options);
 
         setAttributeDefs(attributeDefs);
     }
@@ -101,11 +106,11 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
         }
 
         if (CollectionUtils.isEmpty(attributeDefs)) {
-            this.attributeDefs = new ArrayList<AtlasAttributeDef>();
+            this.attributeDefs = new ArrayList<>();
         } else {
             // if multiple attributes with same name are present, keep only the last entry
-            List<AtlasAttributeDef> tmpList     = new ArrayList<AtlasAttributeDef>(attributeDefs.size());
-            Set<String>             attribNames = new HashSet<String>();
+            List<AtlasAttributeDef> tmpList     = new ArrayList<>(attributeDefs.size());
+            Set<String>             attribNames = new HashSet<>();
 
             ListIterator<AtlasAttributeDef> iter = attributeDefs.listIterator(attributeDefs.size());
             while (iter.hasPrevious()) {
@@ -139,7 +144,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
 
         List<AtlasAttributeDef> a = this.attributeDefs;
 
-        List<AtlasAttributeDef> tmpList = new ArrayList<AtlasAttributeDef>();
+        List<AtlasAttributeDef> tmpList = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(a)) {
             // copy existing attributes, except ones having same name as the attribute being added
             for (AtlasAttributeDef existingAttrDef : a) {
@@ -157,7 +162,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
         List<AtlasAttributeDef> a = this.attributeDefs;
 
         if (hasAttribute(a, attrName)) {
-            List<AtlasAttributeDef> tmpList = new ArrayList<AtlasAttributeDef>();
+            List<AtlasAttributeDef> tmpList = new ArrayList<>();
 
             // copy existing attributes, except ones having same name as the attribute being removed
             for (AtlasAttributeDef existingAttrDef : a) {
@@ -220,24 +225,16 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
         AtlasStructDef that = (AtlasStructDef) o;
-
-        if (attributeDefs != null ? !attributeDefs.equals(that.attributeDefs) : that.attributeDefs != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(attributeDefs, that.attributeDefs);
     }
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (attributeDefs != null ? attributeDefs.hashCode() : 0);
-        return result;
+        return Objects.hash(super.hashCode(), attributeDefs);
     }
 
     @Override
@@ -259,7 +256,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
         /**
          * single-valued attribute or multi-valued attribute.
          */
-        public enum Cardinality { SINGLE, LIST, SET };
+        public enum Cardinality { SINGLE, LIST, SET }
 
         public static final int COUNT_NOT_SET = -1;
 
@@ -276,7 +273,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
         public AtlasAttributeDef() { this(null, null); }
 
         public AtlasAttributeDef(String name, String typeName) {
-            this(name, typeName, false, Cardinality.SINGLE, 1, 1, false, false, null);
+            this(name, typeName, false, Cardinality.SINGLE, COUNT_NOT_SET, COUNT_NOT_SET, false, false, null);
         }
 
         public AtlasAttributeDef(String name, String typeName, boolean isOptional, Cardinality cardinality,
@@ -379,7 +376,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
             if (CollectionUtils.isEmpty(constraintDefs)) {
                 this.constraintDefs = null;
             } else {
-                this.constraintDefs = new ArrayList<AtlasConstraintDef>(constraintDefs);
+                this.constraintDefs = new ArrayList<>(constraintDefs);
             }
         }
 
@@ -429,40 +426,23 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) { return true; }
-            if (o == null || getClass() != o.getClass()) { return false; }
-
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
             AtlasAttributeDef that = (AtlasAttributeDef) o;
-
-            if (name != null ? !name.equals(that.name) : that.name != null) { return false; }
-            if (typeName != null ? !typeName.equals(that.typeName) : that.typeName != null) { return false; }
-            if (isOptional != that.isOptional) { return false; }
-            if (cardinality != null ? !cardinality.equals(that.cardinality) : that.cardinality != null) {
-                return false;
-            }
-            if (valuesMinCount != that.valuesMinCount) { return false; }
-            if (valuesMaxCount != that.valuesMaxCount) { return false; }
-            if (isUnique != that.isUnique) { return false; }
-            if (isIndexable != that.isIndexable) { return false; }
-            if (constraintDefs != null ? !constraintDefs.equals(that.constraintDefs) : that.constraintDefs != null) {
-                return false;
-            }
-
-            return true;
+            return isOptional == that.isOptional &&
+                    valuesMinCount == that.valuesMinCount &&
+                    valuesMaxCount == that.valuesMaxCount &&
+                    isUnique == that.isUnique &&
+                    isIndexable == that.isIndexable &&
+                    Objects.equals(name, that.name) &&
+                    Objects.equals(typeName, that.typeName) &&
+                    cardinality == that.cardinality &&
+                    Objects.equals(constraintDefs, that.constraintDefs);
         }
 
         @Override
         public int hashCode() {
-            int result = name != null ? name.hashCode() : 0;
-            result = 31 * result + (typeName != null ? typeName.hashCode() : 0);
-            result = 31 * result + (isOptional ? 1 : 0);
-            result = 31 * result + (cardinality != null ? cardinality.hashCode() : 0);
-            result = 31 * result + valuesMinCount;
-            result = 31 * result + valuesMaxCount;
-            result = 31 * result + (isUnique ? 1 : 0);
-            result = 31 * result + (isIndexable ? 1 : 0);
-            result = 31 * result + (constraintDefs != null ? constraintDefs.hashCode() : 0);
-            return result;
+            return Objects.hash(name, typeName, isOptional, cardinality, valuesMinCount, valuesMaxCount, isUnique, isIndexable, constraintDefs);
         }
 
         @Override
@@ -504,7 +484,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
             this.type = type;
 
             if (params != null) {
-                this.params = new HashMap<String, Object>(params);
+                this.params = new HashMap<>(params);
             }
         }
 
@@ -513,7 +493,7 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
                 this.type = that.type;
 
                 if (that.params != null) {
-                    this.params = new HashMap<String, Object>(that.params);
+                    this.params = new HashMap<>(that.params);
                 }
             }
         }
@@ -551,20 +531,14 @@ public class AtlasStructDef extends AtlasBaseTypeDef implements Serializable {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-
             AtlasConstraintDef that = (AtlasConstraintDef) o;
-
-            if (type != null ? !type.equals(that.type) : that.type != null) return false;
-            if (params != null ? !params.equals(that.params) : that.params != null) return false;
-
-            return true;
+            return Objects.equals(type, that.type) &&
+                    Objects.equals(params, that.params);
         }
 
         @Override
         public int hashCode() {
-            int result = type != null ? type.hashCode() : 0;
-            result = 31 * result + (params != null ? params.hashCode() : 0);
-            return result;
+            return Objects.hash(type, params);
         }
 
         @Override

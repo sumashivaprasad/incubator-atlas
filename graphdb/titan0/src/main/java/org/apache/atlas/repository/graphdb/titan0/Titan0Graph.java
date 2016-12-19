@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
@@ -282,6 +283,8 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
         ScriptEngine engine = manager.getEngineByName("gremlin-groovy");
         Bindings bindings = engine.createBindings();
         bindings.put("g", getGraph());
+        //Do not cache script compilations due to memory implications
+        engine.getContext().setAttribute("#jsr223.groovy.engine.keep.globals", "phantom", ScriptContext.ENGINE_SCOPE);
         Object result = engine.eval(gremlinQuery, bindings);
         return result;
     }
@@ -316,12 +319,12 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
 
     public Iterable<AtlasEdge<Titan0Vertex, Titan0Edge>> wrapEdges(Iterator<Edge> it) {
 
-        Iterable<Edge> iterable = new IteratorToIterableAdapter<Edge>(it);
+        Iterable<Edge> iterable = new IteratorToIterableAdapter<>(it);
         return wrapEdges(iterable);
     }
 
     public Iterable<AtlasVertex<Titan0Vertex, Titan0Edge>> wrapVertices(Iterator<Vertex> it) {
-        Iterable<Vertex> iterable = new IteratorToIterableAdapter<Vertex>(it);
+        Iterable<Vertex> iterable = new IteratorToIterableAdapter<>(it);
         return wrapVertices(iterable);
     }
 
@@ -338,7 +341,7 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
     }
 
     public Iterable<AtlasEdge<Titan0Vertex, Titan0Edge>> wrapEdges(Iterable<Edge> it) {
-        Iterable<Edge> result = (Iterable<Edge>)it;
+        Iterable<Edge> result = it;
         return Iterables.transform(result, new Function<Edge, AtlasEdge<Titan0Vertex, Titan0Edge>>(){
 
             @Override

@@ -17,24 +17,27 @@
  */
 package org.apache.atlas.model.typedef;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Map;
+import org.apache.atlas.model.TypeCategory;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.codehaus.jackson.annotate.JsonAutoDetect;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
-import org.apache.atlas.model.TypeCategory;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 
 
 /**
@@ -71,6 +74,9 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
     public static final String ATLAS_TYPE_DATASET        = "DataSet";
     public static final String ATLAS_TYPE_ASSET          = "Asset";
     public static final String ATLAS_TYPE_INFRASTRUCTURE = "Infrastructure";
+
+    public static final String TYPEDEF_OPTION_SUPPORTS_SCHEMA  = "supportsSchema";
+    public static final String TYPEDEF_OPTION_SUPPORTS_PROFILE = "supportsProfile";
 
     public static final String[] ATLAS_PRIMITIVE_TYPES = {
         ATLAS_TYPE_BOOLEAN,
@@ -114,8 +120,10 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
     private String  name;
     private String  description;
     private String  typeVersion;
+    private Map<String, String> options;
 
-    protected AtlasBaseTypeDef(TypeCategory category, String name, String description, String typeVersion) {
+    protected AtlasBaseTypeDef(TypeCategory category, String name, String description, String typeVersion,
+                               Map<String, String> options) {
         super();
 
         this.category = category;
@@ -129,6 +137,7 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
         setName(name);
         setDescription(description);
         setTypeVersion(typeVersion);
+        setOptions(options);
     }
 
     protected AtlasBaseTypeDef(AtlasBaseTypeDef other) {
@@ -144,6 +153,7 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
             setName(other.getName());
             setDescription(other.getDescription());
             setTypeVersion(other.getTypeVersion());
+            setOptions(other.getOptions());
         } else {
             this.category = TypeCategory.PRIMITIVE;
 
@@ -156,6 +166,7 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
             setName(null);
             setDescription(null);
             setTypeVersion(null);
+            setOptions(null);
         }
     }
 
@@ -234,6 +245,18 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
         this.typeVersion = typeVersion;
     }
 
+    public Map<String, String> getOptions() {
+        return options;
+    }
+
+    public void setOptions(Map<String, String> options) {
+        if (options != null) {
+            this.options = new HashMap<>(options);
+        } else {
+            this.options = null;
+        }
+    }
+
     public StringBuilder toString(StringBuilder sb) {
         if (sb == null) {
             sb = new StringBuilder();
@@ -250,30 +273,29 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
         sb.append(", name='").append(name).append('\'');
         sb.append(", description='").append(description).append('\'');
         sb.append(", typeVersion='").append(typeVersion).append('\'');
+        sb.append(", options='").append(options).append('\'');
         sb.append('}');
 
         return sb;
     }
 
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         AtlasBaseTypeDef that = (AtlasBaseTypeDef) o;
 
-        if (category != null ? !category.equals(that.category) : that.category != null) { return false; }
-        if (guid != null ? !guid.equals(that.guid) : that.guid != null) { return false; }
-        if (createdBy != null ? !createdBy.equals(that.createdBy) : that.createdBy != null) { return false; }
-        if (updatedBy != null ? !updatedBy.equals(that.updatedBy) : that.updatedBy != null) { return false; }
-        if (createTime != null ? !createTime.equals(that.createTime) : that.createTime != null) { return false; }
-        if (updateTime != null ? !updateTime.equals(that.updateTime) : that.updateTime != null) { return false; }
-        if (version != null ? !version.equals(that.version) : that.version != null) { return false; }
-        if (name != null ? !name.equals(that.name) : that.name != null) { return false; }
-        if (description != null ? !description.equals(that.description) : that.description != null) { return false; }
-        if (typeVersion != null ? !typeVersion.equals(that.typeVersion) : that.typeVersion != null) { return false; }
-
-        return true;
+        return category == that.category &&
+                Objects.equals(guid, that.guid) &&
+                Objects.equals(createdBy, that.createdBy) &&
+                Objects.equals(updatedBy, that.updatedBy) &&
+                Objects.equals(createTime, that.createTime) &&
+                Objects.equals(updateTime, that.updateTime) &&
+                Objects.equals(version, that.version) &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(typeVersion, that.typeVersion);
 
     }
 
@@ -289,12 +311,8 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + (typeVersion != null ? typeVersion.hashCode() : 0);
+        result = 31 * result + (options != null ? options.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public String toString() {
-        return toString(new StringBuilder()).toString();
     }
 
     public static String getArrayTypeName(String elemTypeName) {
@@ -306,7 +324,7 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
                 valueTypeName, ATLAS_TYPE_MAP_SUFFIX);
     }
 
-    public static StringBuilder dumpObjects(Collection<? extends Object> objects, StringBuilder sb) {
+    public static StringBuilder dumpObjects(Collection<?> objects, StringBuilder sb) {
         if (sb == null) {
             sb = new StringBuilder();
         }
@@ -326,14 +344,14 @@ public abstract class AtlasBaseTypeDef implements java.io.Serializable {
         return sb;
     }
 
-    public static StringBuilder dumpObjects(Map<? extends Object, ? extends Object> objects, StringBuilder sb) {
+    public static StringBuilder dumpObjects(Map<?, ?> objects, StringBuilder sb) {
         if (sb == null) {
             sb = new StringBuilder();
         }
 
         if (MapUtils.isNotEmpty(objects)) {
             int i = 0;
-            for (Map.Entry<? extends Object, ? extends Object> e : objects.entrySet()) {
+            for (Map.Entry<?, ?> e : objects.entrySet()) {
                 if (i > 0) {
                     sb.append(", ");
                 }

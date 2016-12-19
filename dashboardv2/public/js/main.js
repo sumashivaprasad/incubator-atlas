@@ -94,6 +94,10 @@ require.config({
             'deps': ['d3'],
             'exports': ['d3-tip']
         },
+        'datetimepicker': {
+            'deps': ['jquery'],
+            'exports': 'datetimepicker'
+        },
         'dagreD3': {
             'deps': ['d3'],
             'exports': ['dagreD3']
@@ -130,10 +134,11 @@ require.config({
         'hbs': 'external_lib/require-handlebars-plugin/js/hbs',
         'i18nprecompile': 'external_lib/require-handlebars-plugin/js/i18nprecompile',
         'dagreD3': 'libs/dagre-d3/dagre-d3.min',
-        'select2': 'libs/select2/select2.min',
+        'select2': 'libs/select2/select2.full.min',
         'backgrid-select-all': 'libs/backgrid-select-all/backgrid-select-all.min',
         'moment': 'libs/moment/js/moment.min',
         'jquery-ui': 'external_lib/jquery-ui/jquery-ui.min',
+        'datetimepicker': 'external_lib/datetimepicker/bootstrap-datetimepicker',
         'pnotify': 'external_lib/pnotify.custom.min',
         'jquery-placeholder': 'libs/jquery-placeholder/js/jquery.placeholder',
         'platform': 'libs/platform/platform'
@@ -152,14 +157,15 @@ require(['App',
     'router/Router',
     'utils/CommonViewFunction',
     'utils/Globals',
+    'utils/UrlLinks',
     'utils/Overrides',
     'bootstrap',
     'd3',
     'select2'
-], function(App, Router, CommonViewFunction, Globals) {
+], function(App, Router, CommonViewFunction, Globals, UrlLinks) {
     App.appRouter = new Router();
     CommonViewFunction.userDataFetch({
-        url: Globals.baseURL + "/api/atlas/admin/session",
+        url: UrlLinks.sessionApiUrl(),
         callback: function(response) {
             if (response && response.userName) {
                 Globals.userLogedIn.status = true;

@@ -20,34 +20,36 @@ package org.apache.atlas.web.resources;
 
 import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.lineage.AtlasLineageInfo;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.web.util.Servlets;
+import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.atlas.AtlasBaseClient.APIInfo;
+
 /**
  * Entity Lineage v2 Integration Tests.
  */
-public class EntityLineageJerseyResourceIT extends BaseResourceIT {
-    private static final String BASE_URI = "api/atlas/v2/lineage/";
-    private static final String INPUT_DIRECTION  = "INPUT";
+public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceIT {
+    private static final String BASE_URI = "api/atlas/v2/lineage";
+    private static final APIInfo LINEAGE_V2_API = new APIInfo(BASE_URI, "GET", Response.Status.OK);
+    private static final String INPUT_DIRECTION = "INPUT";
     private static final String OUTPUT_DIRECTION = "OUTPUT";
-    private static final String BOTH_DIRECTION   = "BOTH";
-    private static final String DIRECTION_PARAM  = "direction";
-    private static final String DEPTH_PARAM      = "depth";
+    private static final String BOTH_DIRECTION = "BOTH";
+    private static final String DIRECTION_PARAM = "direction";
+    private static final String DEPTH_PARAM = "depth";
 
     private String salesFactTable;
     private String salesMonthlyTable;
@@ -66,18 +68,16 @@ public class EntityLineageJerseyResourceIT extends BaseResourceIT {
     public void testInputLineageInfo() throws Exception {
         String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesMonthlyTable).getId()._getId();
-        WebResource resource = service.path(BASE_URI).path(tableId).queryParam(DIRECTION_PARAM, INPUT_DIRECTION).
-                queryParam(DEPTH_PARAM, "5");
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add(DIRECTION_PARAM, INPUT_DIRECTION);
+        queryParams.add(DEPTH_PARAM, "5");
+        JSONObject response = serviceClient.callAPI(LINEAGE_V2_API, JSONObject.class, queryParams, tableId);
+        Assert.assertNotNull(response);
+        System.out.println("input lineage info = " + response
+        );
 
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-        System.out.println("input lineage info = " + responseAsString);
-
-        AtlasLineageInfo inputLineageInfo = gson.fromJson(responseAsString, AtlasLineageInfo.class);
+        AtlasLineageInfo inputLineageInfo = gson.fromJson(response.toString(), AtlasLineageInfo.class);
 
         Map<String, AtlasEntityHeader> entities = inputLineageInfo.getGuidEntityMap();
         Assert.assertNotNull(entities);
@@ -96,18 +96,16 @@ public class EntityLineageJerseyResourceIT extends BaseResourceIT {
     public void testOutputLineageInfo() throws Exception {
         String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesFactTable).getId()._getId();
-        WebResource resource = service.path(BASE_URI).path(tableId).queryParam(DIRECTION_PARAM, OUTPUT_DIRECTION).
-                queryParam(DEPTH_PARAM, "5");
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add(DIRECTION_PARAM, OUTPUT_DIRECTION);
+        queryParams.add(DEPTH_PARAM, "5");
+        JSONObject response = serviceClient.callAPI(LINEAGE_V2_API, JSONObject.class, queryParams, tableId);
 
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-        System.out.println("output lineage info = " + responseAsString);
+        Assert.assertNotNull(response);
+        System.out.println("output lineage info = " + response);
 
-        AtlasLineageInfo outputLineageInfo = gson.fromJson(responseAsString, AtlasLineageInfo.class);
+        AtlasLineageInfo outputLineageInfo = gson.fromJson(response.toString(), AtlasLineageInfo.class);
 
         Map<String, AtlasEntityHeader> entities = outputLineageInfo.getGuidEntityMap();
         Assert.assertNotNull(entities);
@@ -126,18 +124,16 @@ public class EntityLineageJerseyResourceIT extends BaseResourceIT {
     public void testLineageInfo() throws Exception {
         String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesMonthlyTable).getId()._getId();
-        WebResource resource = service.path(BASE_URI).path(tableId).queryParam(DIRECTION_PARAM, BOTH_DIRECTION).
-                queryParam(DEPTH_PARAM, "5");
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add(DIRECTION_PARAM, BOTH_DIRECTION);
+        queryParams.add(DEPTH_PARAM, "5");
+        JSONObject response = serviceClient.callAPI(LINEAGE_V2_API, JSONObject.class, queryParams, tableId);
 
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-        System.out.println("both lineage info = " + responseAsString);
+        Assert.assertNotNull(response);
+        System.out.println("both lineage info = " + response);
 
-        AtlasLineageInfo bothLineageInfo = gson.fromJson(responseAsString, AtlasLineageInfo.class);
+        AtlasLineageInfo bothLineageInfo = gson.fromJson(response.toString(), AtlasLineageInfo.class);
 
         Map<String, AtlasEntityHeader> entities = bothLineageInfo.getGuidEntityMap();
         Assert.assertNotNull(entities);
@@ -190,64 +186,5 @@ public class EntityLineageJerseyResourceIT extends BaseResourceIT {
 
         loadProcess("loadSalesMonthly" + randomString(), "John ETL", ImmutableList.of(salesFactDaily),
                 ImmutableList.of(salesFactMonthly), "create table as select ", "plan", "id", "graph");
-    }
-
-    Id database(String name, String description, String owner, String locationUri, String... traitNames)
-            throws Exception {
-        Referenceable referenceable = new Referenceable(DATABASE_TYPE, traitNames);
-        referenceable.set("name", name);
-        referenceable.set("description", description);
-        referenceable.set("owner", owner);
-        referenceable.set("locationUri", locationUri);
-        referenceable.set("createTime", System.currentTimeMillis());
-
-        return createInstance(referenceable);
-    }
-
-    Referenceable column(String name, String dataType, String comment, String... traitNames) throws Exception {
-        Referenceable referenceable = new Referenceable(COLUMN_TYPE, traitNames);
-        referenceable.set("name", name);
-        referenceable.set("dataType", dataType);
-        referenceable.set("comment", comment);
-
-        return referenceable;
-    }
-
-    Id table(String name, String description, Id dbId, String owner, String tableType, List<Referenceable> columns,
-             String... traitNames) throws Exception {
-        Referenceable referenceable = new Referenceable(HIVE_TABLE_TYPE, traitNames);
-        referenceable.set("name", name);
-        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
-        referenceable.set("description", description);
-        referenceable.set("owner", owner);
-        referenceable.set("tableType", tableType);
-        referenceable.set("createTime", System.currentTimeMillis());
-        referenceable.set("lastAccessTime", System.currentTimeMillis());
-        referenceable.set("retention", System.currentTimeMillis());
-
-        referenceable.set("db", dbId);
-        referenceable.set("columns", columns);
-
-        return createInstance(referenceable);
-    }
-
-    Id loadProcess(String name, String user, List<Id> inputTables, List<Id> outputTables, String queryText,
-                   String queryPlan, String queryId, String queryGraph, String... traitNames) throws Exception {
-        Referenceable referenceable = new Referenceable(HIVE_PROCESS_TYPE, traitNames);
-        referenceable.set("name", name);
-        referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
-        referenceable.set("user", user);
-        referenceable.set("startTime", System.currentTimeMillis());
-        referenceable.set("endTime", System.currentTimeMillis() + 10000);
-
-        referenceable.set("inputs", inputTables);
-        referenceable.set("outputs", outputTables);
-
-        referenceable.set("queryText", queryText);
-        referenceable.set("queryPlan", queryPlan);
-        referenceable.set("queryId", queryId);
-        referenceable.set("queryGraph", queryGraph);
-
-        return createInstance(referenceable);
     }
 }

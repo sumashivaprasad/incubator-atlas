@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.ModelTestUtil;
 import org.apache.atlas.model.instance.AtlasStruct;
@@ -29,6 +30,7 @@ import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_INT;
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_DATE;
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.ATLAS_TYPE_BIGINTEGER;
 
+import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef;
 import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef.Cardinality;
@@ -49,18 +51,24 @@ public class TestAtlasStructType {
     private final List<Object>    invalidValues;
 
     {
-        AtlasAttributeDef multiValuedAttribMinMax = new AtlasAttributeDef(MULTI_VAL_ATTR_NAME_MIN_MAX, ATLAS_TYPE_INT);
-        AtlasAttributeDef multiValuedAttribMin    = new AtlasAttributeDef(MULTI_VAL_ATTR_NAME_MIN, ATLAS_TYPE_INT);
-        AtlasAttributeDef multiValuedAttribMax    = new AtlasAttributeDef(MULTI_VAL_ATTR_NAME_MAX, ATLAS_TYPE_INT);
+        AtlasAttributeDef multiValuedAttribMinMax = new AtlasAttributeDef();
+        AtlasAttributeDef multiValuedAttribMin    = new AtlasAttributeDef();
+        AtlasAttributeDef multiValuedAttribMax    = new AtlasAttributeDef();
 
+        multiValuedAttribMinMax.setName(MULTI_VAL_ATTR_NAME_MIN_MAX);
+        multiValuedAttribMinMax.setTypeName(AtlasBaseTypeDef.getArrayTypeName(ATLAS_TYPE_INT));
         multiValuedAttribMinMax.setCardinality(Cardinality.LIST);
         multiValuedAttribMinMax.setValuesMinCount(MULTI_VAL_ATTR_MIN_COUNT);
         multiValuedAttribMinMax.setValuesMaxCount(MULTI_VAL_ATTR_MAX_COUNT);
 
-        multiValuedAttribMinMax.setCardinality(Cardinality.SET);
+        multiValuedAttribMin.setName(MULTI_VAL_ATTR_NAME_MIN);
+        multiValuedAttribMin.setTypeName(AtlasBaseTypeDef.getArrayTypeName(ATLAS_TYPE_INT));
+        multiValuedAttribMin.setCardinality(Cardinality.SET);
         multiValuedAttribMin.setValuesMinCount(MULTI_VAL_ATTR_MIN_COUNT);
 
-        multiValuedAttribMinMax.setCardinality(Cardinality.LIST);
+        multiValuedAttribMax.setName(MULTI_VAL_ATTR_NAME_MAX);
+        multiValuedAttribMax.setTypeName(AtlasBaseTypeDef.getArrayTypeName(ATLAS_TYPE_INT));
+        multiValuedAttribMax.setCardinality(Cardinality.LIST);
         multiValuedAttribMax.setValuesMaxCount(MULTI_VAL_ATTR_MAX_COUNT);
 
         AtlasStructDef structDef = ModelTestUtil.newStructDef();
@@ -70,8 +78,8 @@ public class TestAtlasStructType {
         structDef.addAttribute(multiValuedAttribMax);
 
         structType    = getStructType(structDef);
-        validValues   = new ArrayList<Object>();
-        invalidValues = new ArrayList<Object>();
+        validValues   = new ArrayList<>();
+        invalidValues = new ArrayList<>();
 
         AtlasStruct invalidValue1 = structType.createDefaultValue();
         AtlasStruct invalidValue2 = structType.createDefaultValue();
@@ -113,7 +121,7 @@ public class TestAtlasStructType {
         invalidValues.add(invalidValue6);
         invalidValues.add(invalidValue7);
         invalidValues.add(new AtlasStruct());             // no values for mandatory attributes
-        invalidValues.add(new HashMap<Object, Object>()); // no values for mandatory attributes
+        invalidValues.add(new HashMap<>()); // no values for mandatory attributes
         invalidValues.add(1);               // incorrect datatype
         invalidValues.add(new HashSet());   // incorrect datatype
         invalidValues.add(new ArrayList()); // incorrect datatype
@@ -160,7 +168,7 @@ public class TestAtlasStructType {
 
     @Test
     public void testStructTypeValidateValue() {
-        List<String> messages = new ArrayList<String>();
+        List<String> messages = new ArrayList<>();
         for (Object value : validValues) {
             assertTrue(structType.validateValue(value, "testObj", messages));
             assertEquals(messages.size(), 0, "value=" + value);
@@ -170,6 +178,23 @@ public class TestAtlasStructType {
             assertFalse(structType.validateValue(value, "testObj", messages));
             assertTrue(messages.size() > 0, "value=" + value);
             messages.clear();
+        }
+    }
+
+    @Test
+    public void testInvalidStructDef_MultiValuedAttributeNotArray() {
+        AtlasAttributeDef invalidMultiValuedAttrib = new AtlasAttributeDef("invalidAttributeDef", ATLAS_TYPE_INT);
+        invalidMultiValuedAttrib.setCardinality(Cardinality.LIST);
+
+        AtlasStructDef invalidStructDef = ModelTestUtil.newStructDef();
+        invalidStructDef.addAttribute(invalidMultiValuedAttrib);
+
+        try {
+            AtlasStructType invalidStructType = new AtlasStructType(invalidStructDef, ModelTestUtil.getTypesRegistry());
+
+            fail("invalidStructDef not detected: structDef=" + invalidStructDef + "; structType=" + invalidStructType);
+        } catch (AtlasBaseException excp) {
+            assertTrue(excp.getAtlasErrorCode() == AtlasErrorCode.INVALID_ATTRIBUTE_TYPE_FOR_CARDINALITY);
         }
     }
 

@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -118,7 +119,7 @@ public class AtlasStruct implements Serializable {
         if (a != null) {
             a.put(name, value);
         } else {
-            a = new HashMap<String, Object>();
+            a = new HashMap<>();
             a.put(name, value);
 
             this.attributes = a;
@@ -142,22 +143,16 @@ public class AtlasStruct implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         AtlasStruct that = (AtlasStruct) o;
-
-        if (typeName != null ? !typeName.equals(that.typeName) : that.typeName != null) { return false; }
-        if (attributes != null ? !attributes.equals(that.attributes) : that.attributes != null) { return false; }
-
-        return true;
+        return Objects.equals(typeName, that.typeName) &&
+                Objects.equals(attributes, that.attributes);
     }
 
     @Override
     public int hashCode() {
-        int result = (typeName != null ? typeName.hashCode() : 0);
-        result = 31 * result + (attributes != null ? attributes.hashCode() : 0);
-        return result;
+        return Objects.hash(typeName, attributes);
     }
 
     @Override
@@ -213,7 +208,7 @@ public class AtlasStruct implements Serializable {
         return sb;
     }
 
-    public static StringBuilder dumpObjects(Collection<? extends Object> objects, StringBuilder sb) {
+    public static StringBuilder dumpObjects(Collection<?> objects, StringBuilder sb) {
         if (sb == null) {
             sb = new StringBuilder();
         }
@@ -233,14 +228,14 @@ public class AtlasStruct implements Serializable {
         return sb;
     }
 
-    public static StringBuilder dumpObjects(Map<? extends Object, ? extends Object> objects, StringBuilder sb) {
+    public static StringBuilder dumpObjects(Map<?, ?> objects, StringBuilder sb) {
         if (sb == null) {
             sb = new StringBuilder();
         }
 
         if (MapUtils.isNotEmpty(objects)) {
             int i = 0;
-            for (Map.Entry<? extends Object, ? extends Object> e : objects.entrySet()) {
+            for (Map.Entry<?, ?> e : objects.entrySet()) {
                 if (i > 0) {
                     sb.append(", ");
                 }

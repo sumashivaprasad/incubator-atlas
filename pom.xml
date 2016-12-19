@@ -491,9 +491,23 @@
         <entity.repository.impl>org.apache.atlas.repository.audit.InMemoryEntityAuditRepository</entity.repository.impl>
 	    <graphdb.backend.impl>org.apache.atlas.repository.graphdb.titan0.Titan0GraphDatabase</graphdb.backend.impl>
         <atlas.surefire.options></atlas.surefire.options>
+
+        <aspectj.runtime.version>1.8.7</aspectj.runtime.version>
+        <aspectj.skip>true</aspectj.skip>
     </properties>
 
     <profiles>
+        <!-- Turn on this profile to instrument atlas server to collect performance metrics -->
+        <profile>
+            <id>perf</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <aspectj.skip>false</aspectj.skip>
+            </properties>
+        </profile>
+
         <!-- Turning on this profile affects only tests and does not affect packaging -->
         <profile>
             <id>distributed</id>
@@ -565,6 +579,7 @@
         <module>addons/storm-bridge</module>
 	
         <module>distro</module>
+        <module>build-tools</module>
     </modules>
 
     <repositories>
@@ -618,6 +633,18 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- AOP dependencies. -->
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjrt</artifactId>
+                <version>${aspectj.runtime.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjtools</artifactId>
+                <version>${aspectj.runtime.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-jsp</artifactId>
@@ -784,6 +811,12 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-framework</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-client</artifactId>
                 <version>${curator.version}</version>
             </dependency>
 
@@ -1215,6 +1248,12 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.apache.atlas</groupId>
+                <artifactId>atlas-buildtools</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
     	    <!-- use titan 0.5.4 by default -->
             <dependency>
                 <groupId>org.apache.atlas</groupId>
@@ -1223,7 +1262,7 @@
                 <type>pom</type>
 		        <!-- exclusions should be added here for all of the non-titan0 implementations -->
                 <scope>test</scope>
-	    </dependency>
+	        </dependency>
 
             <dependency>
                 <groupId>org.apache.atlas</groupId>
@@ -1550,7 +1589,7 @@
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
-                    <version>0.0.29</version>
+                    <version>1.0</version>
                 </plugin>
 
                 <plugin>
@@ -1630,6 +1669,12 @@
                     <configuration>
                         <excludeGroupIds>org.restlet.jee</excludeGroupIds>                       
                     </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>aspectj-maven-plugin</artifactId>
+                    <version>1.8</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -1783,7 +1828,7 @@
                     <excludeSubProjects>true</excludeSubProjects>
                     <excludes>
                         <exclude>**/dependency-reduced-pom.xml</exclude>
-			<exclude>**/javax.script.ScriptEngineFactory</exclude>
+			            <exclude>**/javax.script.ScriptEngineFactory</exclude>
                         <exclude>.reviewboardrc</exclude>
                         <exclude>3party-licenses/**</exclude>
                         <exclude>**/.cache</exclude>
@@ -1801,6 +1846,7 @@
                         <exclude>**/*.twiki</exclude>
                         <exclude>**/*.iml</exclude>
                         <exclude>**/*.json</exclude>
+                        <exclude>**/*.log</exclude>
                         <exclude>**/target/**</exclude>
                         <exclude>**/target*/**</exclude>
                         <exclude>**/build/**</exclude>
@@ -1850,6 +1896,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.atlas</groupId>
+                        <artifactId>atlas-buildtools</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>checkstyle-check</id>
@@ -1859,11 +1912,8 @@
                         <phase>verify</phase>
                         <configuration>
                             <skip>${skipCheck}</skip>
-                            <consoleOutput>true</consoleOutput>
+                            <consoleOutput>false</consoleOutput>
                             <includeTestSourceDirectory>true</includeTestSourceDirectory>
-                            <configLocation>src/build/checkstyle.xml</configLocation>
-                            <headerLocation>src/build/checkstyle-java-header.txt</headerLocation>
-                            <suppressionsLocation>src/build/checkstyle-suppressions.xml</suppressionsLocation>
                             <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
                             <failOnViolation>${checkstyle.failOnViolation}</failOnViolation>
                         </configuration>

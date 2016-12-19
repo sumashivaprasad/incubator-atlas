@@ -19,22 +19,22 @@
 package org.apache.atlas.web.resources;
 
 import com.google.common.collect.ImmutableList;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.web.util.Servlets;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
+import org.apache.atlas.typesystem.types.TraitType;
+import org.apache.atlas.typesystem.types.utils.TypesUtil;
+import com.google.common.collect.ImmutableSet;
 
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 
@@ -45,7 +45,6 @@ import static org.testng.Assert.assertEquals;
  */
 public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
-    private static final String BASE_URI = "api/atlas/lineage/hive/table/";
     private String salesFactTable;
     private String salesMonthlyTable;
     private String salesDBName;
@@ -60,17 +59,10 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testInputsGraph() throws Exception {
-        WebResource resource = service.path(BASE_URI).path(salesMonthlyTable).path("inputs").path("graph");
+        JSONObject response = serviceClient.callAPIWithBodyAndParams(AtlasClient.API.NAME_LINEAGE_INPUTS_GRAPH, null, salesMonthlyTable, "inputs", "graph");
+        Assert.assertNotNull(response);
+        System.out.println("inputs graph = " + response);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-        System.out.println("inputs graph = " + responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         JSONObject results = response.getJSONObject(AtlasClient.RESULTS);
@@ -103,17 +95,10 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testOutputsGraph() throws Exception {
-        WebResource resource = service.path(BASE_URI).path(salesFactTable).path("outputs").path("graph");
+        JSONObject response = serviceClient.callAPIWithBodyAndParams(AtlasClient.API.NAME_LINEAGE_OUTPUTS_GRAPH, null, salesFactTable, "outputs", "graph");
+        Assert.assertNotNull(response);
+        System.out.println("outputs graph= " + response);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-        System.out.println("outputs graph= " + responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         JSONObject results = response.getJSONObject(AtlasClient.RESULTS);
@@ -146,17 +131,11 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSchema() throws Exception {
-        WebResource resource = service.path(BASE_URI).path(salesFactTable).path("schema");
+        JSONObject response = serviceClient.callAPIWithBodyAndParams(AtlasClient.API.NAME_LINEAGE_SCHEMA, null, salesFactTable, "schema");
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        Assert.assertNotNull(response);
+        System.out.println("schema = " + response);
 
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-        System.out.println("schema = " + responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         JSONObject results = response.getJSONObject(AtlasClient.RESULTS);
@@ -167,9 +146,10 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
         for (int index = 0; index < rows.length(); index++) {
             final JSONObject row = rows.getJSONObject(index);
+            LOG.info("JsonRow - {}", row);
             Assert.assertNotNull(row.getString("name"));
             Assert.assertNotNull(row.getString("comment"));
-            Assert.assertNotNull(row.getString("dataType"));
+            Assert.assertNotNull(row.getString("type"));
             Assert.assertEquals(row.getString("$typeName$"), "hive_column");
         }
     }
@@ -185,41 +165,36 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
         for (int index = 0; index < rows.length(); index++) {
             final JSONObject row = rows.getJSONObject(index);
+            LOG.info("JsonRow - {}", row);
             Assert.assertNotNull(row.getString("name"));
             Assert.assertNotNull(row.getString("comment"));
-            Assert.assertNotNull(row.getString("dataType"));
+            Assert.assertNotNull(row.getString("type"));
             Assert.assertEquals(row.getString("$typeName$"), "hive_column");
         }
     }
 
-    @Test
-    public void testSchemaForEmptyTable() throws Exception {
-        WebResource resource = service.path(BASE_URI).path("").path("schema");
-
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
-    }
-
-    @Test
+    @Test(expectedExceptions = AtlasServiceException.class)
     public void testSchemaForInvalidTable() throws Exception {
-        WebResource resource = service.path(BASE_URI).path("blah").path("schema");
-
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+        JSONObject response = serviceClient.callAPIWithBodyAndParams(AtlasClient.API.NAME_LINEAGE_SCHEMA, null, "blah", "schema");
     }
 
-    @Test
+    @Test(expectedExceptions = AtlasServiceException.class)
     public void testSchemaForDB() throws Exception {
-        WebResource resource = service.path(BASE_URI).path(salesDBName).path("schema");
-
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-            .method(HttpMethod.GET, ClientResponse.class);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+        JSONObject response = serviceClient.callAPIWithBodyAndParams(AtlasClient.API.NAME_LINEAGE_SCHEMA, null, salesDBName, "schema");
     }
 
     private void setupInstances() throws Exception {
+        HierarchicalTypeDefinition<TraitType> factTrait =
+                TypesUtil.createTraitTypeDef("Fact", ImmutableSet.<String>of());
+        HierarchicalTypeDefinition<TraitType> etlTrait =
+                TypesUtil.createTraitTypeDef("ETL", ImmutableSet.<String>of());
+        HierarchicalTypeDefinition<TraitType> dimensionTrait =
+                TypesUtil.createTraitTypeDef("Dimension", ImmutableSet.<String>of());
+        HierarchicalTypeDefinition<TraitType> metricTrait =
+                TypesUtil.createTraitTypeDef("Metric", ImmutableSet.<String>of());
+        createType(getTypesDef(null, null,
+                        ImmutableList.of(factTrait, etlTrait, dimensionTrait, metricTrait), null));
+
         salesDBName = "Sales" + randomString();
         Id salesDB = database(salesDBName, "Sales Database", "John ETL",
                 "hdfs://host:8000/apps/warehouse/sales");
@@ -264,6 +239,8 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
     throws Exception {
         Referenceable referenceable = new Referenceable(DATABASE_TYPE, traitNames);
         referenceable.set("name", name);
+        referenceable.set("qualifiedName", name);
+        referenceable.set("clusterName", locationUri + name);
         referenceable.set("description", description);
         referenceable.set("owner", owner);
         referenceable.set("locationUri", locationUri);
@@ -272,10 +249,11 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
         return createInstance(referenceable);
     }
 
-    Referenceable column(String name, String dataType, String comment, String... traitNames) throws Exception {
+    Referenceable column(String name, String type, String comment, String... traitNames) throws Exception {
         Referenceable referenceable = new Referenceable(COLUMN_TYPE, traitNames);
         referenceable.set("name", name);
-        referenceable.set("dataType", dataType);
+        referenceable.set("qualifiedName", name);
+        referenceable.set("type", type);
         referenceable.set("comment", comment);
 
         return referenceable;
@@ -304,13 +282,14 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
         Referenceable referenceable = new Referenceable(HIVE_PROCESS_TYPE, traitNames);
         referenceable.set("name", name);
         referenceable.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, name);
-        referenceable.set("user", user);
+        referenceable.set("userName", user);
         referenceable.set("startTime", System.currentTimeMillis());
         referenceable.set("endTime", System.currentTimeMillis() + 10000);
 
         referenceable.set("inputs", inputTables);
         referenceable.set("outputs", outputTables);
 
+        referenceable.set("operationType", "testOperation");
         referenceable.set("queryText", queryText);
         referenceable.set("queryPlan", queryPlan);
         referenceable.set("queryId", queryId);

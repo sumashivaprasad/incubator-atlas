@@ -21,8 +21,8 @@ package org.apache.atlas.web.resources;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-
+import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.apache.atlas.AtlasBaseClient;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.typesystem.Referenceable;
@@ -36,19 +36,18 @@ import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
-import org.apache.atlas.web.util.Servlets;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 /**
@@ -56,29 +55,29 @@ import static org.testng.Assert.fail;
  */
 public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
+    private static final String SEARCH_DSL_PATH = "api/atlas/discovery/search/dsl";
+
+    private static final AtlasBaseClient.APIInfo SEARCH_DSL = new AtlasBaseClient.APIInfo(SEARCH_DSL_PATH, "GET", Response.Status.OK);
+    public static final String GREMLIN_SEARCH = "api/atlas/discovery/search/gremlin";
     private String tagName;
+    private String dbName;
 
     @BeforeClass
     public void setUp() throws Exception {
         super.setUp();
+        dbName = "db"+randomString();
 
-        createTypes();
-        createInstance();
+        createInstance( createHiveDBInstance(dbName) );
     }
 
     @Test
     public void testSearchByDSL() throws Exception {
-        String dslQuery = "from dsl_test_type";
-        WebResource resource = service.path("api/atlas/discovery/search/dsl").queryParam("query", dslQuery);
+        String dslQuery = "from "+ DATABASE_TYPE + " qualifiedName=\"" + dbName + "\"";
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", dslQuery);
+        JSONObject response = serviceClient.callAPIWithQueryParams(AtlasClient.API.SEARCH_DSL, queryParams);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
+        Assert.assertNotNull(response);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         assertEquals(response.getString("query"), dslQuery);
@@ -86,34 +85,29 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
         JSONArray results = response.getJSONArray(AtlasClient.RESULTS);
         Assert.assertNotNull(results);
-        assertEquals(results.length(), 2);
+        assertEquals(results.length(), 1);
 
         int numRows = response.getInt(AtlasClient.COUNT);
-        assertEquals(numRows, 2);
+        assertEquals(numRows, 1);
     }
 
     @Test
     public void testSearchDSLLimits() throws Exception {
-        Referenceable entity = new Referenceable("dsl_test_type");
-        entity.set("name", randomString());
-        entity.set("description", randomString());
-        createInstance(entity);
 
         //search without new parameters of limit and offset should work
-        String dslQuery = "from dsl_test_type";
-        WebResource resource = service.path("api/atlas/discovery/search/dsl").queryParam("query", dslQuery);
-
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                                                .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        String dslQuery = "from "+ DATABASE_TYPE + " qualifiedName=\"" + dbName + "\"";
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", dslQuery);
+        JSONObject response = serviceClient.callAPIWithQueryParams(AtlasClient.API.SEARCH_DSL, queryParams);
+        assertNotNull(response);
 
         //higher limit, all results returned
         JSONArray results = serviceClient.searchByDSL(dslQuery, 10, 0);
-        assertEquals(results.length(), 2);
+        assertEquals(results.length(), 1);
 
         //default limit and offset -1, all results returned
         results = serviceClient.searchByDSL(dslQuery, -1, -1);
-        assertEquals(results.length(), 2);
+        assertEquals(results.length(), 1);
 
         //uses the limit parameter passed
         results = serviceClient.searchByDSL(dslQuery, 1, 0);
@@ -121,7 +115,7 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
         //uses the offset parameter passed
         results = serviceClient.searchByDSL(dslQuery, 10, 1);
-        assertEquals(results.length(), 1);
+        assertEquals(results.length(), 0);
 
         //limit > 0
         try {
@@ -148,29 +142,24 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
         }
     }
 
-    @Test
+    @Test(expectedExceptions = AtlasServiceException.class)
     public void testSearchByDSLForUnknownType() throws Exception {
         String dslQuery = "from blah";
-        WebResource resource = service.path("api/atlas/discovery/search/dsl").queryParam("query", dslQuery);
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", dslQuery);
+        JSONObject response = serviceClient.callAPIWithQueryParams(AtlasClient.API.SEARCH_DSL, queryParams);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
     }
 
     @Test
     public void testSearchUsingGremlin() throws Exception {
-        String query = "g.V.has('type', 'dsl_test_type').toList()";
-        WebResource resource = service.path("api/atlas/discovery/search/gremlin").queryParam("query", query);
+        String query = "g.V.has('type', 'hive_db').toList()";
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", query);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        JSONObject response = serviceClient.callAPIWithQueryParams(AtlasClient.API.GREMLIN_SEARCH, queryParams);
 
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
+        assertNotNull(response);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         assertEquals(response.getString("query"), query);
@@ -179,17 +168,13 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSearchUsingDSL() throws Exception {
-        String query = "from dsl_test_type";
-        WebResource resource = service.path("api/atlas/discovery/search").queryParam("query", query);
+        //String query = "from dsl_test_type";
+        String query = "from "+ DATABASE_TYPE + " qualifiedName=\"" + dbName +"\"";
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", query);
+        JSONObject response = serviceClient.callAPIWithQueryParams(AtlasClient.API.SEARCH, queryParams);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
+        Assert.assertNotNull(response);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         assertEquals(response.getString("query"), query);
@@ -199,16 +184,11 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
     @Test
     public void testSearchFullTextOnDSLFailure() throws Exception {
         String query = "*";
-        WebResource resource = service.path("api/atlas/discovery/search").queryParam("query", query);
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", query);
+        JSONObject response = serviceClient.callAPIWithQueryParams(AtlasClient.API.SEARCH, queryParams);
 
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-            .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-
-        String responseAsString = clientResponse.getEntity(String.class);
-        Assert.assertNotNull(responseAsString);
-
-        JSONObject response = new JSONObject(responseAsString);
+        Assert.assertNotNull(response);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
         assertEquals(response.getString("query"), query);
@@ -217,10 +197,10 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
     @Test(dependsOnMethods = "testSearchDSLLimits")
     public void testSearchUsingFullText() throws Exception {
-        JSONObject response = serviceClient.searchByFullText(tagName, 10, 0);
+        JSONObject response = serviceClient.searchByFullText(dbName, 10, 0);
         Assert.assertNotNull(response.get(AtlasClient.REQUEST_ID));
 
-        assertEquals(response.getString("query"), tagName);
+        assertEquals(response.getString("query"), dbName);
         assertEquals(response.getString("queryType"), "full-text");
 
         JSONArray results = response.getJSONArray(AtlasClient.RESULTS);
@@ -228,29 +208,28 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
         JSONObject row = results.getJSONObject(0);
         Assert.assertNotNull(row.get("guid"));
-        assertEquals(row.getString("typeName"), "dsl_test_type");
+        assertEquals(row.getString("typeName"), DATABASE_TYPE);
         Assert.assertNotNull(row.get("score"));
 
         int numRows = response.getInt(AtlasClient.COUNT);
         assertEquals(numRows, 1);
 
         //API works without limit and offset
-        String query = "dsl_test_type";
-        WebResource resource = service.path("api/atlas/discovery/search/fulltext").queryParam("query", query);
-        ClientResponse clientResponse = resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-                                                .method(HttpMethod.GET, ClientResponse.class);
-        assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
-        results = new JSONObject(clientResponse.getEntity(String.class)).getJSONArray(AtlasClient.RESULTS);
-        assertEquals(results.length(), 2);
+        String query = dbName;
+        MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
+        queryParams.add("query", query);
+        response = serviceClient.callAPIWithQueryParams(AtlasClient.API.SEARCH_FULL_TEXT, queryParams);
+        results = response.getJSONArray(AtlasClient.RESULTS);
+        assertEquals(results.length(), 1);
 
         //verify passed in limits and offsets are used
         //higher limit and 0 offset returns all results
         results = serviceClient.searchByFullText(query, 10, 0).getJSONArray(AtlasClient.RESULTS);
-        assertEquals(results.length(), 2);
+        assertEquals(results.length(), 1);
 
         //offset is used
         results = serviceClient.searchByFullText(query, 10, 1).getJSONArray(AtlasClient.RESULTS);
-        assertEquals(results.length(), 1);
+        assertEquals(results.length(), 0);
 
         //limit is used
         results = serviceClient.searchByFullText(query, 1, 0).getJSONArray(AtlasClient.RESULTS);
@@ -277,8 +256,9 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
     private Id createInstance() throws Exception {
         Referenceable entityInstance = new Referenceable("dsl_test_type", "Classification");
-        entityInstance.set("name", "foo name");
-        entityInstance.set("description", "bar description");
+        entityInstance.set("name", randomString());
+        entityInstance.set("description", randomString());
+
 
         Struct traitInstance = (Struct) entityInstance.getTrait("Classification");
         tagName = randomString();

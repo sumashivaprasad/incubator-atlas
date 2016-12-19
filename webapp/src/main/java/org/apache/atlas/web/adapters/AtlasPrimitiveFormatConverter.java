@@ -23,29 +23,20 @@ import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 
-import javax.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
 
-public class AtlasPrimitiveFormatConverter implements AtlasFormatAdapter {
-
-    protected AtlasFormatConverters registry;
-
-    @Inject
-    public void init(AtlasFormatConverters registry) throws AtlasBaseException {
-        this.registry = registry;
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V1, AtlasFormatConverters.VERSION_V2);
-        registry.registerConverter(this, AtlasFormatConverters.VERSION_V2, AtlasFormatConverters.VERSION_V1);
+public class AtlasPrimitiveFormatConverter extends AtlasAbstractFormatConverter {
+    public AtlasPrimitiveFormatConverter(AtlasFormatConverters registry, AtlasTypeRegistry typeRegistry) {
+        super(registry, typeRegistry, TypeCategory.PRIMITIVE);
     }
 
     @Override
-    public Object convert(final String sourceVersion, final String targetVersion, final AtlasType type, final Object source) throws AtlasBaseException {
-       return type.getNormalizedValue(source);
+    public Object fromV1ToV2(Object v1Obj, AtlasType type) throws AtlasBaseException {
+        return type.getNormalizedValue(v1Obj);
     }
 
     @Override
-    public TypeCategory getTypeCategory() {
-        return TypeCategory.PRIMITIVE;
+    public Object fromV2ToV1(Object v2Obj, AtlasType type) throws AtlasBaseException {
+        return type.getNormalizedValue(v2Obj);
     }
 }
 

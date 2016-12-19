@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,15 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.web.rest.module;
+package org.apache.atlas.web.adapters;
 
-import com.google.inject.AbstractModule;
 
-import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.type.AtlasType;
 
-public class RestModule extends AbstractModule {
-    @Override
-    protected void configure() {
-        bind(AtlasTypeRegistry.class).to(AtlasTypeRegistry.class).asEagerSingleton();
-    }
+public interface AtlasFormatConverter {
+    Object fromV1ToV2(Object v1Obj, AtlasType type) throws AtlasBaseException;
+
+    Object fromV2ToV1(Object v2Obj, AtlasType type) throws AtlasBaseException;
+
+    TypeCategory getTypeCategory();
 }

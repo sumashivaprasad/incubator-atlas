@@ -15,17 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.web.adapters;
 
+define(['require'], function(require) {
+    'use strict';
 
-import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.model.TypeCategory;
-import org.apache.atlas.type.AtlasType;
+    var Enums = {};
 
-public interface AtlasFormatAdapter {
+    Enums.auditAction = {
+        ENTITY_CREATE: "Entity Created",
+        ENTITY_UPDATE: "Entity Updated",
+        ENTITY_DELETE: "Entity Deleted",
+        TAG_ADD: "Tag Added",
+        TAG_DELETE: "Tag Deleted"
+    }
 
-    Object convert(String sourceVersion, String targetVersion, AtlasType type, Object source) throws AtlasBaseException;
+    Enums.entityStateReadOnly = {
+        ACTIVE: false,
+        DELETED: true,
+        STATUS_ACTIVE: false,
+        STATUS_DELETED: true
+    }
 
-    TypeCategory getTypeCategory();
+    Enums.lineageUrlType = {
+        INPUT: 'inputs',
+        OUTPUT: 'outputs',
+        SCHEMA: 'schema'
+    }
 
-}
+    Enums.searchUrlType = {
+        DSL: 'dsl',
+        FULLTEXT: 'fulltext'
+    }
+
+    return Enums;
+});

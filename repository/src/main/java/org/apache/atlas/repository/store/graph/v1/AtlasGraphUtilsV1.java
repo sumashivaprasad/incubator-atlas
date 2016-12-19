@@ -77,7 +77,7 @@ public class AtlasGraphUtilsV1 {
     }
 
     public static String getIdFromVertex(AtlasVertex vertex) {
-        return vertex.<String>getProperty(Constants.GUID_PROPERTY_KEY, String.class);
+        return vertex.getProperty(Constants.GUID_PROPERTY_KEY, String.class);
     }
 
     public static String getTypeName(AtlasVertex instanceVertex) {
@@ -180,7 +180,7 @@ public class AtlasGraphUtilsV1 {
         return returnType.cast(property);
     }
 
-    private static <T extends AtlasElement> String toString(T element) {
+    private static String toString(AtlasElement element) {
         if (element instanceof AtlasVertex) {
             return toString((AtlasVertex) element);
         } else if (element instanceof AtlasEdge) {

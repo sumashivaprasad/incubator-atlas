@@ -52,32 +52,37 @@ public class AtlasEnumDef extends AtlasBaseTypeDef implements Serializable {
     private String                    defaultValue;
 
     public AtlasEnumDef() {
-        this(null, null, null, null, null);
+        this(null, null, null, null, null, null);
     }
 
     public AtlasEnumDef(String name) {
-        this(name, null, null, null, null);
+        this(name, null, null, null, null, null);
     }
 
     public AtlasEnumDef(String name, String description) {
-        this(name, description, null, null, null);
+        this(name, description, null, null, null, null);
     }
 
     public AtlasEnumDef(String name, String description, String typeVersion) {
-        this(name, description, typeVersion, null, null);
+        this(name, description, typeVersion, null, null, null);
     }
 
     public AtlasEnumDef(String name, String description, List<AtlasEnumElementDef> elementDefs) {
-        this(name, description, null, elementDefs, null);
+        this(name, description, null, elementDefs, null, null);
     }
 
     public AtlasEnumDef(String name, String description, String typeVersion, List<AtlasEnumElementDef> elementDefs) {
-        this(name, description, typeVersion, elementDefs, null);
+        this(name, description, typeVersion, elementDefs, null, null);
     }
 
     public AtlasEnumDef(String name, String description, String typeVersion, List<AtlasEnumElementDef> elementDefs,
                         String defaultValue) {
-        super(TypeCategory.ENUM, name, description, typeVersion);
+        this(name, description, typeVersion, elementDefs, defaultValue, null);
+    }
+
+    public AtlasEnumDef(String name, String description, String typeVersion, List<AtlasEnumElementDef> elementDefs,
+                        String defaultValue, Map<String, String> options) {
+        super(TypeCategory.ENUM, name, description, typeVersion, options);
 
         setElementDefs(elementDefs);
         setDefaultValue(defaultValue);
@@ -102,11 +107,11 @@ public class AtlasEnumDef extends AtlasBaseTypeDef implements Serializable {
         }
 
         if (CollectionUtils.isEmpty(elementDefs)) {
-            this.elementDefs = new ArrayList<AtlasEnumElementDef>();
+            this.elementDefs = new ArrayList<>();
         } else {
             // if multiple elements with same value are present, keep only the last entry
-            List<AtlasEnumElementDef> tmpList       = new ArrayList<AtlasEnumElementDef>(elementDefs.size());
-            Set<String>               elementValues = new HashSet<String>();
+            List<AtlasEnumElementDef> tmpList       = new ArrayList<>(elementDefs.size());
+            Set<String>               elementValues = new HashSet<>();
 
             ListIterator<AtlasEnumElementDef> iter = elementDefs.listIterator(elementDefs.size());
             while (iter.hasPrevious()) {
@@ -144,7 +149,7 @@ public class AtlasEnumDef extends AtlasBaseTypeDef implements Serializable {
     public void addElement(AtlasEnumElementDef elementDef) {
         List<AtlasEnumElementDef> e = this.elementDefs;
 
-        List<AtlasEnumElementDef> tmpList = new ArrayList<AtlasEnumElementDef>();
+        List<AtlasEnumElementDef> tmpList = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(e)) {
             // copy existing elements, except ones having same value as the element being added
             for (AtlasEnumElementDef existingElem : e) {
@@ -163,7 +168,7 @@ public class AtlasEnumDef extends AtlasBaseTypeDef implements Serializable {
 
         // if element doesn't exist, no need to create the tmpList below
         if (hasElement(e, elemValue)) {
-            List<AtlasEnumElementDef> tmpList = new ArrayList<AtlasEnumElementDef>();
+            List<AtlasEnumElementDef> tmpList = new ArrayList<>();
 
             // copy existing elements, except ones having same value as the element being removed
             for (AtlasEnumElementDef existingElem : e) {
@@ -217,22 +222,17 @@ public class AtlasEnumDef extends AtlasBaseTypeDef implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
         AtlasEnumDef that = (AtlasEnumDef) o;
-
-        if (elementDefs != null ? !elementDefs.equals(that.elementDefs) : that.elementDefs != null) { return false; }
-
-        return true;
+        return Objects.equals(elementDefs, that.elementDefs) &&
+                Objects.equals(defaultValue, that.defaultValue);
     }
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (elementDefs != null ? elementDefs.hashCode() : 0);
-        return result;
+        return Objects.hash(super.hashCode(), elementDefs, defaultValue);
     }
 
     @Override
@@ -314,26 +314,17 @@ public class AtlasEnumDef extends AtlasBaseTypeDef implements Serializable {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) { return true; }
-            if (o == null || getClass() != o.getClass()) { return false; }
-
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
             AtlasEnumElementDef that = (AtlasEnumElementDef) o;
-
-            if (value != null ? !value.equals(that.value) : that.value != null) { return false; }
-            if (description != null ? !description.equals(that.description) : that.description != null) {
-                return false;
-            }
-            if (ordinal != null ? !ordinal.equals(that.ordinal) : that.ordinal != null) { return false; }
-
-            return true;
+            return Objects.equals(value, that.value) &&
+                    Objects.equals(description, that.description) &&
+                    Objects.equals(ordinal, that.ordinal);
         }
 
         @Override
         public int hashCode() {
-            int result = value != null ? value.hashCode() : 0;
-            result = 31 * result + (description != null ? description.hashCode() : 0);
-            result = 31 * result + (ordinal != null ? ordinal.hashCode() : 0);
-            return result;
+            return Objects.hash(value, description, ordinal);
         }
 
         @Override

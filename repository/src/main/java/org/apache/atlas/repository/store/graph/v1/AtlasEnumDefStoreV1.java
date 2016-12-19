@@ -165,6 +165,8 @@ public class AtlasEnumDefStoreV1 extends AtlasAbstractDefStoreV1 implements Atla
             throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_NOT_FOUND, name);
         }
 
+        typeDefStore.updateTypeVertex(enumDef, vertex);
+
         toVertex(enumDef, vertex);
 
         AtlasEnumDef ret = toEnumDef(vertex);
@@ -187,6 +189,8 @@ public class AtlasEnumDefStoreV1 extends AtlasAbstractDefStoreV1 implements Atla
         if (vertex == null) {
             throw new AtlasBaseException(AtlasErrorCode.TYPE_GUID_NOT_FOUND, guid);
         }
+
+        typeDefStore.updateTypeVertex(enumDef, vertex);
 
         toVertex(enumDef, vertex);
 

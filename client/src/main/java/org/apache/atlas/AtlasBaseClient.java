@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.io.IOException;
@@ -224,8 +225,8 @@ public abstract class AtlasBaseClient {
         String activeServerAddress = null;
         for (int i = 0; i < getNumberOfRetries(); i++) {
             try {
-                WebResource service = client.resource(UriBuilder.fromUri(serverInstance).build());
-                String adminStatus = getAdminStatus(service);
+                service = client.resource(UriBuilder.fromUri(serverInstance).build());
+                String adminStatus = getAdminStatus();
                 if (StringUtils.equals(adminStatus, "ACTIVE")) {
                     activeServerAddress = serverInstance;
                     break;
@@ -315,11 +316,7 @@ public abstract class AtlasBaseClient {
 
     private WebResource getResource(WebResource service, String path, String... pathParams) {
         WebResource resource = service.path(path);
-        if (pathParams != null) {
-            for (String pathParam : pathParams) {
-                resource = resource.path(pathParam);
-            }
-        }
+        resource = appendPathParams(resource, pathParams);
         return resource;
     }
 
@@ -347,10 +344,6 @@ public abstract class AtlasBaseClient {
      * @throws AtlasServiceException if there is a HTTP error.
      */
     public String getAdminStatus() throws AtlasServiceException {
-        return getAdminStatus(service);
-    }
-
-    private String getAdminStatus(WebResource service) throws AtlasServiceException {
         String result = AtlasBaseClient.UNKNOWN_STATUS;
         WebResource resource = getResource(service, STATUS.getPath());
         JSONObject response = callAPIWithResource(STATUS, resource, null, JSONObject.class);
@@ -380,14 +373,6 @@ public abstract class AtlasBaseClient {
         throw che;
     }
 
-    public boolean isRetryEnabled() {
-        return retryEnabled;
-    }
-
-    public void setRetryEnabled(boolean retryEnabled) {
-        this.retryEnabled = retryEnabled;
-    }
-
     @VisibleForTesting
     JSONObject callAPIWithRetries(APIInfo api, Object requestObject, ResourceCreator resourceCreator)
             throws AtlasServiceException {
@@ -395,7 +380,7 @@ public abstract class AtlasBaseClient {
             WebResource resource = resourceCreator.createResource();
             try {
                 LOG.debug("Using resource {} for {} times", resource.getURI(), i);
-                JSONObject result = callAPIWithResource(api, resource, requestObject);
+                JSONObject result = callAPIWithResource(api, resource, requestObject, JSONObject.class);
                 return result;
             } catch (ClientHandlerException che) {
                 if (i == (getNumberOfRetries() - 1)) {
@@ -409,24 +394,15 @@ public abstract class AtlasBaseClient {
         throw new AtlasServiceException(api, new RuntimeException("Could not get response after retries."));
     }
 
-    protected JSONObject callAPIWithResource(APIInfo api, WebResource resource, Object requestObject)
-            throws AtlasServiceException {
-        return callAPIWithResource(api, resource, requestObject, JSONObject.class);
-    }
-
-    protected JSONObject callAPI(final APIInfo api, Object requestObject, final String... pathParams)
-            throws AtlasServiceException {
-        return callAPIWithRetries(api, requestObject, new ResourceCreator() {
-            @Override
-            public WebResource createResource() {
-                return getResource(api, pathParams);
-            }
-        });
-    }
-
-    protected <T> T callAPI(APIInfo api, Object requestObject, Class<T> responseType, String... params)
+    public <T> T callAPI(APIInfo api, Object requestObject, Class<T> responseType, String... params)
             throws AtlasServiceException {
         return callAPIWithResource(api, getResource(api, params), requestObject, responseType);
+    }
+
+    public <T> T callAPI(APIInfo api, Class<T> responseType, MultivaluedMap<String, String> queryParams, String... params)
+            throws AtlasServiceException {
+        WebResource resource = getResource(api, queryParams, params);
+        return callAPIWithResource(api, resource, null, responseType);
     }
 
     protected WebResource getResource(APIInfo api, String... pathParams) {
@@ -436,6 +412,38 @@ public abstract class AtlasBaseClient {
     // Modify URL to include the path params
     private WebResource getResource(WebResource service, APIInfo api, String... pathParams) {
         WebResource resource = service.path(api.getPath());
+        resource = appendPathParams(resource, pathParams);
+        return resource;
+    }
+
+    public <T> T callAPI(APIInfo api, Class<T> responseType, MultivaluedMap<String, String> queryParams)
+            throws AtlasServiceException {
+        return callAPIWithResource(api, getResource(api, queryParams), null, responseType);
+    }
+
+    public <T> T callAPI(APIInfo api, Class<T> responseType, String queryParamKey, List<String> queryParamValues)
+            throws AtlasServiceException {
+        return callAPIWithResource(api, getResource(api, queryParamKey, queryParamValues), null, responseType);
+    }
+
+    private WebResource getResource(APIInfo api, String queryParamKey, List<String> queryParamValues) {
+        WebResource resource = service.path(api.getPath());
+        for (String queryParamValue : queryParamValues) {
+            if (StringUtils.isNotBlank(queryParamKey) && StringUtils.isNotBlank(queryParamValue)) {
+                resource = resource.queryParam(queryParamKey, queryParamValue);
+            }
+        }
+        return resource;
+    }
+
+    protected WebResource getResource(APIInfo api, MultivaluedMap<String, String> queryParams, String ... pathParams) {
+        WebResource resource = service.path(api.getPath());
+        resource = appendPathParams(resource, pathParams);
+        resource = appendQueryParams(queryParams, resource);
+        return resource;
+    }
+
+    private WebResource appendPathParams(WebResource resource, String[] pathParams) {
         if (pathParams != null) {
             for (String pathParam : pathParams) {
                 resource = resource.path(pathParam);
@@ -444,21 +452,25 @@ public abstract class AtlasBaseClient {
         return resource;
     }
 
-    protected <T> T callAPI(APIInfo api, Object requestObject, Class<T> responseType, Map<String, String> queryParams)
-            throws AtlasServiceException {
-        return callAPIWithResource(api, getResource(api, queryParams), requestObject, responseType);
-    }
-
-    protected WebResource getResource(APIInfo api, Map<String, String> queryParams) {
+    protected WebResource getResource(APIInfo api, MultivaluedMap<String, String> queryParams) {
         return getResource(service, api, queryParams);
     }
 
     // Modify URL to include the query params
-    private WebResource getResource(WebResource service, APIInfo api, Map<String, String> queryParams) {
+    private WebResource getResource(WebResource service, APIInfo api, MultivaluedMap<String, String> queryParams) {
         WebResource resource = service.path(api.getPath());
+        resource = appendQueryParams(queryParams, resource);
+        return resource;
+    }
+
+    private WebResource appendQueryParams(MultivaluedMap<String, String> queryParams, WebResource resource) {
         if (null != queryParams && !queryParams.isEmpty()) {
-            for (Map.Entry<String, String> entry : queryParams.entrySet()) {
-                resource = resource.queryParam(entry.getKey(), entry.getValue());
+            for (Map.Entry<String, List<String>> entry : queryParams.entrySet()) {
+                for (String value : entry.getValue()) {
+                    if (StringUtils.isNotBlank(value)) {
+                        resource = resource.queryParam(entry.getKey(), value);
+                    }
+                }
             }
         }
         return resource;
@@ -484,7 +496,7 @@ public abstract class AtlasBaseClient {
         private final String path;
         private final Response.Status status;
 
-        APIInfo(String path, String method, Response.Status status) {
+        public APIInfo(String path, String method, Response.Status status) {
             this.path = path;
             this.method = method;
             this.status = status;

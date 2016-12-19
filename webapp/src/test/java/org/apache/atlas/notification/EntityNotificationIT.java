@@ -20,8 +20,6 @@ package org.apache.atlas.notification;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.notification.entity.EntityNotification;
 import org.apache.atlas.typesystem.IReferenceableInstance;
@@ -35,14 +33,10 @@ import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.atlas.web.resources.BaseResourceIT;
-import org.apache.atlas.web.util.Servlets;
-import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,6 +58,7 @@ public class EntityNotificationIT extends BaseResourceIT {
     @Inject
     private NotificationInterface notificationInterface;
     private Id tableId;
+    private Id dbId;
     private String traitName;
     private NotificationConsumer<EntityNotification> notificationConsumer;
 
@@ -71,6 +66,8 @@ public class EntityNotificationIT extends BaseResourceIT {
     public void setUp() throws Exception {
         super.setUp();
         createTypeDefinitions();
+        Referenceable HiveDBInstance = createHiveDBInstance(DATABASE_NAME);
+        dbId = createInstance(HiveDBInstance);
 
         List<NotificationConsumer<EntityNotification>> consumers =
             notificationInterface.createConsumers(NotificationInterface.NotificationType.ENTITIES, 1);
@@ -80,8 +77,7 @@ public class EntityNotificationIT extends BaseResourceIT {
 
     @Test
     public void testCreateEntity() throws Exception {
-        Referenceable tableInstance = createHiveTableInstance(DATABASE_NAME, TABLE_NAME);
-
+        Referenceable tableInstance = createHiveTableInstance(DATABASE_NAME, TABLE_NAME, dbId);
         tableId = createInstance(tableInstance);
 
         final String guid = tableId._getId();
@@ -107,7 +103,10 @@ public class EntityNotificationIT extends BaseResourceIT {
     public void testDeleteEntity() throws Exception {
         final String tableName = "table-" + randomString();
         final String dbName = "db-" + randomString();
-        Referenceable tableInstance = createHiveTableInstance(dbName, tableName);
+        Referenceable HiveDBInstance = createHiveDBInstance(dbName);
+        Id dbId = createInstance(HiveDBInstance);
+
+        Referenceable tableInstance = createHiveTableInstance(dbName, tableName, dbId);
         final Id tableId = createInstance(tableInstance);
         final String guid = tableId._getId();
 
@@ -139,8 +138,7 @@ public class EntityNotificationIT extends BaseResourceIT {
 
         final String guid = tableId._getId();
 
-        ClientResponse clientResponse = addTrait(guid, traitInstanceJSON);
-        assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
+        serviceClient.addTrait(guid, traitInstance);
 
         EntityNotification entityNotification = waitForNotification(notificationConsumer, MAX_WAIT_TIME,
                 newNotificationPredicate(EntityNotification.OperationType.TRAIT_ADD, HIVE_TABLE_TYPE, guid));
@@ -165,8 +163,7 @@ public class EntityNotificationIT extends BaseResourceIT {
         traitInstanceJSON = InstanceSerialization.toJson(traitInstance, true);
         LOG.debug("Trait instance = " + traitInstanceJSON);
 
-        clientResponse = addTrait(guid, traitInstanceJSON);
-        assertEquals(clientResponse.getStatus(), Response.Status.CREATED.getStatusCode());
+        serviceClient.addTrait(guid, traitInstance);
 
         entityNotification = waitForNotification(notificationConsumer, MAX_WAIT_TIME,
                 newNotificationPredicate(EntityNotification.OperationType.TRAIT_ADD, HIVE_TABLE_TYPE, guid));
@@ -187,8 +184,7 @@ public class EntityNotificationIT extends BaseResourceIT {
     public void testDeleteTrait() throws Exception {
         final String guid = tableId._getId();
 
-        ClientResponse clientResponse = deleteTrait(guid, traitName);
-        Assert.assertEquals(clientResponse.getStatus(), Response.Status.OK.getStatusCode());
+        serviceClient.deleteTrait(guid, traitName);
 
         EntityNotification entityNotification = waitForNotification(notificationConsumer, MAX_WAIT_TIME,
                 newNotificationPredicate(EntityNotification.OperationType.TRAIT_DELETE, HIVE_TABLE_TYPE, guid));
@@ -208,18 +204,4 @@ public class EntityNotificationIT extends BaseResourceIT {
         createType(traitDefinitionJSON);
     }
 
-    private ClientResponse addTrait(String guid, String traitInstance) {
-        WebResource resource = service.path(ENTITIES).path(guid).path(TRAITS);
-
-        return resource.accept(Servlets.JSON_MEDIA_TYPE)
-            .type(Servlets.JSON_MEDIA_TYPE)
-            .method(HttpMethod.POST, ClientResponse.class, traitInstance);
-    }
-
-    private ClientResponse deleteTrait(String guid, String traitName) {
-        WebResource resource = service.path(ENTITIES).path(guid).path(TRAITS).path(traitName);
-
-        return resource.accept(Servlets.JSON_MEDIA_TYPE).type(Servlets.JSON_MEDIA_TYPE)
-            .method(HttpMethod.DELETE, ClientResponse.class);
-    }
 }

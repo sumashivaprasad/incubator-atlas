@@ -17,24 +17,26 @@
  */
 package org.apache.atlas.model.typedef;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlSeeAlso;
-
 import org.apache.atlas.model.PList;
 import org.apache.atlas.model.SearchFilter.SortType;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.commons.collections.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
+import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 
 
 /**
@@ -52,28 +54,33 @@ public class AtlasEntityDef extends AtlasStructDef implements java.io.Serializab
 
 
     public AtlasEntityDef() {
-        this(null, null, null, null, null);
+        this(null, null, null, null, null, null);
     }
 
     public AtlasEntityDef(String name) {
-        this(name, null, null, null, null);
+        this(name, null, null, null, null, null);
     }
 
     public AtlasEntityDef(String name, String description) {
-        this(name, description, null, null, null);
+        this(name, description, null, null, null, null);
     }
 
     public AtlasEntityDef(String name, String description, String typeVersion) {
-        this(name, description, typeVersion, null, null);
+        this(name, description, typeVersion, null, null, null);
     }
 
     public AtlasEntityDef(String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs) {
-        this(name, description, typeVersion, attributeDefs, null);
+        this(name, description, typeVersion, attributeDefs, null, null);
     }
 
     public AtlasEntityDef(String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs,
                           Set<String> superTypes) {
-        super(TypeCategory.ENTITY, name, description, typeVersion, attributeDefs);
+        this(name, description, typeVersion, attributeDefs, superTypes, null);
+    }
+
+    public AtlasEntityDef(String name, String description, String typeVersion, List<AtlasAttributeDef> attributeDefs,
+                          Set<String> superTypes, Map<String, String> options) {
+        super(TypeCategory.ENTITY, name, description, typeVersion, attributeDefs, options);
 
         setSuperTypes(superTypes);
     }
@@ -94,9 +101,9 @@ public class AtlasEntityDef extends AtlasStructDef implements java.io.Serializab
         }
 
         if (CollectionUtils.isEmpty(superTypes)) {
-            this.superTypes = new HashSet<String>();
+            this.superTypes = new HashSet<>();
         } else {
-            this.superTypes = new HashSet<String>(superTypes);
+            this.superTypes = new HashSet<>(superTypes);
         }
     }
 
@@ -108,7 +115,7 @@ public class AtlasEntityDef extends AtlasStructDef implements java.io.Serializab
         Set<String> s = this.superTypes;
 
         if (!hasSuperType(s, typeName)) {
-            s = new HashSet<String>(s);
+            s = new HashSet<>(s);
 
             s.add(typeName);
 
@@ -120,7 +127,7 @@ public class AtlasEntityDef extends AtlasStructDef implements java.io.Serializab
         Set<String> s = this.superTypes;
 
         if (hasSuperType(s, typeName)) {
-            s = new HashSet<String>(s);
+            s = new HashSet<>(s);
 
             s.remove(typeName);
 
@@ -155,17 +162,12 @@ public class AtlasEntityDef extends AtlasStructDef implements java.io.Serializab
         if (!super.equals(o)) { return false; }
 
         AtlasEntityDef that = (AtlasEntityDef) o;
-
-        if (superTypes != null ? !superTypes.equals(that.superTypes) : that.superTypes != null) { return false; }
-
-        return true;
+        return Objects.equals(superTypes, that.superTypes);
     }
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (superTypes != null ? superTypes.hashCode() : 0);
-        return result;
+        return Objects.hash(super.hashCode(), superTypes);
     }
 
     @Override

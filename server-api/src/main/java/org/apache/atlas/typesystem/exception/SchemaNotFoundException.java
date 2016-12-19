@@ -17,9 +17,7 @@
  */
 package org.apache.atlas.typesystem.exception;
 
-import org.apache.atlas.AtlasException;
-
-public class SchemaNotFoundException extends AtlasException {
+public class SchemaNotFoundException extends NotFoundException {
     public SchemaNotFoundException() {
     }
 

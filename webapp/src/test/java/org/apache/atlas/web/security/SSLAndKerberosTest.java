@@ -57,6 +57,7 @@ public class SSLAndKerberosTest extends BaseSSLAndKerberosTest {
     private TestSecureEmbeddedServer secureEmbeddedServer;
     private Subject subject;
     private String originalConf;
+    private String originalHomeDir;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -71,7 +72,7 @@ public class SSLAndKerberosTest extends BaseSSLAndKerberosTest {
         // client will actually only leverage subset of these properties
         final PropertiesConfiguration configuration = getSSLConfiguration(providerUrl);
 
-        persistSSLClientConfiguration((org.apache.commons.configuration.Configuration) configuration);
+        persistSSLClientConfiguration(configuration);
 
         TestUtils.writeConfiguration(configuration, persistDir + File.separator +
             ApplicationProperties.APPLICATION_PROPERTIES);
@@ -118,6 +119,9 @@ public class SSLAndKerberosTest extends BaseSSLAndKerberosTest {
         originalConf = System.getProperty("atlas.conf");
         System.setProperty("atlas.conf", persistDir);
 
+        originalHomeDir = System.getProperty("atlas.home");
+        System.setProperty("atlas.home", TestUtils.getTargetDirectory());
+
         dgiCLient = proxyUser.doAs(new PrivilegedExceptionAction<AtlasClient>() {
             @Override
             public AtlasClient run() throws Exception {
@@ -148,6 +152,10 @@ public class SSLAndKerberosTest extends BaseSSLAndKerberosTest {
         if (originalConf != null) {
             System.setProperty("atlas.conf", originalConf);
         }
+
+        if(originalHomeDir !=null){
+            System.setProperty("atlas.home", originalHomeDir);
+        }
     }
 
     protected Subject loginTestUser() throws LoginException, IOException {
@@ -155,13 +163,13 @@ public class SSLAndKerberosTest extends BaseSSLAndKerberosTest {
 
             @Override
             public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
-                for (int i = 0; i < callbacks.length; i++) {
-                    if (callbacks[i] instanceof PasswordCallback) {
-                        PasswordCallback passwordCallback = (PasswordCallback) callbacks[i];
+                for (Callback callback : callbacks) {
+                    if (callback instanceof PasswordCallback) {
+                        PasswordCallback passwordCallback = (PasswordCallback) callback;
                         passwordCallback.setPassword(TESTPASS.toCharArray());
                     }
-                    if (callbacks[i] instanceof NameCallback) {
-                        NameCallback nameCallback = (NameCallback) callbacks[i];
+                    if (callback instanceof NameCallback) {
+                        NameCallback nameCallback = (NameCallback) callback;
                         nameCallback.setName(TESTUSER);
                     }
                 }
