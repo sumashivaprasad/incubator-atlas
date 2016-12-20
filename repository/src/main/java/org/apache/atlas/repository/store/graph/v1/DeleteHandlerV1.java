@@ -2,11 +2,14 @@ package org.apache.atlas.repository.store.graph.v1;
 
 
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.types.AttributeInfo;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +18,14 @@ import static org.apache.atlas.repository.graph.GraphHelper.string;
 public class DeleteHandlerV1 {
 
     public static final Logger LOG = LoggerFactory.getLogger(DeleteHandlerV1.class);
+
+    private AtlasTypeRegistry typeRegistry;
+
+    public DeleteHandlerV1(AtlasTypeRegistry typeRegistry, boolean shouldUpdateReverseAttribute, boolean softDelete) {
+        this.typeRegistry = typeRegistry;
+        this.shouldUpdateReverseAttribute = shouldUpdateReverseAttribute;
+        this.softDelete = softDelete;
+    }
     /**
      * Force delete is used to remove struct/trait in case of entity updates
      * @param edge
@@ -25,7 +36,7 @@ public class DeleteHandlerV1 {
      * @throws AtlasException
      */
     public boolean deleteEdgeReference(AtlasEdge edge, TypeCategory typeCategory, boolean isComposite,
-        boolean forceDeleteStructTrait) throws AtlasException {
+        boolean forceDeleteStructTrait) throws AtlasBaseException {
         LOG.debug("Deleting {}", string(edge));
         boolean forceDelete =
             (typeCategory == TypeCategory.STRUCT || typeCategory == TypeCategory.CLASSIFICATION)
@@ -51,7 +62,7 @@ public class DeleteHandlerV1 {
         return !softDelete || forceDelete;
     }
 
-    protected void deleteEdge(AtlasEdge edge, boolean updateReverseAttribute, boolean force) throws AtlasException {
+    protected void deleteEdge(AtlasEdge edge, boolean updateReverseAttribute, boolean force) throws AtlasBaseException {
         //update reverse attribute
         if (updateReverseAttribute) {
             AtlasStructDef.AtlasAttributeDef attributeInfo = getAttributeForEdge(edge.getLabel());

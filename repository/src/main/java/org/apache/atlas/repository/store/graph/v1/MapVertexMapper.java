@@ -70,20 +70,17 @@ public class MapVertexMapper {
                     String keyStr = entry.getKey().toString();
                     String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, keyStr);
 
-                    Optional<AtlasEdge> existingEdge = Optional.absent();
-                    if ( mapType.getValueType().getTypeCategory() == TypeCategory.STRUCT || mapType.getValueType().getTypeCategory() == TypeCategory.ENTITY ) {
-                        existingEdge = Optional.of((AtlasEdge) currentMap.get(keyStr));
-                    }
+                    Optional<AtlasEdge> existingEdge = getEdgeIfExists(mapType, currentMap, keyStr);
                     Object newEntry = structVertexMapper.mapCollectionElementsToVertex(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
                     newMap.put(keyStr, newEntry);
                 }
             }
 
-            Map<String, Object> additionalMap =
+            Map<String, Object> finalMap =
                 removeUnusedMapEntries(parentType, mapType, attributeDef, vertex, vertexPropertyName, currentMap, newMap);
 
             Set<String> newKeys = new HashSet<>(newMap.keySet());
-            newKeys.addAll(additionalMap.keySet());
+            newKeys.addAll(finalMap.keySet());
 
             // for dereference on way out
 
@@ -127,7 +124,7 @@ public class MapVertexMapper {
         AtlasVertex instanceVertex, String propertyName,
         Map<String, Object> currentMap,
         Map<String, Object> newMap)
-        throws AtlasException {
+        throws AtlasException, AtlasBaseException {
 
         Map<String, Object> additionalMap = new HashMap<>();
         for (String currentKey : currentMap.keySet()) {
@@ -155,5 +152,14 @@ public class MapVertexMapper {
             }
         }
         return additionalMap;
+    }
+    
+    private Optional<AtlasEdge> getEdgeIfExists(AtlasMapType mapType, Map<String, Object> currentMap, String keyStr) {
+        Optional<AtlasEdge> existingEdge = Optional.absent();
+        if ( AtlasGraphUtilsV1.isReference(mapType.getValueType()) ) {
+            existingEdge = Optional.of((AtlasEdge) currentMap.get(keyStr));
+        }
+        
+        return existingEdge;
     }
 }

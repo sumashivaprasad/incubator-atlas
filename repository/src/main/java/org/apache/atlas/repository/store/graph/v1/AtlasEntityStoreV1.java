@@ -130,16 +130,13 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
             AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
 
             if ( discoveredEntities.isResolved(entity) ) {
-                //Create vertices which do not exist in the repository
                 vertex = discoveredEntities.getResolvedReference(entity);
                 context.addUpdated(entity, entityType, vertex);
             } else {
-                vertex = vertexMapper.createVertex(entity, entityType);
+                //Create vertices which do not exist in the repository
+                vertex = vertexMapper.createVertex(entityType, entity);
                 context.addCreated(entity, entityType, vertex);
             }
-
-            //Map only primitive attributes
-//            vertexMapper.mapByCategory(vertex, entity, entityType, new HashSet<TypeCategory>() {{ add(TypeCategory.PRIMITIVE); add(TypeCategory.ENUM); }});
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("<== AtlasEntityStoreV1.preCreate({}): {}", entity, vertex);
@@ -178,7 +175,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
         final Collection<AtlasEntity> createdEntities = ctx.getCreatedEntities();
         for (AtlasEntity createdEntity : createdEntities) {
-            vertexMapper.mapAttributestoVertex(createdEntity, ctx.getVertex(createdEntity), (AtlasStructType) ctx.getType(createdEntity));
+            vertexMapper.mapAttributestoVertex((AtlasStructType) ctx.getType(createdEntity), createdEntity, ctx.getVertex(createdEntity));
         }
 
         if (LOG.isDebugEnabled()) {
