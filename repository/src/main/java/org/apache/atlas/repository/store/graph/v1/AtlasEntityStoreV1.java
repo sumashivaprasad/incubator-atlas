@@ -134,7 +134,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
                 context.addUpdated(entity, entityType, vertex);
             } else {
                 //Create vertices which do not exist in the repository
-                vertex = vertexMapper.createVertex(entityType, entity);
+                vertex = vertexMapper.createVertexTemplate(entity, entityType);
                 context.addCreated(entity, entityType, vertex);
             }
 

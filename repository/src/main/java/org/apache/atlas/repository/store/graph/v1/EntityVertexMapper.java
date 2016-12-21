@@ -41,7 +41,7 @@ public class EntityVertexMapper extends StructVertexMapper {
 
     @Override
     public AtlasVertex createVertexTemplate(final AtlasStruct instance, final AtlasStructType structType) {
-        AtlasVertex vertex = createVertexTemplate(instance, structType);
+        AtlasVertex vertex = super.createVertexTemplate(instance, structType);
         
         // add super types
         AtlasEntityType entityType = (AtlasEntityType) structType;
