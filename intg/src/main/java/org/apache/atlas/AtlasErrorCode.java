@@ -68,14 +68,7 @@ public enum AtlasErrorCode {
     // All internal errors go here
     INTERNAL_ERROR(500, "ATLAS5001E", "Internal server error {0}"),
     INDEX_CREATION_FAILED(500, "ATLAS5002E", "Index creation failed for {0}"),
-    INDEX_ROLLBACK_FAILED(500, "ATLAS5003E", "Index rollback failed for {0}");
-
-    PATCH_NOT_APPLICABLE_FOR_TYPE(500, "ATLAS5004E", "{0} - invalid patch for type {1}"),
-    PATCH_FOR_UNKNOWN_TYPE(500, "ATLAS5005E", "{0} - patch references unknown type {1}"),
-    ATTRIBUTE_UNIQUE_INVALID(400, "ATLAS40015E", "Type {0} with unique attribute {1} does not exist"),
-
-    TYPE_NAME_INVALID(400, "ATLAS40016E", "Type {0} with name {1} does not exist"),
-    TYPE_CATEGORY_INVALID(400, "ATLAS40017E", "Type Category {0} does not match {1} or is invalid"),
+    INDEX_ROLLBACK_FAILED(500, "ATLAS5003E", "Index rollback failed for {0}"),
 
     INSTANCE_BY_UNIQUE_ATTRIBUTE_NOT_FOUND(400, "ATLAS40018E", "Instance {0} with unique attribute {1} does not exist");
 

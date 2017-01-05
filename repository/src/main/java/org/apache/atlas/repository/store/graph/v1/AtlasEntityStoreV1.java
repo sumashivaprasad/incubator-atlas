@@ -124,7 +124,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
             AtlasVertex vertex = null;
             if (LOG.isDebugEnabled()) {
-                LOG.debug("<== AtlasEntityStoreV1.preCreate({}): {}", entity);
+                LOG.debug("<== AtlasEntityStoreV1.preCreateOrUpdate({}): {}", entity);
             }
 
             AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
@@ -139,7 +139,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
             }
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("<== AtlasEntityStoreV1.preCreate({}): {}", entity, vertex);
+                LOG.debug("<== AtlasEntityStoreV1.preCreateOrUpdate({}): {}", entity, vertex);
             }
         }
         return context;
@@ -173,8 +173,11 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
         EntityMutationContext ctx = preCreateOrUpdate(normalizedEntities);
 
-        final Collection<AtlasEntity> createdEntities = ctx.getCreatedEntities();
-        for (AtlasEntity createdEntity : createdEntities) {
+        for (AtlasEntity createdEntity : ctx.getCreatedEntities()) {
+            vertexMapper.mapAttributestoVertex((AtlasStructType) ctx.getType(createdEntity), createdEntity, ctx.getVertex(createdEntity));
+        }
+
+        for (AtlasEntity createdEntity : ctx.getUpdatedEntities()) {
             vertexMapper.mapAttributestoVertex((AtlasStructType) ctx.getType(createdEntity), createdEntity, ctx.getVertex(createdEntity));
         }
 

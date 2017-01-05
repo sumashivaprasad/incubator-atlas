@@ -45,6 +45,7 @@ import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.repository.store.graph.v1.AtlasEntityGraphDiscoveryV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasEntityStoreV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasTypeDefGraphStoreV1;
+import org.apache.atlas.repository.store.graph.v1.DeleteHandlerV1;
 import org.apache.atlas.repository.store.graph.v1.EntityVertexMapper;
 import org.apache.atlas.repository.store.graph.v1.IDBasedEntityResolver;
 import org.apache.atlas.repository.store.graph.v1.UniqAttrBasedEntityResolver;
@@ -108,6 +109,8 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         bindAuditRepository(binder(), configuration);
 
         bind(DeleteHandler.class).to(AtlasRepositoryConfiguration.getDeleteHandlerImpl()).asEagerSingleton();
+
+        bind(DeleteHandlerV1.class).to(AtlasRepositoryConfiguration.getDeleteHandlerV1Impl()).asEagerSingleton();
 
         bind(TypeCache.class).to(AtlasRepositoryConfiguration.getTypeCache()).asEagerSingleton();
 

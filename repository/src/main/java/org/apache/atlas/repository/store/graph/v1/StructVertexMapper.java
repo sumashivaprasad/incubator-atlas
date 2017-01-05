@@ -41,22 +41,24 @@ public class StructVertexMapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(StructVertexMapper.class);
 
-    public AtlasVertex createVertexTemplate(final AtlasStruct instance, final AtlasStructType structType) {
-        LOG.debug("Creating AtlasVertex for type {}", instance.getTypeName());
-        final AtlasVertex vertexWithoutIdentity = graph.addVertex();
 
-        // add type information
-        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.ENTITY_TYPE_PROPERTY_KEY, instance.getTypeName());
+    public Object toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
+        AtlasEdge result = null;
 
-        // add state information
-        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
+        String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
 
-        // add timestamp information
-        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
-        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY,
-            RequestContext.get().getRequestTime());
+        if ( existingEdge.isPresent() ) {
+            updateVertex(parentType, attrType, attributeDef, (AtlasStruct) value, existingEdge.get().getOutVertex());
+            result = existingEdge.get();
+        } else {
+            result = createVertex(parentType, attrType, attributeDef, (AtlasStruct) value, referringVertex, edgeLabel);
+        }
 
-        return vertexWithoutIdentity;
+        return result;
+    }
+
+    public static boolean shouldManageChildReferences(AtlasStructType type, String attributeName) {
+        return type.isMappedFromRefAttribute(attributeName);
     }
 
     /**
@@ -88,9 +90,9 @@ public class StructVertexMapper {
         case ENUM:
             return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
         case STRUCT:
-            return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
+            return toVertex((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
         case ENTITY:
-            return entityVertexMapper.createOrUpdate((AtlasEntityType)parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
+            return entityVertexMapper.toVertex((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
         case MAP:
             return mapVertexMapper.createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
         case ARRAY:
@@ -98,7 +100,6 @@ public class StructVertexMapper {
         default:
             throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, attrType.getTypeCategory().name());
         }
-
     }
 
     public Object createOrUpdatePrimitives(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object val, AtlasVertex vertex, String vertexPropertyName) {
@@ -110,7 +111,7 @@ public class StructVertexMapper {
         return val;
     }
 
-    public AtlasEdge createVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct struct, AtlasVertex referringVertex, String edgeLabel) throws AtlasBaseException {
+    private AtlasEdge createVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct struct, AtlasVertex referringVertex, String edgeLabel) throws AtlasBaseException {
         AtlasVertex vertex = createVertexTemplate(struct, structAttributeType);
         mapAttributestoVertex(structAttributeType, struct, vertex);
 
@@ -121,27 +122,26 @@ public class StructVertexMapper {
         }
     }
 
-    public void updateVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct value, AtlasVertex structVertex) throws AtlasBaseException {
+    private void updateVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct value, AtlasVertex structVertex) throws AtlasBaseException {
         mapAttributestoVertex(structAttributeType, value, structVertex);
     }
 
-    public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
-        AtlasEdge result = null;
+    protected AtlasVertex createVertexTemplate(final AtlasStruct instance, final AtlasStructType structType) {
+        LOG.debug("Creating AtlasVertex for type {}", instance.getTypeName());
+        final AtlasVertex vertexWithoutIdentity = graph.addVertex();
 
-        String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
+        // add type information
+        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.ENTITY_TYPE_PROPERTY_KEY, instance.getTypeName());
 
-        if ( existingEdge.isPresent() ) {
-            updateVertex(parentType, attrType, attributeDef, (AtlasStruct) value, existingEdge.get().getOutVertex());
-            result = existingEdge.get();
-        } else {
-            result = createVertex(parentType, attrType, attributeDef, (AtlasStruct) value, referringVertex, edgeLabel);
-        }
+        // add state information
+        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
 
-        return result;
-    }
+        // add timestamp information
+        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
+        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY,
+            RequestContext.get().getRequestTime());
 
-    public static boolean shouldManageChildReferences(AtlasStructType type, String attributeName) {
-        return type.isMappedFromRefAttribute(attributeName);
+        return vertexWithoutIdentity;
     }
 
     protected Object mapCollectionElementsToVertex(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
@@ -150,9 +150,9 @@ public class StructVertexMapper {
         case ENUM:
             return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
         case STRUCT:
-            return createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
+            return toVertex((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
         case ENTITY:
-            return entityVertexMapper.createOrUpdate((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
+            return entityVertexMapper.toVertex((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
         case MAP:
         case ARRAY:
         default:

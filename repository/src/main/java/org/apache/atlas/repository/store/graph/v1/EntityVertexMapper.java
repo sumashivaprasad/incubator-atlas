@@ -70,7 +70,27 @@ public class EntityVertexMapper extends StructVertexMapper {
     }
 
 
-    public AtlasEdge updateEdge(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, Object value, AtlasEdge existingEdge, final AtlasVertex entityVertex) throws AtlasBaseException {
+    @Override
+    public Object toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
+        AtlasEdge result = null;
+
+        AtlasVertex entityVertex = context.getResolvedReference(new AtlasObjectId(attrType.getTypeName(), (String) value));
+        String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
+        if ( existingEdge.isPresent() ) {
+            updateEdge(parentType, attrType, attributeDef, value, existingEdge.get(), entityVertex);
+            result = existingEdge.get();
+        } else {
+            try {
+                result = graphHelper.getOrCreateEdge(referringVertex, entityVertex, edgeLabel);
+            } catch (RepositoryException e) {
+                throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
+            }
+        }
+
+        return result;
+    }
+
+    private AtlasEdge updateEdge(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, Object value, AtlasEdge existingEdge, final AtlasVertex entityVertex) throws AtlasBaseException {
 
         LOG.debug("Updating entity reference {} for reference attribute {}",  attributeDef.getName());
         // Update edge if it exists
@@ -93,25 +113,6 @@ public class EntityVertexMapper extends StructVertexMapper {
         return newEdge;
     }
 
-    @Override
-    public Object createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
-        AtlasEdge result = null;
-
-        AtlasVertex entityVertex = context.getResolvedReference(new AtlasObjectId(attrType.getTypeName(), (String) value));
-        String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
-        if ( existingEdge.isPresent() ) {
-            updateEdge(parentType, attrType, attributeDef, value, existingEdge.get(), entityVertex);
-            result = existingEdge.get();
-        } else {
-            try {
-                result = graphHelper.getOrCreateEdge(referringVertex, entityVertex, edgeLabel);
-            } catch (RepositoryException e) {
-                throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
-            }
-        }
-
-        return result;
-    }
 
     String getId(Object value) throws AtlasBaseException {
         if ( value != null) {

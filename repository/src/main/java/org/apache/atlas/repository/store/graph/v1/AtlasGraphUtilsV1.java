@@ -23,6 +23,7 @@ import com.google.common.collect.HashBiMap;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.GraphHelper;
@@ -30,6 +31,7 @@ import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasElement;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasType;
+import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.commons.lang.StringUtils;
@@ -223,5 +225,14 @@ public class AtlasGraphUtilsV1 {
     public static String getEdgeDetails(AtlasEdge edge) {
         return String.format("edge[id=%s label=%s from %s -> to %s]", edge.getId(), edge.getLabel(),
                 toString(edge.getOutVertex()), toString(edge.getInVertex()));
+    }
+
+    public static AtlasEntity.Status getState(AtlasElement element) {
+        String state = getStateAsString(element);
+        return state == null ? null : AtlasEntity.Status.valueOf(state);
+    }
+
+    public static String getStateAsString(AtlasElement element) {
+        return element.getProperty(Constants.STATE_PROPERTY_KEY, String.class);
     }
 }
