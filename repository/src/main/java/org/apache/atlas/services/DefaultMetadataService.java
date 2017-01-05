@@ -40,6 +40,7 @@ import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.audit.EntityAuditRepository;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.typestore.ITypeStore;
+import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
@@ -55,8 +56,11 @@ import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.EnumTypeDefinition;
+import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.cache.TypeCache;
@@ -159,7 +163,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         if (typesDef != null && !typesDef.isEmpty()) {
             TypeSystem.TransientTypeSystem transientTypeSystem = typeSystem.createTransientTypeSystem(typesDef, true);
             Map<String, IDataType> typesAdded = transientTypeSystem.getTypesAdded();
-            LOG.info("Number of types got from transient type system: " + typesAdded.size());
+            LOG.info("Number of types got from transient type system: {}", typesAdded.size());
             typeSystem.commitTypes(typesAdded);
         }
     }
@@ -213,14 +217,36 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         return createOrUpdateTypes(typeDefinition, true);
     }
 
-    private TypesDef validateTypeDefinition(String typeDefinition) {
+    private TypesDef validateTypeDefinition(String typeDefinition) throws AtlasException {
         try {
             TypesDef typesDef = TypesSerialization.fromJson(typeDefinition);
             if (typesDef.isEmpty()) {
                 throw new IllegalArgumentException("Invalid type definition");
             }
+
+            for (HierarchicalTypeDefinition<ClassType> t : typesDef.classTypesAsJavaList()) {
+                if (!AtlasTypeUtil.isValidTypeName(t.typeName))
+                    throw new AtlasException("Only characters, numbers and '_' are allowed in class names. " + t.toString());
+            }
+
+            for (StructTypeDefinition t : typesDef.structTypesAsJavaList()) {
+                if (!AtlasTypeUtil.isValidTypeName(t.typeName))
+                    throw new AtlasException("Only characters, numbers and '_' are allowed in struct names. " + t.toString());
+            }
+
+            for (EnumTypeDefinition t : typesDef.enumTypesAsJavaList()) {
+                if (!AtlasTypeUtil.isValidTypeName(t.name))
+                    throw new AtlasException("Only characters, numbers and '_' are allowed in enum names. " + t.toString());
+            }
+
+            for (HierarchicalTypeDefinition<TraitType> t : typesDef.traitTypesAsJavaList()) {
+                if (!AtlasTypeUtil.isValidTypeName(t.typeName))
+                    throw new AtlasException("Only characters, numbers and '_' are allowed in trait names. " + t.toString());
+            }
+
             return typesDef;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             LOG.error("Unable to deserialize json={}", typeDefinition, e);
             throw new IllegalArgumentException("Unable to deserialize json " + typeDefinition, e);
         }
@@ -460,30 +486,30 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
 
             DataTypes.TypeCategory attrTypeCategory = attributeInfo.dataType().getTypeCategory();
             Object value = updatedEntity.get(attributeName);
-            if (value != null) {
-                switch (attrTypeCategory) {
-                    case CLASS:
+            switch (attrTypeCategory) {
+                case CLASS:
+                    if (value != null) {
                         if (value instanceof Referenceable) {
                             newInstance.set(attributeName, value);
                         } else {
                             Id id = new Id((String) value, 0, attributeInfo.dataType().getName());
                             newInstance.set(attributeName, id);
                         }
-                        break;
+                    }
+                    break;
 
-                    case ENUM:
-                    case PRIMITIVE:
-                    case ARRAY:
-                    case STRUCT:
-                    case MAP:
-                        newInstance.set(attributeName, value);
-                        break;
+                case ENUM:
+                case PRIMITIVE:
+                case ARRAY:
+                case STRUCT:
+                case MAP:
+                    newInstance.set(attributeName, value);
+                    break;
 
-                    case TRAIT:
-                        //TODO - handle trait updates as well?
-                    default:
-                        throw new AtlasException("Update of " + attrTypeCategory + " is not supported");
-                }
+                case TRAIT:
+                    //TODO - handle trait updates as well?
+                default:
+                    throw new AtlasException("Update of " + attrTypeCategory + " is not supported");
             }
         }
 
@@ -748,7 +774,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
             TypeSystem.TransientTypeSystem transientTypeSystem
                     = typeSystem.createTransientTypeSystem(typesDef, false);
             Map<String, IDataType> typesAdded = transientTypeSystem.getTypesAdded();
-            LOG.info("Number of types got from transient type system: " + typesAdded.size());
+            LOG.info("Number of types got from transient type system: {}", typesAdded.size());
             typeSystem.commitTypes(typesAdded);
         } catch (AtlasException e) {
             LOG.error("Failed to restore type-system after TypeRegistry changes", e);

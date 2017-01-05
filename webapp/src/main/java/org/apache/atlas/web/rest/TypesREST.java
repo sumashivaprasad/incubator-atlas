@@ -34,8 +34,6 @@ import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.web.util.Servlets;
 import org.apache.http.annotation.Experimental;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
@@ -305,12 +303,7 @@ public class TypesREST {
     public AtlasEntityDef createEntityDef(AtlasEntityDef entityDef) throws AtlasBaseException {
         AtlasEntityDef ret = typeDefStore.createEntityDef(entityDef);
 
-        try {
-            ret = typeDefStore.createEntityDef(entityDef);
-            return ret;
-        } catch (AtlasBaseException ex) {
-            throw new WebApplicationException(Servlets.getErrorResponse(ex, Response.Status.BAD_REQUEST));
-        }
+        return ret;
     }
 
     @GET
@@ -336,10 +329,8 @@ public class TypesREST {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Experimental
-    public AtlasEntityDef updateEntityDefByName(@PathParam("name") String name, AtlasEntityDef entityDef) throws Exception {
-        AtlasEntityDef ret = null;
-
-        ret = typeDefStore.updateEntityDefByName(name, entityDef);
+    public AtlasEntityDef updateEntityDefByName(@PathParam("name") String name, AtlasEntityDef entityDef) throws AtlasBaseException {
+        AtlasEntityDef ret = typeDefStore.updateEntityDefByName(name, entityDef);
 
         return ret;
     }
@@ -349,10 +340,8 @@ public class TypesREST {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Experimental
-    public AtlasEntityDef updateEntityDefByGuid(@PathParam("guid") String guid, AtlasEntityDef entityDef) throws Exception {
-        AtlasEntityDef ret = null;
-
-        ret = typeDefStore.updateEntityDefByGuid(guid, entityDef);
+    public AtlasEntityDef updateEntityDefByGuid(@PathParam("guid") String guid, AtlasEntityDef entityDef) throws AtlasBaseException {
+        AtlasEntityDef ret = typeDefStore.updateEntityDefByGuid(guid, entityDef);
 
         return ret;
     }
@@ -361,7 +350,7 @@ public class TypesREST {
     @Path("/entitydef/name/{name}")
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Experimental
-    public void deleteEntityDef(@PathParam("name") String name) throws Exception {
+    public void deleteEntityDef(@PathParam("name") String name) throws AtlasBaseException {
         typeDefStore.deleteEntityDefByName(name);
     }
 
@@ -369,7 +358,7 @@ public class TypesREST {
     @Path("/entitydef/guid/{guid}")
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Experimental
-    public void deleteEntityDefByGuid(@PathParam("guid") String guid) throws Exception {
+    public void deleteEntityDefByGuid(@PathParam("guid") String guid) throws AtlasBaseException {
         typeDefStore.deleteEntityDefByGuid(guid);
     }
 
@@ -448,14 +437,8 @@ public class TypesREST {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Experimental
-    public AtlasTypesDef updateAtlasTypeDefs(final AtlasTypesDef typesDef) throws Exception {
-        AtlasTypesDef ret = null;
-
-        try {
-            ret = typeDefStore.updateTypesDef(typesDef);
-        } catch (AtlasBaseException ex) {
-            throw new WebApplicationException(Servlets.getErrorResponse(ex, ex.getAtlasErrorCode().getHttpCode()));
-        }
+    public AtlasTypesDef updateAtlasTypeDefs(final AtlasTypesDef typesDef) throws AtlasBaseException {
+        AtlasTypesDef ret = typeDefStore.updateTypesDef(typesDef);
 
         return ret;
     }
@@ -470,12 +453,8 @@ public class TypesREST {
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Experimental
-    public void deleteAtlasTypeDefs(final AtlasTypesDef typesDef) {
-        try {
-            typeDefStore.deleteTypesDef(typesDef);
-        } catch (AtlasBaseException ex) {
-            throw new WebApplicationException(Servlets.getErrorResponse(ex, Response.Status.NOT_MODIFIED));
-        }
+    public void deleteAtlasTypeDefs(final AtlasTypesDef typesDef) throws AtlasBaseException {
+        typeDefStore.deleteTypesDef(typesDef);
     }
 
     /**

@@ -194,10 +194,12 @@ public final class TypedInstanceToGraphMapper {
 
     void mapAttributeToVertex(ITypedInstance typedInstance, AtlasVertex instanceVertex,
                               AttributeInfo attributeInfo, Operation operation) throws AtlasException {
-        Object attrValue = typedInstance.get(attributeInfo.name);
-        LOG.debug("Mapping attribute {} = {}", attributeInfo.name, attrValue);
 
-        if (attrValue != null  || operation == Operation.UPDATE_FULL) {
+        if ( typedInstance.isValueSet(attributeInfo.name) || operation == Operation.CREATE ) {
+
+            Object attrValue = typedInstance.get(attributeInfo.name);
+            LOG.debug("Mapping attribute {} = {}", attributeInfo.name, attrValue);
+
             switch (attributeInfo.dataType().getTypeCategory()) {
             case PRIMITIVE:
             case ENUM:
@@ -323,10 +325,6 @@ public final class TypedInstanceToGraphMapper {
         List newElements = (List) typedInstance.get(attributeInfo.name);
         boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
 
-        if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
-            return;
-        }
-
         IDataType elementType = ((DataTypes.ArrayType) attributeInfo.dataType()).getElemType();
         String propertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
         
@@ -401,9 +399,6 @@ public final class TypedInstanceToGraphMapper {
                 (Map<Object, Object>) typedInstance.get(attributeInfo.name);
 
         boolean newAttributeEmpty = (newAttribute == null || newAttribute.isEmpty());
-        if (newAttributeEmpty && operation != Operation.UPDATE_FULL) {
-            return;
-        }
 
         IDataType elementType = ((DataTypes.MapType) attributeInfo.dataType()).getValueType();
         String propertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
@@ -588,7 +583,7 @@ public final class TypedInstanceToGraphMapper {
             String edgeLabel) throws AtlasException {
         AtlasVertex newReferenceVertex = getClassVertex(newAttributeValue);
         if( ! GraphHelper.elementExists(newReferenceVertex) && newAttributeValue != null) {
-            LOG.error("Could not find vertex for Class Reference " + newAttributeValue);
+            LOG.error("Could not find vertex for Class Reference {}", newAttributeValue);
             throw new EntityNotFoundException("Could not find vertex for Class Reference " + newAttributeValue);
         }
 
@@ -632,7 +627,7 @@ public final class TypedInstanceToGraphMapper {
 
         if (id.isUnassigned()) {
             AtlasVertex classVertex = idToVertexMap.get(id);
-            String guid = GraphHelper.getIdFromVertex(classVertex);
+            String guid = GraphHelper.getGuid(classVertex);
             id = new Id(guid, 0, typedReference.getTypeName());
         }
         return id;
@@ -646,7 +641,7 @@ public final class TypedInstanceToGraphMapper {
         LOG.debug("Updating {} for reference attribute {}", string(currentEdge), attributeInfo.name);
         // Update edge if it exists
         AtlasVertex currentVertex = currentEdge.getInVertex();
-        String currentEntityId = GraphHelper.getIdFromVertex(currentVertex);
+        String currentEntityId = GraphHelper.getGuid(currentVertex);
         String newEntityId = getId(newAttributeValue).id;
         AtlasEdge newEdge = currentEdge;
         if (!currentEntityId.equals(newEntityId)) {
@@ -687,7 +682,7 @@ public final class TypedInstanceToGraphMapper {
         final String vertexPropertyName = GraphHelper.getQualifiedFieldName(typedInstance, attributeInfo);
         Object propertyValue = null;
 
-        if (attrValue == null ) {
+        if (attrValue == null) {
             propertyValue = null;
         } else if (attributeInfo.dataType() == DataTypes.STRING_TYPE) {
             propertyValue = typedInstance.getString(attributeInfo.name);
@@ -712,12 +707,12 @@ public final class TypedInstanceToGraphMapper {
         } else if (attributeInfo.dataType() == DataTypes.DATE_TYPE) {
             final Date dateVal = typedInstance.getDate(attributeInfo.name);
             //Convert Property value to Long  while persisting
-            if(dateVal != null) {
+            if (dateVal != null) {
                 propertyValue = dateVal.getTime();
             }
         } else if (attributeInfo.dataType().getTypeCategory() == DataTypes.TypeCategory.ENUM) {
             if (attrValue != null) {
-                propertyValue = ((EnumValue)attrValue).value;
+                propertyValue = ((EnumValue) attrValue).value;
             }
         }
 

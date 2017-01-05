@@ -165,10 +165,7 @@ public class TypesResource {
             response.put(AtlasClient.REQUEST_ID, Servlets.getRequestId());
             response.put(AtlasClient.TYPES, typesResponse);
             return Response.ok().entity(response).build();
-        } catch (TypeExistsException e) {
-            LOG.error("Type already exists", e);
-            throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.CONFLICT));
-        } catch (AtlasException | IllegalArgumentException e) {
+        } catch (AtlasBaseException | IllegalArgumentException e) {
             LOG.error("Unable to persist types", e);
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.BAD_REQUEST));
         } catch (WebApplicationException e) {
@@ -268,9 +265,8 @@ public class TypesResource {
 
             return Response.ok(response).build();
         } catch (AtlasBaseException e) {
-            LOG.error("Given search filter did not yield any results");
-            throw new WebApplicationException(
-                    Servlets.getErrorResponse(new Exception("Given search filter did not yield any results "), Response.Status.BAD_REQUEST));
+            LOG.warn("TypesREST exception: {} {}", e.getClass().getSimpleName(), e.getMessage());
+            throw new WebApplicationException(Servlets.getErrorResponse(e, e.getAtlasErrorCode().getHttpCode()));
         } catch (Throwable e) {
             LOG.error("Unable to get types list", e);
             throw new WebApplicationException(Servlets.getErrorResponse(e, Response.Status.INTERNAL_SERVER_ERROR));

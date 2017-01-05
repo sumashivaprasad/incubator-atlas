@@ -58,7 +58,7 @@ define(['require',
              * @constructs
              */
             initialize: function(options) {
-                _.extend(this, _.pick(options, 'globalVent', 'guid'));
+                _.extend(this, _.pick(options, 'globalVent', 'guid', 'vent', 'entityObject'));
                 this.entityCollection = new VEntityList();
                 this.count = 26;
                 this.entityCollection.url = UrlLinks.entityCollectionaudit(this.guid);
@@ -79,6 +79,7 @@ define(['require',
                     paginatorOpts: {}
                 };
                 this.currPage = 1;
+                this.bindEvents();
                 // this.pageFrom = 1;
                 // this.pageTo = this.count;
             },
@@ -90,6 +91,17 @@ define(['require',
                     previous: this.ui.previousAuditData
                 });
                 this.renderTableLayoutView();
+            },
+            bindEvents: function() {
+                var that = this;
+                this.listenTo(this.vent, "reset:collection", function() {
+                    this.fetchCollection({
+                        next: this.ui.nextAuditData,
+                        nextClick: false,
+                        previous: this.ui.previousAuditData
+                    });
+                }, this);
+
             },
             getToOffset: function() {
                 var toOffset = 0;
@@ -141,7 +153,6 @@ define(['require',
                         if ((that.entityCollection.models.length < that.count && that.currPage == 1) && that.next == that.entityCollection.last().get('eventKey')) {
                             options.next.attr('disabled', true);
                             options.previous.removeAttr("disabled");
-                            //that.renderTableLayoutView();
                         } else {
                             if (that.entityCollection.models.length > 0) {
                                 that.next = that.entityCollection.last().get('eventKey');
@@ -149,8 +160,9 @@ define(['require',
                                     options.previous.attr('disabled', true);
                                 }
                             }
-                            that.renderTableLayoutView();
+
                         }
+                        that.renderTableLayoutView();
                     },
                     silent: true
                 });
@@ -227,7 +239,7 @@ define(['require',
                     that.action = $(e.target).data("action");
                     var eventModel = that.entityCollection.findWhere({ 'eventKey': $(e.currentTarget).data('modalid') }).toJSON(),
                         collectionModel = new that.entityCollection.model(eventModel),
-                        view = new CreateAuditTableLayoutView({ guid: that.guid, entityModel: collectionModel, action: that.action });
+                        view = new CreateAuditTableLayoutView({ guid: that.guid, entityModel: collectionModel, action: that.action, entityObject: that.entityObject });
                     var modal = new Modal({
                         title: that.action,
                         content: view,

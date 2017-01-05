@@ -24,7 +24,7 @@ import javax.ws.rs.core.Response;
 import java.text.MessageFormat;
 import java.util.Arrays;
 public enum AtlasErrorCode {
-    NO_SEARCH_RESULTS(204, "ATLAS2041E", "Given search filter did not yield any results"),
+    NO_SEARCH_RESULTS(204, "ATLAS2041E", "Given search filter {0} did not yield any results"),
 
     // All Bad request enums go here
     UNKNOWN_TYPE(400, "ATLAS4001E", "Unknown type {0} for {1}.{2}"),
@@ -51,6 +51,7 @@ public enum AtlasErrorCode {
     PATCH_NOT_APPLICABLE_FOR_TYPE(400, "ATLAS40022E", "{0} - invalid patch for type {1}"),
     PATCH_FOR_UNKNOWN_TYPE(400, "ATLAS40023E", "{0} - patch references unknown type {1}"),
     PATCH_INVALID_DATA(400, "ATLAS40024E", "{0} - patch data is invalid for type {1}"),
+    TYPE_NAME_INVALID_FORMAT(400, "ATLAS40025E", "{0}: invalid name for {1}. Only alphanumeric and '_' are allowed."),
 
     // All Not found enums go here
     TYPE_NAME_NOT_FOUND(404, "ATLAS4041E", "Given typename {0} was invalid"),

@@ -57,7 +57,7 @@ public class GraphTransactionInterceptor implements MethodInterceptor {
                 if (logException(t)) {
                     LOG.error("graph rollback due to exception ", t);
                 } else {
-                    LOG.error("graph rollback due to exception " + t.getClass().getSimpleName() + ":" + t.getMessage());
+                    LOG.error("graph rollback due to exception {}:{}", t.getClass().getSimpleName(), t.getMessage());
                 }
                 graph.rollback();
                 throw t;
@@ -80,9 +80,14 @@ public class GraphTransactionInterceptor implements MethodInterceptor {
     }
 
     boolean logException(Throwable t) {
-        return !(t instanceof NotFoundException) &&
-                ((t instanceof AtlasBaseException) &&
-                        ((AtlasBaseException) t).getAtlasErrorCode().getHttpCode() != Response.Status.NOT_FOUND);
+        if (t instanceof AtlasBaseException) {
+            Response.Status httpCode = ((AtlasBaseException) t).getAtlasErrorCode().getHttpCode();
+            return httpCode != Response.Status.NOT_FOUND && httpCode != Response.Status.NO_CONTENT;
+        } else if (t instanceof NotFoundException) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     public static abstract class PostTransactionHook {

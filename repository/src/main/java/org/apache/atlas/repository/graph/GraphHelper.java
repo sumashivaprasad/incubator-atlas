@@ -505,12 +505,17 @@ public final class GraphHelper {
     }
 
     public static Id getIdFromVertex(String dataTypeName, AtlasVertex vertex) {
-        return new Id(getIdFromVertex(vertex),
-            vertex.getProperty(Constants.VERSION_PROPERTY_KEY, Integer.class), dataTypeName, getStateAsString(vertex));
+        return new Id(getGuid(vertex),
+                getVersion(vertex), dataTypeName,
+                getStateAsString(vertex));
     }
 
-    public static String getIdFromVertex(AtlasVertex vertex) {
-        return vertex.getProperty(Constants.GUID_PROPERTY_KEY, String.class);
+    public static Id getIdFromVertex(AtlasVertex vertex) {
+        return getIdFromVertex(getTypeName(vertex), vertex);
+    }
+
+    public static String getGuid(AtlasVertex vertex) {
+        return vertex.<String>getProperty(Constants.GUID_PROPERTY_KEY, String.class);
     }
 
     public static String getTypeName(AtlasVertex instanceVertex) {
@@ -520,6 +525,10 @@ public final class GraphHelper {
     public static Id.EntityState getState(AtlasElement element) {
         String state = getStateAsString(element);
         return state == null ? null : Id.EntityState.valueOf(state);
+    }
+
+    public static Integer getVersion(AtlasElement element) {
+        return element.getProperty(Constants.VERSION_PROPERTY_KEY, Integer.class);
     }
 
     public static String getStateAsString(AtlasElement element) {
@@ -564,7 +573,7 @@ public final class GraphHelper {
                     result = findVertex(propertyKey, instance.get(attributeInfo.name),
                             Constants.ENTITY_TYPE_PROPERTY_KEY, classType.getName(),
                             Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
-                    LOG.debug("Found vertex by unique attribute : " + propertyKey + "=" + instance.get(attributeInfo.name));
+                    LOG.debug("Found vertex by unique attribute : {}={}", propertyKey, instance.get(attributeInfo.name));
                 } catch (EntityNotFoundException e) {
                     //Its ok if there is no entity with the same unique value
                 }
@@ -629,7 +638,7 @@ public final class GraphHelper {
         while (vertices.size() > 0) {
             AtlasVertex vertex = vertices.pop();
             String typeName = GraphHelper.getTypeName(vertex);
-            String guid = GraphHelper.getIdFromVertex(vertex);
+            String guid = GraphHelper.getGuid(vertex);
             Id.EntityState state = GraphHelper.getState(vertex);
             if (state == Id.EntityState.DELETED) {
                 //If the reference vertex is marked for deletion, skip it
@@ -814,7 +823,7 @@ public final class GraphHelper {
     public static String getVertexDetails(AtlasVertex<?,?> vertex) {
 
         return String.format("vertex[id=%s type=%s guid=%s]", vertex.getIdForDisplay(), getTypeName(vertex),
-                getIdFromVertex(vertex));
+                getGuid(vertex));
     }
 
 
