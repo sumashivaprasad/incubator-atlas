@@ -21,7 +21,10 @@ import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.EntityMutationResponse;
+import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
+import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -37,22 +40,21 @@ public class AtlasEntityStoreV1Test {
     @Inject
     AtlasTypeRegistry typeRegistry;
 
+    @Inject
+    AtlasEntityStore entityStore;
+
     @BeforeClass
     public void setUp() throws Exception {
-        new GraphBackedSearchIndexer(new AtlasTypeRegistry());
+        new GraphBackedSearchIndexer(typeRegistry);
         TestUtilsV2.defineDeptEmployeeTypes();
     }
-
-
 
     @Test
     public void testCreate() throws Exception {
         AtlasEntity hrDept = TestUtilsV2.createDeptEg1();
 
-        List<String> guids = .createEntities(hrDept);
-        Assert.assertNotNull(guids);
-        Assert.assertEquals(guids.size(), 5);
-        guid = guids.get(4);
-        Assert.assertNotNull(guid);
+        EntityMutationResponse response = entityStore.createOrUpdate(hrDept);
+        Assert.assertNotNull(response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE));
+        Assert.assertEquals(response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE).size(), 5);
     }
 }

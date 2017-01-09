@@ -88,6 +88,10 @@ public class RequestContextV1 {
         this.createdEntityIds.addAll(createdEntityIds);
     }
 
+    public void recordEntityCreate(String createdEntityId) {
+        this.createdEntityIds.add(createdEntityId);
+    }
+
     public void recordEntityUpdate(Collection<String> updatedEntityIds) {
         this.updatedEntityIds.addAll(updatedEntityIds);
     }
@@ -95,7 +99,6 @@ public class RequestContextV1 {
     public void recordEntityUpdate(String entityId) {
         this.updatedEntityIds.add(entityId);
     }
-
     public void recordEntityDelete(String entityId) {
         deletedEntityIds.add(entityId);
     }

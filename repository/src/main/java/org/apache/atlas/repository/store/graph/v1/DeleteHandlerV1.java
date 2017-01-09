@@ -83,7 +83,7 @@ public abstract class DeleteHandlerV1 {
         Set<AtlasVertex> deletionCandidateVertices = new HashSet<>();
 
         for (AtlasVertex instanceVertex : instanceVertices) {
-            String guid = GraphHelper.getIdFromVertex(instanceVertex);
+            String guid = GraphHelper.getGuid(instanceVertex);
             AtlasEntity.Status state = AtlasGraphUtilsV1.getState(instanceVertex);
             if (requestContext.getDeletedEntityIds().contains(guid) || state == AtlasEntity.Status.STATUS_DELETED) {
                 LOG.debug("Skipping deletion of {} as it is already deleted", guid);
@@ -123,7 +123,7 @@ public abstract class DeleteHandlerV1 {
         while (vertices.size() > 0) {
             AtlasVertex vertex = vertices.pop();
             String typeName = GraphHelper.getTypeName(vertex);
-            String guid = GraphHelper.getIdFromVertex(vertex);
+            String guid = GraphHelper.getGuid(vertex);
             AtlasEntity.Status state = AtlasGraphUtilsV1.getState(vertex);
             if (state == AtlasEntity.Status.STATUS_DELETED) {
                 //If the reference vertex is marked for deletion, skip it
@@ -380,7 +380,7 @@ public abstract class DeleteHandlerV1 {
         LOG.debug("Removing edge from {} to {} with attribute name {}", string(outVertex), string(inVertex),
             attributeName);
         String typeName = GraphHelper.getTypeName(outVertex);
-        String outId = GraphHelper.getIdFromVertex(outVertex);
+        String outId = GraphHelper.getGuid(outVertex);
         AtlasEntity.Status state = AtlasGraphUtilsV1.getState(outVertex);
         if ((outId != null && RequestContext.get().isDeletedEntity(outId)) || state == AtlasEntity.Status.STATUS_DELETED) {
             //If the reference vertex is marked for deletion, skip updating the reference

@@ -2,7 +2,7 @@ package org.apache.atlas.repository.store.graph.v1;
 
 
 import com.google.common.base.Optional;
-import com.google.inject.Singleton;
+import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -14,6 +14,7 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.type.AtlasEntityType;
@@ -21,11 +22,7 @@ import org.apache.atlas.type.AtlasStructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.text.html.Option;
-import java.util.Iterator;
 import java.util.UUID;
-
-import static org.apache.atlas.repository.graph.GraphHelper.string;
 
 public class EntityVertexMapper extends StructVertexMapper {
 
@@ -33,10 +30,10 @@ public class EntityVertexMapper extends StructVertexMapper {
 
     private GraphHelper graphHelper = GraphHelper.getInstance();
 
-    EntityGraphDiscoveryContext context;
+    EntityGraphDiscoveryContext context = new EntityGraphDiscoveryContext();
 
-    public EntityVertexMapper(EntityGraphDiscoveryContext context) {
-        this.context = context;
+    public EntityVertexMapper(final AtlasGraph graph, final MapVertexMapper mapVertexMapper, final ArrayVertexMapper arrayVertexMapper) {
+        super(graph, mapVertexMapper, arrayVertexMapper);
     }
 
     @Override
@@ -96,7 +93,7 @@ public class EntityVertexMapper extends StructVertexMapper {
         // Update edge if it exists
 
         AtlasVertex currentVertex = existingEdge.getOutVertex();
-        String currentEntityId = GraphHelper.getIdFromVertex(currentVertex);
+        String currentEntityId = AtlasGraphUtilsV1.getIdFromVertex(currentVertex);
         String newEntityId = getId(value);
         AtlasEdge newEdge = existingEdge;
         if (!currentEntityId.equals(newEntityId)) {

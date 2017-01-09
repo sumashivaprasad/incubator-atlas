@@ -2,6 +2,7 @@ package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.atlas.aspect.Monitored;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.typedef.AtlasStructDef;
@@ -14,6 +15,7 @@ import org.apache.atlas.type.AtlasType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,11 +28,12 @@ public class ArrayVertexMapper {
 
     private DeleteHandlerV1 deleteHandler;
 
-    private StructVertexMapper structVertexMapper = new StructVertexMapper();
+    private final Provider<StructVertexMapper> structVertexMapperProvider;
 
     @Inject
-    public ArrayVertexMapper(DeleteHandlerV1 deleteHandler) {
+    public ArrayVertexMapper(DeleteHandlerV1 deleteHandler, Provider<StructVertexMapper> structVertexMapper) {
         this.deleteHandler = deleteHandler;
+        this.structVertexMapperProvider = structVertexMapper;
     }
 
     public Collection<Object> toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasArrayType arrType, Object val, AtlasVertex instanceVertex, String vertexPropertyName) throws AtlasBaseException {
@@ -56,7 +59,7 @@ public class ArrayVertexMapper {
                     LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
                         currentElement, newElements.get(index));
                     Optional<AtlasEdge> existingEdge = getEdgeIfExists(arrType, currentElements, index);
-                    Object newEntry = structVertexMapper.mapCollectionElementsToVertex(parentType, attributeDef, elementType, val, instanceVertex, vertexPropertyName, existingEdge);
+                    Object newEntry = structVertexMapperProvider.get().mapCollectionElementsToVertex(parentType, attributeDef, elementType, val, instanceVertex, vertexPropertyName, existingEdge);
                     newElementsCreated.add(newEntry);
                 }
             }

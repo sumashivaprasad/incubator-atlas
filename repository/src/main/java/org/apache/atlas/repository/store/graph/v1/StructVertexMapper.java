@@ -3,6 +3,7 @@ package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -31,7 +32,7 @@ public class StructVertexMapper {
 
     private AtlasGraph graph;
 
-    private GraphHelper graphHelper;
+    private GraphHelper graphHelper = GraphHelper.getInstance();
 
     private MapVertexMapper mapVertexMapper;
 
@@ -39,7 +40,20 @@ public class StructVertexMapper {
 
     private EntityVertexMapper entityVertexMapper;
 
+    public StructVertexMapper(final AtlasGraph graph, final MapVertexMapper mapVertexMapper, final ArrayVertexMapper arrayVertexMapper) {
+        this.graph = graph;
+        this.mapVertexMapper = mapVertexMapper;
+        this.arrVertexMapper = arrayVertexMapper;
+    }
+
+    @Inject
+    public StructVertexMapper(AtlasGraph graph, MapVertexMapper mapVertexMapper, ArrayVertexMapper arrayVertexMapper, EntityVertexMapper entityVertexMapper) {
+        this(graph, mapVertexMapper, arrayVertexMapper);
+        this.entityVertexMapper = entityVertexMapper;
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(StructVertexMapper.class);
+
 
 
     public Object toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
@@ -70,7 +84,6 @@ public class StructVertexMapper {
      * @throws AtlasBaseException
      */
     public AtlasVertex mapAttributestoVertex(AtlasStructType structType, AtlasStruct struct, AtlasVertex vertex) throws AtlasBaseException {
-
         if (struct.getAttributes() != null) {
             for (String attrName : struct.getAttributes().keySet()) {
                 Object value = struct.getAttribute(attrName);
@@ -84,17 +97,17 @@ public class StructVertexMapper {
         return vertex;
     }
 
-    public Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
+    protected Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
         switch(attrType.getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
-            return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
+            return primitivesToVertex(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
         case STRUCT:
             return toVertex((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
         case ENTITY:
             return entityVertexMapper.toVertex((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
         case MAP:
-            return mapVertexMapper.createOrUpdate((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
+            return mapVertexMapper.toVertex((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
         case ARRAY:
             return arrVertexMapper.toVertex((AtlasStructType) parentType, attributeDef, (AtlasArrayType) attrType, value, vertex, vertexPropertyName);
         default:
@@ -102,7 +115,7 @@ public class StructVertexMapper {
         }
     }
 
-    public Object createOrUpdatePrimitives(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object val, AtlasVertex vertex, String vertexPropertyName) {
+    protected Object primitivesToVertex(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object val, AtlasVertex vertex, String vertexPropertyName) {
         if ( parentType.getTypeCategory() == TypeCategory.MAP ) {
             MapVertexMapper.setMapValueProperty(((AtlasMapType)parentType).getValueType(), vertex, vertexPropertyName, val);
         } else {
@@ -148,7 +161,7 @@ public class StructVertexMapper {
         switch(attrType.getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
-            return createOrUpdatePrimitives(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
+            return primitivesToVertex(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
         case STRUCT:
             return toVertex((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
         case ENTITY:

@@ -3,6 +3,7 @@ package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -19,6 +20,7 @@ import org.apache.commons.collections.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Provider;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,16 +34,17 @@ public class MapVertexMapper {
 
     private DeleteHandlerV1 deleteHandler;
 
-    private StructVertexMapper structVertexMapper = new StructVertexMapper();
-
     private static final Logger LOG = LoggerFactory.getLogger(MapVertexMapper.class);
 
+    private final Provider<StructVertexMapper> structVertexMapperProvider;
+
     @Inject
-    public MapVertexMapper(DeleteHandlerV1 deleteHandler) {
+    public MapVertexMapper(DeleteHandlerV1 deleteHandler, Provider<StructVertexMapper> structVertexMapper) {
         this.deleteHandler = deleteHandler;
+        this.structVertexMapperProvider = structVertexMapper;
     }
 
-    public Map<String, Object> createOrUpdate(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasMapType mapType, Object val, AtlasVertex vertex, String vertexPropertyName) throws AtlasBaseException {
+    public Map<String, Object> toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasMapType mapType, Object val, AtlasVertex vertex, String vertexPropertyName) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Mapping instance to vertex {} for map type {}", string(vertex), mapType.getTypeName());
@@ -71,7 +74,7 @@ public class MapVertexMapper {
                     String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, keyStr);
 
                     Optional<AtlasEdge> existingEdge = getEdgeIfExists(mapType, currentMap, keyStr);
-                    Object newEntry = structVertexMapper.mapCollectionElementsToVertex(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
+                    Object newEntry = structVertexMapperProvider.get().mapCollectionElementsToVertex(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
                     newMap.put(keyStr, newEntry);
                 }
             }

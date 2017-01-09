@@ -42,12 +42,15 @@ import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
 import org.apache.atlas.repository.store.graph.EntityResolver;
+import org.apache.atlas.repository.store.graph.v1.ArrayVertexMapper;
 import org.apache.atlas.repository.store.graph.v1.AtlasEntityGraphDiscoveryV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasEntityStoreV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasTypeDefGraphStoreV1;
 import org.apache.atlas.repository.store.graph.v1.DeleteHandlerV1;
 import org.apache.atlas.repository.store.graph.v1.EntityVertexMapper;
 import org.apache.atlas.repository.store.graph.v1.IDBasedEntityResolver;
+import org.apache.atlas.repository.store.graph.v1.MapVertexMapper;
+import org.apache.atlas.repository.store.graph.v1.StructVertexMapper;
 import org.apache.atlas.repository.store.graph.v1.UniqAttrBasedEntityResolver;
 import org.apache.atlas.repository.typestore.GraphBackedTypeStore;
 import org.apache.atlas.repository.typestore.ITypeStore;
@@ -113,6 +116,14 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         bind(DeleteHandlerV1.class).to(AtlasRepositoryConfiguration.getDeleteHandlerV1Impl()).asEagerSingleton();
 
         bind(TypeCache.class).to(AtlasRepositoryConfiguration.getTypeCache()).asEagerSingleton();
+
+        bind(StructVertexMapper.class);
+
+        bind(EntityVertexMapper.class);
+
+        bind(MapVertexMapper.class).asEagerSingleton();
+
+        bind(ArrayVertexMapper.class).asEagerSingleton();
 
         //Add EntityAuditListener as EntityChangeListener
         Multibinder<EntityChangeListener> entityChangeListenerBinder =

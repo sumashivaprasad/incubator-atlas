@@ -43,10 +43,6 @@ public final class EntityGraphDiscoveryContext {
         return repositoryResolvedReferences.containsKey(entity);
     }
 
-    AtlasVertex getResolvedVertex(AtlasEntity entity) {
-        return repositoryResolvedReferences.get(entity);
-    }
-
     public Map<Object, AtlasVertex> getResolvedReferences() {
         return repositoryResolvedReferences;
     }

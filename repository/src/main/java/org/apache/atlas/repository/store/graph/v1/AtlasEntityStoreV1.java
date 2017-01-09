@@ -21,6 +21,7 @@ package org.apache.atlas.repository.store.graph.v1;
 import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.GraphTransaction;
+import org.apache.atlas.RequestContextV1;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.SearchFilter;
 import org.apache.atlas.model.TypeCategory;
@@ -51,12 +52,15 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     protected EntityGraphDiscovery graphDiscoverer;
     protected AtlasTypeRegistry typeRegistry;
 
-    @Inject
-    EntityVertexMapper vertexMapper;
+    private EntityVertexMapper vertexMapper;
 
     private static final Logger LOG = LoggerFactory.getLogger(AtlasEntityStoreV1.class);
 
-    @Override
+    @Inject
+    public AtlasEntityStoreV1(EntityVertexMapper vertexMapper) {
+        this.vertexMapper = vertexMapper;
+    }
+
     @Inject
     public void init(AtlasTypeRegistry typeRegistry, EntityGraphDiscovery graphDiscoverer) throws AtlasBaseException {
         this.graphDiscoverer = graphDiscoverer;
@@ -132,16 +136,22 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
             if ( discoveredEntities.isResolved(entity) ) {
                 vertex = discoveredEntities.getResolvedReference(entity);
                 context.addUpdated(entity, entityType, vertex);
+
+                RequestContextV1.get().recordEntityUpdate(AtlasGraphUtilsV1.getIdFromVertex(vertex));
             } else {
                 //Create vertices which do not exist in the repository
                 vertex = vertexMapper.createVertexTemplate(entity, entityType);
                 context.addCreated(entity, entityType, vertex);
+
+                RequestContextV1.get().recordEntityCreate(AtlasGraphUtilsV1.getIdFromVertex(vertex));
             }
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("<== AtlasEntityStoreV1.preCreateOrUpdate({}): {}", entity, vertex);
             }
         }
+
+
         return context;
     }
 

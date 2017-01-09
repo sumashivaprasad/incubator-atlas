@@ -36,7 +36,7 @@ public class IDBasedEntityResolver implements EntityResolver {
                 //validate in graph repo that given guid, typename exists
                 Optional<AtlasVertex> vertex = resolveGuid(typeIdPair);
 
-                if ( vertex.isPresent()) {
+                if ( vertex.isPresent() ) {
                     entities.addRepositoryResolvedReference(typeIdPair, vertex.get());
                     resolvedReferences.add(typeIdPair);
                 }
