@@ -24,7 +24,6 @@ public class IDBasedEntityResolver implements EntityResolver {
 
     private GraphHelper graphHelper = GraphHelper.getInstance();
 
-
     public EntityGraphDiscoveryContext resolveEntityReferences(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
 
         init(entities);
