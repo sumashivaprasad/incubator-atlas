@@ -44,7 +44,7 @@ public interface AtlasEntityStore {
      * @param entity
      * @return
      */
-    EntityMutationResponse createOrUpdate(AtlasEntity entity);
+    EntityMutationResponse createOrUpdate(AtlasEntity entity) throws AtlasBaseException;
 
 
     /**

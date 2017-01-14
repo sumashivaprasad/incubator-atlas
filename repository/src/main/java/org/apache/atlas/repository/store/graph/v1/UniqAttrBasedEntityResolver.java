@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.GraphHelper;
@@ -43,7 +44,7 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
             //query in graph repo that given unique attribute - check for deleted also?
             Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
             if (vertex.isPresent()) {
-                entities.addRepositoryResolvedReference(entity, vertex.get());
+                entities.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
                 resolvedReferences.add(entity);
             }
         }
@@ -59,7 +60,8 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
             if ( !entities.isResolved(entity) ) {
                 Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
                 if (vertex.isPresent()) {
-                    entities.addRepositoryResolvedReference(entity, vertex.get());
+                    entities.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
+                    entities.removeUnResolvedEntityReference(entity);
                 }
             }
         }
@@ -78,7 +80,8 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
                     try {
                         vertex = graphHelper.findVertex(qualifiedAttrName, attrVal,
                             Constants.ENTITY_TYPE_PROPERTY_KEY, entityType.getTypeName(),
-                            Constants.STATE_PROPERTY_KEY, AtlasEntity.Status.STATUS_ACTIVE.name());
+                            Constants.STATE_PROPERTY_KEY, AtlasEntity.Status.ACTIVE
+                                .name());
                         LOG.debug("Found vertex by unique attribute : " + qualifiedAttrName + "=" + attrVal);
                         if (vertex != null) {
                             return Optional.of(vertex);

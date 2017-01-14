@@ -30,40 +30,45 @@ import java.util.Set;
 
 import static org.apache.atlas.repository.graph.GraphHelper.string;
 
-public class MapVertexMapper {
+public class MapVertexMapper implements InstanceGraphMapper<Map> {
 
     private DeleteHandlerV1 deleteHandler;
 
     private static final Logger LOG = LoggerFactory.getLogger(MapVertexMapper.class);
 
-    private final Provider<StructVertexMapper> structVertexMapperProvider;
+    private StructVertexMapper structVertexMapper;
 
     @Inject
-    public MapVertexMapper(DeleteHandlerV1 deleteHandler, Provider<StructVertexMapper> structVertexMapper) {
+    public MapVertexMapper(DeleteHandlerV1 deleteHandler) {
         this.deleteHandler = deleteHandler;
-        this.structVertexMapperProvider = structVertexMapper;
     }
 
-    public Map<String, Object> toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasMapType mapType, Object val, AtlasVertex vertex, String vertexPropertyName) throws AtlasBaseException {
+    void init(StructVertexMapper structVertexMapper) {
+        this.structVertexMapper = structVertexMapper;
+    }
+
+    public Map<String, Object> toGraph(GraphMutationContext ctx) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Mapping instance to vertex {} for map type {}", string(vertex), mapType.getTypeName());
+            LOG.debug("Mapping instance to vertex {} for map type {}", string(ctx.getReferringVertex()), ctx.getAttrType().getTypeName());
         }
 
         @SuppressWarnings("unchecked") Map<Object, Object> newVal =
-            (Map<Object, Object>) val;
+            (Map<Object, Object>) ctx.getValue();
 
         boolean newAttributeEmpty = MapUtils.isEmpty(newVal);
 
         Map<String, Object> currentMap = new HashMap<>();
         Map<String, Object> newMap = new HashMap<>();
 
+        AtlasMapType mapType = (AtlasMapType) ctx.getAttrType();
+
         try {
-            List<String> currentKeys = GraphHelper.getListProperty(vertex, vertexPropertyName);
+            List<String> currentKeys = GraphHelper.getListProperty(ctx.getReferringVertex(), ctx.getVertexPropertyKey());
             if (currentKeys != null && !currentKeys.isEmpty()) {
                 for (String key : currentKeys) {
-                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, key);
-                    Object propertyValueForKey = getMapValueProperty(mapType.getValueType(), vertex, propertyNameForKey);
+                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(ctx.getVertexPropertyKey(), key);
+                    Object propertyValueForKey = getMapValueProperty(mapType.getValueType(), ctx.getReferringVertex(), propertyNameForKey);
                     currentMap.put(key, propertyValueForKey);
                 }
             }
@@ -71,23 +76,27 @@ public class MapVertexMapper {
             if (!newAttributeEmpty) {
                 for (Map.Entry<Object, Object> entry : newVal.entrySet()) {
                     String keyStr = entry.getKey().toString();
-                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(vertexPropertyName, keyStr);
-
+                    String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(ctx.getVertexPropertyKey(), keyStr);
                     Optional<AtlasEdge> existingEdge = getEdgeIfExists(mapType, currentMap, keyStr);
-                    Object newEntry = structVertexMapperProvider.get().mapCollectionElementsToVertex(parentType, attributeDef, mapType.getValueType(), entry.getValue(), vertex, propertyNameForKey, existingEdge);
+                    GraphMutationContext mapCtx =  new GraphMutationContext.Builder(ctx.getParentType(), ctx.getStructDef(), ctx.getAttributeDef(), mapType.getValueType(), entry.getValue())
+                        .referringVertex(ctx.getReferringVertex())
+                        .edge(existingEdge.get())
+                        .vertexProperty(propertyNameForKey).build();
+
+
+                    Object newEntry = structVertexMapper.mapCollectionElementsToVertex(mapCtx);
                     newMap.put(keyStr, newEntry);
                 }
             }
 
             Map<String, Object> finalMap =
-                removeUnusedMapEntries(parentType, mapType, attributeDef, vertex, vertexPropertyName, currentMap, newMap);
+                removeUnusedMapEntries(ctx.getParentType(), mapType, ctx.getAttributeDef(), ctx.getReferringVertex(), ctx.getVertexPropertyKey(), currentMap, newMap);
 
             Set<String> newKeys = new HashSet<>(newMap.keySet());
             newKeys.addAll(finalMap.keySet());
 
             // for dereference on way out
-
-            GraphHelper.setListProperty(vertex, vertexPropertyName, new ArrayList<>(newKeys));
+            GraphHelper.setListProperty(ctx.getReferringVertex(), ctx.getVertexPropertyKey(), new ArrayList<>(newKeys));
         } catch (AtlasException e) {
             throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
         }

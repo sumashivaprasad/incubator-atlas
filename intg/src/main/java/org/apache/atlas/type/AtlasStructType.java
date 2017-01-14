@@ -20,6 +20,8 @@ package org.apache.atlas.type;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef;
@@ -52,7 +54,6 @@ public class AtlasStructType extends AtlasType {
     private Map<String, AtlasType>         attrTypes               = Collections.emptyMap();
     private Set<String>                    foreignKeyAttributes    = new HashSet<>();
     private Map<String, TypeAttributePair> mappedFromRefAttributes = new HashMap<>();
-
 
     public AtlasStructType(AtlasStructDef structDef) {
         super(structDef);
@@ -137,6 +138,10 @@ public class AtlasStructType extends AtlasType {
         return  ret;
     }
 
+    public AtlasAttributeDef getAttribute(String attributeName) {
+        return structDef.findAttribute(structDef.getAttributeDefs(), attributeName);
+    }
+
     @Override
     public boolean isValidValue(Object obj) {
         if (obj != null) {
@@ -157,7 +162,7 @@ public class AtlasStructType extends AtlasType {
                     }
                 }
             } else {
-                return false; // invalid type
+                return false;
             }
         }
 
@@ -228,9 +233,13 @@ public class AtlasStructType extends AtlasType {
                         }
                     }
                 }
+            } else if (obj instanceof String) {
+                return AtlasEntity.isAssigned((String) obj) || AtlasEntity.isUnAssigned((String) obj);
+            } else if (obj instanceof AtlasObjectId) {
+                return AtlasEntity.isAssigned(((AtlasObjectId) obj).getGuid()) || AtlasEntity.isUnAssigned(((AtlasObjectId) obj).getGuid());
+
             } else {
                 ret = false;
-
                 messages.add(objName + "=" + obj + ": invalid value for type " + getTypeName());
             }
         }
@@ -446,5 +455,15 @@ public class AtlasStructType extends AtlasType {
             this.typeName      = typeName;
             this.attributeName = attributeName;
         }
+    }
+
+    public String getQualifiedAttributeName(String attrName) throws AtlasBaseException {
+        final String typeName = structDef.getName();
+        return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
+    }
+
+    protected String getQualifiedAttributeName(AtlasStructDef structDef, String attrName) {
+        final String typeName = structDef.getName();
+        return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
     }
 }

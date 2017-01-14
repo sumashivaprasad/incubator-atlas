@@ -20,16 +20,19 @@ package org.apache.atlas.repository.store.graph.v1;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
+import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasBaseTypeDef;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasElement;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.DataTypes;
@@ -40,6 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 
 /**
@@ -90,19 +94,24 @@ public class AtlasGraphUtilsV1 {
         return PROPERTY_PREFIX + "edge." + fromNode + "." + toNode;
     }
 
-    public static String getAttributeEdgeLabel(AtlasType parentType, String attributeName) {
+    public static String getAttributeEdgeLabel(AtlasType parentType, String attributeName) throws AtlasBaseException {
         return GraphHelper.EDGE_LABEL_PREFIX + getQualifiedAttributePropertyKey(parentType, attributeName);
     }
 
-    public static String getQualifiedAttributePropertyKey(AtlasType parentType, String attributeName) {
-        return attributeName.contains(".") ? attributeName : String.format("%s.%s", parentType.getTypeName(), attributeName);
+    public static String getQualifiedAttributePropertyKey(AtlasType parentType, String attributeName) throws AtlasBaseException {
+        switch (parentType.getTypeCategory()) {
+         case STRUCT:
+         case ENTITY:
+         case CLASSIFICATION:
+             return ((AtlasStructType)(parentType)).getQualifiedAttributeName(attributeName);
+        default:
+            throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_TYPE, parentType.getTypeCategory().name());
+        }
     }
 
     public static boolean isReference(AtlasType type) {
-
         return type.getTypeCategory() == TypeCategory.STRUCT ||
             type.getTypeCategory() == TypeCategory.ENTITY;
-
     }
 
     public static String encodePropertyKey(String key) {
@@ -167,7 +176,12 @@ public class AtlasGraphUtilsV1 {
                     LOG.debug("Setting property {} in {}", propertyName, toString(element));
                 }
 
-                element.setProperty(propertyName, value);
+                if ( value instanceof Date) {
+                    Long encodedValue = ((Date) value).getTime();
+                    element.setProperty(propertyName, encodedValue);
+                } else {
+                    element.setProperty(propertyName, value);
+                }
             }
         }
     }

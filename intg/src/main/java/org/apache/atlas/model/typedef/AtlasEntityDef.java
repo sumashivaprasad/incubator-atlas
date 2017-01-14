@@ -20,6 +20,7 @@ package org.apache.atlas.model.typedef;
 import org.apache.atlas.model.PList;
 import org.apache.atlas.model.SearchFilter.SortType;
 import org.apache.atlas.model.TypeCategory;
+import org.apache.atlas.type.AtlasType;
 import org.apache.commons.collections.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;

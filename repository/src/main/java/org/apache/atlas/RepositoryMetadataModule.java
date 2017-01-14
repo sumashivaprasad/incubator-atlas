@@ -24,6 +24,7 @@ import com.google.inject.matcher.Matchers;
 import com.google.inject.multibindings.Multibinder;
 
 import org.aopalliance.intercept.MethodInterceptor;
+import org.apache.atlas.discovery.AtlasLineageService;
 import org.apache.atlas.discovery.DataSetLineageService;
 import org.apache.atlas.discovery.DiscoveryService;
 import org.apache.atlas.discovery.EntityLineageService;
@@ -32,7 +33,6 @@ import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.listener.TypeDefChangeListener;
 import org.apache.atlas.listener.TypesChangeListener;
-import org.apache.atlas.model.lineage.AtlasLineageService;
 import org.apache.atlas.repository.MetadataRepository;
 import org.apache.atlas.repository.audit.EntityAuditListener;
 import org.apache.atlas.repository.audit.EntityAuditRepository;
@@ -47,10 +47,9 @@ import org.apache.atlas.repository.store.graph.v1.AtlasEntityGraphDiscoveryV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasEntityStoreV1;
 import org.apache.atlas.repository.store.graph.v1.AtlasTypeDefGraphStoreV1;
 import org.apache.atlas.repository.store.graph.v1.DeleteHandlerV1;
-import org.apache.atlas.repository.store.graph.v1.EntityVertexMapper;
+import org.apache.atlas.repository.store.graph.v1.EntityGraphMapper;
 import org.apache.atlas.repository.store.graph.v1.IDBasedEntityResolver;
 import org.apache.atlas.repository.store.graph.v1.MapVertexMapper;
-import org.apache.atlas.repository.store.graph.v1.StructVertexMapper;
 import org.apache.atlas.repository.store.graph.v1.UniqAttrBasedEntityResolver;
 import org.apache.atlas.repository.typestore.GraphBackedTypeStore;
 import org.apache.atlas.repository.typestore.ITypeStore;
@@ -117,19 +116,16 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
 
         bind(TypeCache.class).to(AtlasRepositoryConfiguration.getTypeCache()).asEagerSingleton();
 
-        bind(StructVertexMapper.class);
-
-        bind(EntityVertexMapper.class);
+        bind(EntityGraphMapper.class);
 
         bind(MapVertexMapper.class).asEagerSingleton();
 
         bind(ArrayVertexMapper.class).asEagerSingleton();
 
-        // New typesdef/instance change listener should also be bound to the corresponding implementation
-        Multibinder<EntityResolver> entityGraphResolvers =
+        Multibinder<EntityResolver> entityRefResolver =
             Multibinder.newSetBinder(binder(), EntityResolver.class);
-        entityGraphResolvers.addBinding().to(IDBasedEntityResolver.class);
-        entityGraphResolvers.addBinding().to(UniqAttrBasedEntityResolver.class);
+        entityRefResolver.addBinding().to(IDBasedEntityResolver.class);
+        entityRefResolver.addBinding().to(UniqAttrBasedEntityResolver.class);
 
         //Add EntityAuditListener as EntityChangeListener
         Multibinder<EntityChangeListener> entityChangeListenerBinder =
@@ -141,13 +137,6 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         bindInterceptor(Matchers.any(), Matchers.annotatedWith(GraphTransaction.class), interceptor);
 
         bind(EntityGraphDiscovery.class).to(AtlasEntityGraphDiscoveryV1.class).asEagerSingleton();
-
-        Multibinder<EntityResolver> entityRefResolver =
-            Multibinder.newSetBinder(binder(), EntityResolver.class);
-        entityRefResolver.addBinding().to(IDBasedEntityResolver.class);
-        entityRefResolver.addBinding().to(UniqAttrBasedEntityResolver.class);
-
-        bind(EntityVertexMapper.class).asEagerSingleton();
     }
 
     protected Configuration getConfiguration() {

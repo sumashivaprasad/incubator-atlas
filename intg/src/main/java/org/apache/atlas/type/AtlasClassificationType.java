@@ -21,7 +21,10 @@ package org.apache.atlas.type;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasClassification;
+import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
+import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
@@ -47,6 +50,8 @@ public class AtlasClassificationType extends AtlasStructType {
     private List<AtlasClassificationType>  superTypes        = Collections.emptyList();
     private Set<String>                    allSuperTypes     = Collections.emptySet();
     private Map<String, AtlasAttributeDef> allAttributeDefs  = Collections.emptyMap();
+    //Map of short name to a qualified attribute name
+    private Map<String, String> allQualifiedAttributeNames   = new HashMap<>();
     private Map<String, AtlasType>         allAttributeTypes = new HashMap<>();
 
     public AtlasClassificationType(AtlasClassificationDef classificationDef) {
@@ -281,13 +286,17 @@ public class AtlasClassificationType extends AtlasStructType {
         if (CollectionUtils.isNotEmpty(classificationDef.getAttributeDefs())) {
             for (AtlasAttributeDef attributeDef : classificationDef.getAttributeDefs()) {
                 allAttributeDefs.put(attributeDef.getName(), attributeDef);
+                allQualifiedAttributeNames.put(attributeDef.getName(), getQualifiedAttributeName(classificationDef, attributeDef.getName()));
             }
         }
     }
 
-    public String getQualifiedAttributeName(String attrName) {
-        AtlasAttributeDef attrDef = getAttributeDef(attrName);
-        final String typeName = attrDef.getTypeName();
-        return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
+    public String getQualifiedAttributeName(String attrName) throws AtlasBaseException {
+        if ( allQualifiedAttributeNames.containsKey(attrName)) {
+            return allQualifiedAttributeNames.get(attrName);
+        }
+
+        throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attrName, getStructDef().getName());
     }
+
 }

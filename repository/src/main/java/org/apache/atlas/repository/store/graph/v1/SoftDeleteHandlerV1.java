@@ -45,7 +45,7 @@ public class SoftDeleteHandlerV1 extends DeleteHandlerV1 {
             graphHelper.removeVertex(instanceVertex);
         } else {
             AtlasEntity.Status state = AtlasGraphUtilsV1.getState(instanceVertex);
-            if (state != AtlasEntity.Status.STATUS_DELETED) {
+            if (state != AtlasEntity.Status.DELETED) {
                 GraphHelper.setProperty(instanceVertex, STATE_PROPERTY_KEY, Id.EntityState.DELETED.name());
                 GraphHelper.setProperty(instanceVertex, MODIFICATION_TIMESTAMP_PROPERTY_KEY,
                     RequestContext.get().getRequestTime());

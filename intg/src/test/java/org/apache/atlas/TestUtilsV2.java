@@ -80,13 +80,19 @@ public final class TestUtilsV2 {
 
         AtlasEntityDef deptTypeDef =
                 AtlasTypeUtil.createClassTypeDef(DEPARTMENT_TYPE, "Department"+_description, ImmutableSet.<String>of(),
-                        AtlasTypeUtil.createRequiredAttrDef("name", "string"),
-                        new AtlasAttributeDef("employees", String.format("array<%s>", "Person"), true,
-                                AtlasAttributeDef.Cardinality.SINGLE, 0, 1, false, false,
-                                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()));
+                        AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
+                        new AtlasAttributeDef("employees", String.format("array<%s>", "Employee"), true,
+                                AtlasAttributeDef.Cardinality.SINGLE, 0, Integer.MAX_VALUE, false, false,
+                                new ArrayList<AtlasStructDef.AtlasConstraintDef>()));
+
+        deptTypeDef.getAttribute("employees").addConstraint(
+            new AtlasStructDef.AtlasConstraintDef(
+                AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF, new HashMap<String, Object>() {{
+                put(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "department");
+            }}));
 
         AtlasEntityDef personTypeDef = AtlasTypeUtil.createClassTypeDef("Person", "Person"+_description, ImmutableSet.<String>of(),
-                AtlasTypeUtil.createRequiredAttrDef("name", "string"),
+                AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                 AtlasTypeUtil.createOptionalAttrDef("address", "Address"),
                 AtlasTypeUtil.createOptionalAttrDef("birthday", "date"),
                 AtlasTypeUtil.createOptionalAttrDef("hasPets", "boolean"),
@@ -103,19 +109,24 @@ public final class TestUtilsV2 {
                 new AtlasAttributeDef("department", "Department", false,
                         AtlasAttributeDef.Cardinality.SINGLE, 1, 1,
                         false, false,
-                        Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
-                new AtlasAttributeDef("manager", "Employee", true,
+                        new ArrayList<AtlasStructDef.AtlasConstraintDef>()),
+                new AtlasAttributeDef("manager", "Manager", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
-                new AtlasAttributeDef("mentor", "Employee", true,
+                new AtlasAttributeDef("mentor", "Person", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
                 AtlasTypeUtil.createOptionalAttrDef("shares", "long"),
                 AtlasTypeUtil.createOptionalAttrDef("salary", "double")
-
                 );
+
+        employeeTypeDef.getAttribute("department").addConstraint(
+            new AtlasStructDef.AtlasConstraintDef(
+                AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_FOREIGN_KEY, new HashMap<String, Object>() {{
+                put(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_ON_DELETE, AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_VAL_CASCADE);
+            }}));
 
         AtlasEntityDef managerTypeDef = AtlasTypeUtil.createClassTypeDef("Manager", "Manager"+_description, ImmutableSet.of("Employee"),
                 new AtlasAttributeDef("subordinates", String.format("array<%s>", "Employee"), false, AtlasAttributeDef.Cardinality.SET,
@@ -149,7 +160,7 @@ public final class TestUtilsV2 {
         AtlasEntityDef deptTypeDef =
                 AtlasTypeUtil.createClassTypeDef(DEPARTMENT_TYPE, "Department"+_description,
                         ImmutableSet.<String>of(),
-                        AtlasTypeUtil.createRequiredAttrDef("name", "string"),
+                        AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                         AtlasTypeUtil.createOptionalAttrDef("dep-code", "string"),
                         new AtlasAttributeDef("employees", String.format("array<%s>", "Employee"), true,
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1, false, false,
@@ -157,7 +168,7 @@ public final class TestUtilsV2 {
 
         AtlasEntityDef personTypeDef = AtlasTypeUtil.createClassTypeDef("Person", "Person"+_description,
                 ImmutableSet.<String>of(),
-                AtlasTypeUtil.createRequiredAttrDef("name", "string"),
+                AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                 AtlasTypeUtil.createOptionalAttrDef("email", "string"),
                 AtlasTypeUtil.createOptionalAttrDef("address", "Address"),
                 AtlasTypeUtil.createOptionalAttrDef("birthday", "date"),
@@ -178,11 +189,11 @@ public final class TestUtilsV2 {
                         AtlasAttributeDef.Cardinality.SINGLE, 1, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
-                new AtlasAttributeDef("manager", "Employee", true,
+                new AtlasAttributeDef("manager", "Manager", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
-                new AtlasAttributeDef("mentor", "Employee", true,
+                new AtlasAttributeDef("mentor", EMPLOYEE_TYPE, true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
@@ -241,7 +252,7 @@ public final class TestUtilsV2 {
                         AtlasAttributeDef.Cardinality.SINGLE, 1, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
-                new AtlasAttributeDef("manager", "Person", true,
+                new AtlasAttributeDef("manager", "Manager", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
@@ -269,10 +280,11 @@ public final class TestUtilsV2 {
 
     public static final String DEPARTMENT_TYPE = "Department";
     public static final String PERSON_TYPE = "Person";
+    public static final String EMPLOYEE_TYPE = "Employee";
 
     public static AtlasEntity createDeptEg1() {
         AtlasEntity hrDept = new AtlasEntity(DEPARTMENT_TYPE);
-        AtlasEntity john = new AtlasEntity(PERSON_TYPE);
+        AtlasEntity john = new AtlasEntity(EMPLOYEE_TYPE);
 
 //        AtlasEntity jane = new AtlasEntity("Manager", "SecurityClearance");
         AtlasEntity jane = new AtlasEntity("Manager");
@@ -280,13 +292,12 @@ public final class TestUtilsV2 {
         AtlasEntity janeAddr = new AtlasEntity("Address");
         AtlasEntity julius = new AtlasEntity("Manager");
         AtlasEntity juliusAddr = new AtlasEntity("Address");
-        AtlasEntity max = new AtlasEntity("Person");
+        AtlasEntity max = new AtlasEntity(EMPLOYEE_TYPE);
         AtlasEntity maxAddr = new AtlasEntity("Address");
-
 
         hrDept.setAttribute("name", "hr");
         john.setAttribute("name", "John");
-        john.setAttribute("department", hrDept);
+        john.setAttribute("department", hrDept.getGuid());
         johnAddr.setAttribute("street", "Stewart Drive");
         johnAddr.setAttribute("city", "Sunnyvale");
         john.setAttribute("address", johnAddr);
@@ -303,26 +314,26 @@ public final class TestUtilsV2 {
         john.setAttribute("approximationOfPi", new BigDecimal("3.141592653589793238462643383279502884197169399375105820974944592307816406286"));
 
         jane.setAttribute("name", "Jane");
-        jane.setAttribute("department", hrDept);
+        jane.setAttribute("department", hrDept.getGuid());
         janeAddr.setAttribute("street", "Great America Parkway");
         janeAddr.setAttribute("city", "Santa Clara");
         jane.setAttribute("address", janeAddr);
         janeAddr.setAttribute("street", "Great America Parkway");
 
         julius.setAttribute("name", "Julius");
-        julius.setAttribute("department", hrDept);
+        julius.setAttribute("department", hrDept.getGuid());
         juliusAddr.setAttribute("street", "Madison Ave");
         juliusAddr.setAttribute("city", "Newtonville");
         julius.setAttribute("address", juliusAddr);
         julius.setAttribute("subordinates", ImmutableList.of());
 
         max.setAttribute("name", "Max");
-        max.setAttribute("department", hrDept);
+        max.setAttribute("department", hrDept.getGuid());
         maxAddr.setAttribute("street", "Ripley St");
         maxAddr.setAttribute("city", "Newton");
         max.setAttribute("address", maxAddr);
-        max.setAttribute("manager", jane);
-        max.setAttribute("mentor", julius);
+        max.setAttribute("manager", jane.getGuid());
+        max.setAttribute("mentor", julius.getGuid());
         max.setAttribute("birthday",new Date(1979, 3, 15));
         max.setAttribute("hasPets", true);
         max.setAttribute("age", 36);
@@ -334,15 +345,15 @@ public final class TestUtilsV2 {
         max.setAttribute("numberOfStarsEstimate", new BigInteger("1000000000000000000000000000000"));
         max.setAttribute("approximationOfPi", new BigDecimal("3.1415926535897932"));
 
-        john.setAttribute("manager", jane);
-        john.setAttribute("mentor", max);
+        john.setAttribute("manager", jane.getGuid());
+        john.setAttribute("mentor", max.getGuid());
         hrDept.setAttribute("employees", ImmutableList.of(john, jane, julius, max));
 
         jane.setAttribute("subordinates", ImmutableList.of(john, max));
 
-        Map<String, Integer> secClearanceLevelMap = new HashMap<>();
-        secClearanceLevelMap.put("level", 1);
-        jane.setAttribute("SecurityClearance", secClearanceLevelMap);
+//        Map<String, Integer> secClearanceLevelMap = new HashMap<>();
+//        secClearanceLevelMap.put("level", 1);
+//        jane.setAttribute("SecurityClearance", secClearanceLevelMap);
 
         return hrDept;
     }

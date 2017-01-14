@@ -22,56 +22,63 @@ import java.util.List;
 
 import static org.apache.atlas.repository.graph.GraphHelper.string;
 
-public class ArrayVertexMapper {
+public class ArrayVertexMapper implements InstanceGraphMapper<List> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ArrayVertexMapper.class);
 
-    private DeleteHandlerV1 deleteHandler;
+    protected DeleteHandlerV1 deleteHandler;
 
-    private final Provider<StructVertexMapper> structVertexMapperProvider;
+    protected StructVertexMapper structVertexMapper;
 
     @Inject
-    public ArrayVertexMapper(DeleteHandlerV1 deleteHandler, Provider<StructVertexMapper> structVertexMapper) {
+    public ArrayVertexMapper(DeleteHandlerV1 deleteHandler) {
         this.deleteHandler = deleteHandler;
-        this.structVertexMapperProvider = structVertexMapper;
     }
 
-    public Collection<Object> toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasArrayType arrType, Object val, AtlasVertex instanceVertex, String vertexPropertyName) throws AtlasBaseException {
+    void init(StructVertexMapper structVertexMapper) {
+        this.structVertexMapper = structVertexMapper;
+    }
+
+    public List toGraph(GraphMutationContext ctx) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Mapping instance to vertex {} for array attribute {}", string(instanceVertex), arrType.getTypeName());
+            LOG.debug("Mapping instance to vertex {} for array attribute {}", string(ctx.getReferringVertex()), ctx.getAttrType().getTypeName());
         }
 
-        List newElements = (List) val;
+        List newElements = (List) ctx.getValue();
         boolean newAttributeEmpty = (newElements == null || newElements.isEmpty());
 
+        AtlasArrayType arrType = (AtlasArrayType) ctx.getAttrType();
         AtlasType elementType = arrType.getElementType();
-        List<Object> currentElements = getArrayElementsProperty(elementType, instanceVertex, vertexPropertyName);
+        List<Object> currentElements = getArrayElementsProperty(elementType, ctx.getReferringVertex(), ctx.getVertexPropertyKey());
 
         List<Object> newElementsCreated = new ArrayList<>();
 
         if (!newAttributeEmpty) {
             if (newElements != null && !newElements.isEmpty()) {
-                int index = 0;
-                for (; index < newElements.size(); index++) {
-                    Object currentElement = (currentElements != null && index < currentElements.size()) ?
-                        currentElements.get(index) : null;
-                    LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
-                        currentElement, newElements.get(index));
-                    Optional<AtlasEdge> existingEdge = getEdgeIfExists(arrType, currentElements, index);
-                    Object newEntry = structVertexMapperProvider.get().mapCollectionElementsToVertex(parentType, attributeDef, elementType, val, instanceVertex, vertexPropertyName, existingEdge);
+                for (int index = 0; index < newElements.size(); index++) {
+                    Optional<AtlasEdge> existingEdge = getEdgeIfExists(arrType, currentElements, newElements, index);
+                    ctx.setCurrentEdge(existingEdge);
+
+                    GraphMutationContext arrCtx = new GraphMutationContext.Builder(ctx.getParentType(), ctx.getStructDef(), ctx.getAttributeDef(),
+                        arrType.getElementType(), newElements.get(index))
+                        .referringVertex(ctx.getReferringVertex())
+                        .edge(existingEdge)
+                        .vertexProperty(ctx.getVertexPropertyKey()).build();
+
+                    Object newEntry = structVertexMapper.mapCollectionElementsToVertex(arrCtx);
                     newElementsCreated.add(newEntry);
                 }
             }
         }
 
         if (AtlasGraphUtilsV1.isReference(elementType)) {
-            List<AtlasEdge> additionalEdges = removeUnusedArrayEntries(parentType, attributeDef, (List) currentElements, (List) newElementsCreated, elementType);
+            List<AtlasEdge> additionalEdges = removeUnusedArrayEntries(ctx.getParentType(), ctx.getAttributeDef(), (List) currentElements, (List) newElementsCreated, elementType);
             newElementsCreated.addAll(additionalEdges);
         }
 
         // for dereference on way out
-        setArrayElementsProperty(elementType, instanceVertex, vertexPropertyName, newElementsCreated);
+        setArrayElementsProperty(elementType, ctx.getReferringVertex(), ctx.getVertexPropertyKey(), newElementsCreated);
         return newElementsCreated;
     }
 
@@ -119,10 +126,17 @@ public class ArrayVertexMapper {
         }
     }
 
-    private Optional<AtlasEdge> getEdgeIfExists(AtlasArrayType arrType, List<Object> currentList, int index) {
+    private Optional<AtlasEdge> getEdgeIfExists(AtlasArrayType arrType, List<Object> currentElements, List<Object> newElements, int index) {
         Optional<AtlasEdge> existingEdge = Optional.absent();
         if ( AtlasGraphUtilsV1.isReference(arrType.getElementType()) ) {
-            existingEdge = Optional.of((AtlasEdge) currentList.get(index));
+            Object currentElement = (currentElements != null && index < currentElements.size()) ?
+                currentElements.get(index) : null;
+            LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
+                currentElement, newElements.get(index));
+
+            if ( currentElement != null) {
+                existingEdge = Optional.of((AtlasEdge) currentElement);
+            }
         }
 
         return existingEdge;

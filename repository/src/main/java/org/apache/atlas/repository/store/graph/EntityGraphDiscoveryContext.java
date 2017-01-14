@@ -8,23 +8,42 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 public final class EntityGraphDiscoveryContext {
 
-    private List<AtlasEntity> rootEntities;
+    /**
+     *  Keeps track of all the entities that need to be created/updated including its child entities *
+     */
+    private List<AtlasEntity> rootEntities = new ArrayList<>();
 
-    //Key can be a guid or an AtlasEntity with its qualifiedName
-    private Map<Object, AtlasVertex> repositoryResolvedReferences = new LinkedHashMap<>();
+    //Key is a transient id/guid
+    /**
+     * These references have been resolved using a unique identifier like guid or a qualified name etc in Atlas repository
+     */
+    private Map<String, AtlasVertex> repositoryResolvedReferences = new LinkedHashMap<>();
 
+    /**
+     * Unresolved entity references
+     */
     private List<AtlasEntity> unresolvedEntityReferences = new ArrayList<>();
 
-    private List<AtlasObjectId> unresolvedIdReferences = new ArrayList<>();
+    /**
+     * Unresolved entity id references
+     */
+    private Set<AtlasObjectId> unresolvedIdReferences = new HashSet<>();
 
-    public void addRepositoryResolvedReference(Object entity, AtlasVertex vertex) {
-        repositoryResolvedReferences.put(entity, vertex);
+    public void addRepositoryResolvedReference(AtlasObjectId id, AtlasVertex vertex) {
+        repositoryResolvedReferences.put(id.getGuid(), vertex);
+    }
+
+    public void addRepositoryResolvedReference(String id, AtlasVertex vertex) {
+        repositoryResolvedReferences.put(id, vertex);
     }
 
     public void addUnResolvedEntityReference(AtlasEntity entity) {
@@ -35,7 +54,7 @@ public final class EntityGraphDiscoveryContext {
         this.unresolvedIdReferences.add(new AtlasObjectId(entityType.getTypeName(), id));
     }
 
-    public List<AtlasObjectId> getUnresolvedIdReferences() {
+    public Set<AtlasObjectId> getUnresolvedIdReferences() {
         return unresolvedIdReferences;
     }
 
@@ -43,12 +62,16 @@ public final class EntityGraphDiscoveryContext {
         return repositoryResolvedReferences.containsKey(entity);
     }
 
-    public Map<Object, AtlasVertex> getResolvedReferences() {
+    public AtlasVertex getResolvedReference(AtlasObjectId ref) {
+        return repositoryResolvedReferences.get(ref.getGuid());
+    }
+
+    public Map<String, AtlasVertex> getRepositoryResolvedReferences() {
         return repositoryResolvedReferences;
     }
 
-    public AtlasVertex getResolvedReference(Object ref) {
-        return repositoryResolvedReferences.get(ref);
+    public AtlasVertex getResolvedReference(String id) {
+        return repositoryResolvedReferences.get(id);
     }
 
     public List<AtlasEntity> getUnResolvedEntityReferences() {
@@ -71,6 +94,10 @@ public final class EntityGraphDiscoveryContext {
         return unresolvedEntityReferences.remove(entity);
     }
 
+    public boolean removeUnResolvedEntityReference(final AtlasObjectId id) {
+        return unresolvedEntityReferences.remove(id);
+    }
+
     public boolean removeUnResolvedEntityReferences(final List<AtlasEntity> entities) {
         return unresolvedEntityReferences.removeAll(entities);
     }
@@ -79,7 +106,35 @@ public final class EntityGraphDiscoveryContext {
         return unresolvedEntityReferences.removeAll(entities);
     }
 
+    public boolean removeUnResolvedIdReference(final AtlasObjectId entity) {
+        return unresolvedIdReferences.remove(entity);
+    }
+
     public boolean hasUnresolvedReferences() {
         return unresolvedEntityReferences.size() > 0 || unresolvedIdReferences.size() > 0;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        } else if (obj == this) {
+            return true;
+        } else if (obj.getClass() != getClass()) {
+            return false;
+        } else {
+            EntityGraphDiscoveryContext ctx = (EntityGraphDiscoveryContext) obj;
+            return Objects.equals(rootEntities, ctx.getRootEntities()) &&
+                Objects.equals(repositoryResolvedReferences, ctx.getRepositoryResolvedReferences()) &&
+                Objects.equals(unresolvedEntityReferences, ctx.getUnResolvedEntityReferences()) &&
+                Objects.equals(unresolvedIdReferences, ctx.getUnresolvedIdReferences());
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(rootEntities, repositoryResolvedReferences, unresolvedEntityReferences, unresolvedIdReferences);
+    }
+
+    //TODO - toString
 }

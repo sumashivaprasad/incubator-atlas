@@ -1,24 +1,18 @@
 package org.apache.atlas.repository.store.graph.v1;
 
-
-import com.google.common.base.Optional;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.atlas.AtlasErrorCode;
-import org.apache.atlas.RequestContext;
+import org.apache.atlas.RequestContextV1;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
-import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.RepositoryException;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.type.AtlasArrayType;
-import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
@@ -26,46 +20,40 @@ import org.apache.atlas.typesystem.persistence.Id;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
+public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
 
-public class StructVertexMapper {
+    private final AtlasGraph graph;
 
-    private AtlasGraph graph;
-
-    private GraphHelper graphHelper = GraphHelper.getInstance();
+    private final GraphHelper graphHelper = GraphHelper.getInstance();
 
     private MapVertexMapper mapVertexMapper;
 
     private ArrayVertexMapper arrVertexMapper;
 
-    private EntityVertexMapper entityVertexMapper;
+    private EntityGraphMapper entityVertexMapper;
 
-    public StructVertexMapper(final AtlasGraph graph, final MapVertexMapper mapVertexMapper, final ArrayVertexMapper arrayVertexMapper) {
-        this.graph = graph;
+    private static final Logger LOG = LoggerFactory.getLogger(StructVertexMapper.class);
+
+    public StructVertexMapper(ArrayVertexMapper arrayVertexMapper, MapVertexMapper mapVertexMapper) {
+        this.graph = AtlasGraphProvider.getGraphInstance();;
         this.mapVertexMapper = mapVertexMapper;
         this.arrVertexMapper = arrayVertexMapper;
     }
 
-    @Inject
-    public StructVertexMapper(AtlasGraph graph, MapVertexMapper mapVertexMapper, ArrayVertexMapper arrayVertexMapper, EntityVertexMapper entityVertexMapper) {
-        this(graph, mapVertexMapper, arrayVertexMapper);
+    void init(final EntityGraphMapper entityVertexMapper) {
         this.entityVertexMapper = entityVertexMapper;
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(StructVertexMapper.class);
-
-
-
-    public Object toVertex(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStructType attrType, Object value, AtlasVertex referringVertex, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
+    public AtlasEdge toGraph(GraphMutationContext ctx) throws AtlasBaseException {
         AtlasEdge result = null;
 
-        String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(parentType, attributeDef.getName());
+        String edgeLabel = AtlasGraphUtilsV1.getAttributeEdgeLabel(ctx.getParentType(), ctx.getAttributeDef().getName());
 
-        if ( existingEdge.isPresent() ) {
-            updateVertex(parentType, attrType, attributeDef, (AtlasStruct) value, existingEdge.get().getOutVertex());
-            result = existingEdge.get();
+        if ( ctx.getCurrentEdge().isPresent() ) {
+            updateVertex(ctx.getParentType(), (AtlasStructType) ctx.getAttrType(), ctx.getAttributeDef(), (AtlasStruct) ctx.getValue(), ctx.getCurrentEdge().get().getOutVertex());
+            result = ctx.getCurrentEdge().get();
         } else {
-            result = createVertex(parentType, attrType, attributeDef, (AtlasStruct) value, referringVertex, edgeLabel);
+            result = createVertex(ctx.getParentType(), (AtlasStructType) ctx.getAttrType(), ctx.getAttributeDef(), (AtlasStruct) ctx.getValue(), ctx.getReferringVertex(), edgeLabel);
         }
 
         return result;
@@ -88,40 +76,43 @@ public class StructVertexMapper {
             for (String attrName : struct.getAttributes().keySet()) {
                 Object value = struct.getAttribute(attrName);
                 AtlasType attributeType = structType.getAttributeType(attrName);
-
-                final AtlasStructDef.AtlasAttributeDef attributeDef = structType.getStructDef().getAttribute(attrName);
-
-                mapToVertexByTypeCategory(structType, attributeDef, attributeType, value, vertex, AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(structType, attrName), Optional.<AtlasEdge>absent());
+                if ( attributeType != null) {
+                    final AtlasStructDef.AtlasAttributeDef attributeDef = structType.getAttribute(attrName);
+                    GraphMutationContext ctx =  new GraphMutationContext.Builder(structType, structType.getStructDef(), attributeDef, attributeType, value)
+                        .referringVertex(vertex)
+                        .vertexProperty(AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(structType, attrName)).build();
+                    mapToVertexByTypeCategory(ctx);
+                }
             }
         }
         return vertex;
     }
 
-    protected Object mapToVertexByTypeCategory(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
-        switch(attrType.getTypeCategory()) {
+    protected Object mapToVertexByTypeCategory(GraphMutationContext ctx) throws AtlasBaseException {
+        switch(ctx.getAttrType().getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
-            return primitivesToVertex(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
+            return primitivesToVertex(ctx);
         case STRUCT:
-            return toVertex((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
+            return toGraph(ctx);
         case ENTITY:
-            return entityVertexMapper.toVertex((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
+            return entityVertexMapper.toGraph(ctx);
         case MAP:
-            return mapVertexMapper.toVertex((AtlasStructType) parentType, attributeDef, (AtlasMapType) attrType, value, vertex, vertexPropertyName);
+            return mapVertexMapper.toGraph(ctx);
         case ARRAY:
-            return arrVertexMapper.toVertex((AtlasStructType) parentType, attributeDef, (AtlasArrayType) attrType, value, vertex, vertexPropertyName);
+            return arrVertexMapper.toGraph(ctx);
         default:
-            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, attrType.getTypeCategory().name());
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, ctx.getAttrType().getTypeCategory().name());
         }
     }
 
-    protected Object primitivesToVertex(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object val, AtlasVertex vertex, String vertexPropertyName) {
-        if ( parentType.getTypeCategory() == TypeCategory.MAP ) {
-            MapVertexMapper.setMapValueProperty(((AtlasMapType)parentType).getValueType(), vertex, vertexPropertyName, val);
+    protected Object primitivesToVertex(GraphMutationContext ctx) {
+        if ( ctx.getAttrType().getTypeCategory() == TypeCategory.MAP ) {
+            MapVertexMapper.setMapValueProperty(((AtlasMapType) ctx.getAttrType()).getValueType(), ctx.getReferringVertex(), ctx.getVertexPropertyKey(), ctx.getValue());
         } else {
-            AtlasGraphUtilsV1.setProperty(vertex, vertexPropertyName, val);
+            AtlasGraphUtilsV1.setProperty(ctx.getReferringVertex(), ctx.getVertexPropertyKey(), ctx.getValue());
         }
-        return val;
+        return ctx.getValue();
     }
 
     private AtlasEdge createVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct struct, AtlasVertex referringVertex, String edgeLabel) throws AtlasBaseException {
@@ -150,26 +141,26 @@ public class StructVertexMapper {
         AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.STATE_PROPERTY_KEY, Id.EntityState.ACTIVE.name());
 
         // add timestamp information
-        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.TIMESTAMP_PROPERTY_KEY, RequestContext.get().getRequestTime());
+        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.TIMESTAMP_PROPERTY_KEY, RequestContextV1.get().getRequestTime());
         AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY,
-            RequestContext.get().getRequestTime());
+            RequestContextV1.get().getRequestTime());
 
         return vertexWithoutIdentity;
     }
 
-    protected Object mapCollectionElementsToVertex(AtlasType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object value, AtlasVertex vertex, String vertexPropertyName, Optional<AtlasEdge> existingEdge) throws AtlasBaseException {
-        switch(attrType.getTypeCategory()) {
+    protected Object mapCollectionElementsToVertex(GraphMutationContext ctx) throws AtlasBaseException {
+        switch(ctx.getAttrType().getTypeCategory()) {
         case PRIMITIVE:
         case ENUM:
-            return primitivesToVertex(parentType, attributeDef, attrType, value, vertex, vertexPropertyName);
+            return primitivesToVertex(ctx);
         case STRUCT:
-            return toVertex((AtlasStructType) parentType, attributeDef, (AtlasStructType) attrType, value, vertex, existingEdge);
+            return toGraph(ctx);
         case ENTITY:
-            return entityVertexMapper.toVertex((AtlasEntityType) parentType, attributeDef, (AtlasEntityType) attrType, value, vertex, existingEdge);
+            return entityVertexMapper.toGraph(ctx);
         case MAP:
         case ARRAY:
         default:
-            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, attrType.getTypeCategory().name());
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_CATEGORY_INVALID, ctx.getAttrType().getTypeCategory().name());
         }
     }
 }
