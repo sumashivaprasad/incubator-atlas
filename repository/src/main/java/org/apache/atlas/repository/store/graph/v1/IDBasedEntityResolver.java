@@ -30,7 +30,6 @@ public class IDBasedEntityResolver implements EntityResolver {
     public void init(EntityGraphDiscoveryContext context) throws AtlasBaseException {
         this.context = context;
         for (AtlasEntity entity : context.getRootEntities()) {
-
             idToEntityMap.put(entity.getGuid(), entity);
         }
     }
@@ -96,6 +95,7 @@ public class IDBasedEntityResolver implements EntityResolver {
     @Override
     public void cleanUp() throws AtlasBaseException {
         idToEntityMap.clear();
+        this.context = null;
     }
 
 }

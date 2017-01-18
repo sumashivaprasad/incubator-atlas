@@ -92,7 +92,6 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
 
     @Override
     public void cleanUp() throws AtlasBaseException {
-
     }
 
     private AtlasEdge updateEdge(AtlasStructDef.AtlasAttributeDef attributeDef, Object value,  AtlasEdge currentEdge, final AtlasVertex entityVertex) throws AtlasBaseException {

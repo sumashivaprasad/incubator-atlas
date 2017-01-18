@@ -47,10 +47,7 @@ public class AtlasEntityType extends AtlasStructType {
 
     private List<AtlasEntityType>          superTypes        = Collections.emptyList();
     private Set<String>                    allSuperTypes     = Collections.emptySet();
-    private Map<String, AtlasAttributeDef> allAttributeDefs  = Collections.emptyMap();
-    //Map of short name to a qualified attribute name
-    private Map<String, String> allQualifiedAttributeNames   = new HashMap<>();
-    private Map<String, AtlasType>         allAttributeTypes = Collections.emptyMap();
+
 
     public AtlasEntityType(AtlasEntityDef entityDef) {
         super(entityDef);
@@ -74,10 +71,10 @@ public class AtlasEntityType extends AtlasStructType {
 
         List<AtlasEntityType>          s    = new ArrayList<>();
         Set<String>                    allS = new HashSet<>();
-        Map<String, AtlasAttributeDef> allA = new HashMap<>();
-        Map<String, String> allQA = new HashMap<>();
+        Map<String, AtlasAttributeDef> allAd = new HashMap<>();
+        Map<String, AtlasAttribute> allA = new HashMap<>();
 
-        getTypeHierarchyInfo(typeRegistry, allS, allA, allQA);
+        getTypeHierarchyInfo(typeRegistry, allS, allAd, allA);
 
         for (String superTypeName : entityDef.getSuperTypes()) {
             AtlasType superType = typeRegistry.getType(superTypeName);
@@ -91,9 +88,7 @@ public class AtlasEntityType extends AtlasStructType {
 
         this.superTypes        = Collections.unmodifiableList(s);
         this.allSuperTypes     = Collections.unmodifiableSet(allS);
-        this.allAttributeDefs  = Collections.unmodifiableMap(allA);
-        this.allQualifiedAttributeNames = Collections.unmodifiableMap(allQA);
-        this.allAttributeTypes = new HashMap<>(); // this will be rebuilt on calls to getAttributeType()
+        this.allAttributes     = Collections.unmodifiableMap(allA);
     }
 
     public Set<String> getSuperTypes() {
@@ -104,32 +99,29 @@ public class AtlasEntityType extends AtlasStructType {
         return allSuperTypes;
     }
 
-    public Map<String, AtlasAttributeDef> getAllAttributeDefs() { return allAttributeDefs; }
-
+    public Map<String, AtlasAttribute> getAllAttributes() { return allAttributes; }
 
     @Override
     public AtlasType getAttributeType(String attributeName) {
-        AtlasType ret = allAttributeTypes.get(attributeName);
+        return super.getAttributeType(attributeName);
 
-        if (ret == null) {
-            ret = super.getAttributeType(attributeName);
-
-            if (ret == null) {
-                for (AtlasEntityType superType : superTypes) {
-                    ret = superType.getAttributeType(attributeName);
-
-                    if (ret != null) {
-                        break;
-                    }
-                }
-            }
-
-            if (ret != null) {
-                allAttributeTypes.put(attributeName, ret);
-            }
-        }
-
-        return ret;
+//        if (ret == null) {
+//            ret = super.getAttributeType(attributeName);
+//
+//            if (ret == null) {
+//                for (AtlasEntityType superType : superTypes) {
+//                    ret = superType.getAttributeType(attributeName);
+//
+//                    if (ret != null) {
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            if (ret != null) {
+//                allAttributeTypes.put(attributeName, ret);
+//            }
+//        }
     }
 
     @Override
@@ -224,8 +216,8 @@ public class AtlasEntityType extends AtlasStructType {
     }
 
     @Override
-    public AtlasAttributeDef getAttribute(String attributeName) {
-        return entityDef.findAttribute(allAttributeDefs.values(), attributeName);
+    public AtlasAttribute getAttribute(String attributeName) {
+        return findAttribute(allAttributes.values(), attributeName);
     }
 
     @Override
@@ -277,10 +269,10 @@ public class AtlasEntityType extends AtlasStructType {
     private void getTypeHierarchyInfo(AtlasTypeRegistry              typeRegistry,
                                       Set<String>                    allSuperTypeNames,
                                       Map<String, AtlasAttributeDef> allAttributeDefs,
-                                      Map<String, String> allQualifiedAttributeNames) throws AtlasBaseException {
+                                      Map<String, AtlasAttribute> allAttributes) throws AtlasBaseException {
         List<String> visitedTypes = new ArrayList<>();
 
-        collectTypeHierarchyInfo(typeRegistry, allSuperTypeNames, allAttributeDefs, allQualifiedAttributeNames, visitedTypes);
+        collectTypeHierarchyInfo(typeRegistry, allSuperTypeNames, allAttributeDefs, allAttributes, visitedTypes);
     }
 
     /*
@@ -290,7 +282,7 @@ public class AtlasEntityType extends AtlasStructType {
     private void collectTypeHierarchyInfo(AtlasTypeRegistry              typeRegistry,
                                           Set<String>                    allSuperTypeNames,
                                           Map<String, AtlasAttributeDef> allAttributeDefs,
-                                          Map<String, String> allQualifiedAttributeNames,
+                                          Map<String, AtlasAttribute>    allAttributes,
                                           List<String>                   visitedTypes) throws AtlasBaseException {
         if (visitedTypes.contains(entityDef.getName())) {
             throw new AtlasBaseException(AtlasErrorCode.CIRCULAR_REFERENCE, entityDef.getName(),
@@ -304,28 +296,29 @@ public class AtlasEntityType extends AtlasStructType {
 
                 if (type instanceof AtlasEntityType) {
                     AtlasEntityType superType = (AtlasEntityType) type;
-                    superType.collectTypeHierarchyInfo(typeRegistry, allSuperTypeNames, allAttributeDefs, allQualifiedAttributeNames, visitedTypes);
+                    superType.collectTypeHierarchyInfo(typeRegistry, allSuperTypeNames, allAttributeDefs, allAttributes, visitedTypes);
                 }
             }
             visitedTypes.remove(entityDef.getName());
-
             allSuperTypeNames.addAll(entityDef.getSuperTypes());
         }
 
         if (CollectionUtils.isNotEmpty(entityDef.getAttributeDefs())) {
             for (AtlasAttributeDef attributeDef : entityDef.getAttributeDefs()) {
                 allAttributeDefs.put(attributeDef.getName(), attributeDef);
-                allQualifiedAttributeNames.put(attributeDef.getName(), getQualifiedAttributeName(entityDef, attributeDef.getName()));
+
+                AtlasType type = typeRegistry.getType(attributeDef.getTypeName());
+                allAttributes.put(attributeDef.getName(), new AtlasAttribute(this, entityDef, attributeDef, type, getQualifiedAttributeName(entityDef, attributeDef.getName())));
             }
         }
     }
 
-    @Override
-    public String getQualifiedAttributeName(String attrName) throws AtlasBaseException {
-       if ( allQualifiedAttributeNames.containsKey(attrName)) {
-           return allQualifiedAttributeNames.get(attrName);
-       }
-
-       throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attrName, entityDef.getName());
-    }
+//    @Override
+//    public String getQualifiedAttributeName(String attrName) throws AtlasBaseException {
+//       if ( allAttributes.containsKey(attrName)) {
+//           return allAttributes.get(attrName).getQualifiedName();
+//       }
+//
+//       throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attrName, entityDef.getName());
+//    }
 }

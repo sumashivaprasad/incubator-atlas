@@ -12,20 +12,17 @@ import java.util.Objects;
 
 public class GraphMutationContext {
 
-    /**
-     * Current entity/struct type for which we are mapping attributes
-     */
-    private AtlasStructType parentType;
 
     /**
-     * Current attribute definition
+     * Atlas Attribute
      */
-    private AtlasStructDef.AtlasAttributeDef attributeDef;
+
+    private AtlasStructType.AtlasAttribute attribute;
 
     /**
-     * Current attribute type
+     * Overriding type for which elements are being mapped
      */
-    private AtlasType attrType;
+    private AtlasType currentElementType;
 
     /**
      * Current attribute value/entity/Struct instance
@@ -51,9 +48,8 @@ public class GraphMutationContext {
 
 
     private GraphMutationContext(final Builder builder) {
-        this.parentType = builder.parentType;
-        this.attrType = builder.attrType;
-        this.attributeDef = builder.attributeDef;
+        this.attribute = builder.attribute;
+        this.currentElementType = builder.elementType;
         this.existingEdge = builder.currentEdge;
         this.value = builder.currentValue;
         this.referringVertex = builder.referringVertex;
@@ -66,7 +62,7 @@ public class GraphMutationContext {
 
     @Override
     public int hashCode() {
-        return Objects.hash(parentType, attrType, value, referringVertex, vertexPropertyKey, existingEdge);
+        return Objects.hash(attribute, value, referringVertex, vertexPropertyKey, existingEdge);
     }
 
     @Override
@@ -79,8 +75,7 @@ public class GraphMutationContext {
             return false;
         } else {
             GraphMutationContext rhs = (GraphMutationContext) obj;
-            return Objects.equals(parentType, rhs.getParentType())
-                 && Objects.equals(attrType, rhs.getAttrType())
+            return Objects.equals(attribute, rhs.getAttribute())
                  && Objects.equals(value, rhs.getValue())
                  && Objects.equals(referringVertex, rhs.getReferringVertex())
                  && Objects.equals(vertexPropertyKey, rhs.getReferringVertex())
@@ -91,11 +86,9 @@ public class GraphMutationContext {
 
     public static final class Builder {
 
-        private final AtlasStructType parentType;
+        private final AtlasStructType.AtlasAttribute attribute;
 
-        private final AtlasStructDef.AtlasAttributeDef attributeDef;
-
-        private final AtlasType attrType;
+        private final AtlasType elementType;
 
         private final Object currentValue;
 
@@ -106,10 +99,15 @@ public class GraphMutationContext {
         private  String vertexPropertyKey;
 
 
-        public Builder(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object currentValue) {
-            this.parentType = parentType;
-            this.attributeDef = attributeDef;
-            this.attrType = attrType;
+        public Builder(AtlasStructType.AtlasAttribute attribute, AtlasType currentElementType, Object currentValue) {
+            this.attribute = attribute;
+            this.elementType = currentElementType;
+            this.currentValue = currentValue;
+        }
+
+        public Builder(AtlasStructType.AtlasAttribute attribute, Object currentValue) {
+            this.attribute = attribute;
+            this.elementType = null;
             this.currentValue = currentValue;
         }
 
@@ -139,19 +137,23 @@ public class GraphMutationContext {
     }
 
     public AtlasStructType getParentType() {
-        return parentType;
+        return attribute.getStructType();
     }
 
     public AtlasStructDef getStructDef() {
-        return parentType.getStructDef();
+        return attribute.getStructDef();
     }
 
     public AtlasStructDef.AtlasAttributeDef getAttributeDef() {
-        return attributeDef;
+        return attribute.getAttributeDef();
     }
 
     public AtlasType getAttrType() {
-        return attrType;
+        return currentElementType == null ? attribute.getAttributeType() : currentElementType;
+    }
+
+    public AtlasType getCurrentElementType() {
+        return currentElementType;
     }
 
     public Object getValue() {
@@ -166,7 +168,11 @@ public class GraphMutationContext {
         return existingEdge;
     }
 
-    public void setAttrType(final AtlasType attrType) {
-        this.attrType = attrType;
+    public void setElementType(final AtlasType attrType) {
+        this.currentElementType = attrType;
+    }
+
+    public AtlasStructType.AtlasAttribute getAttribute() {
+        return attribute;
     }
 }

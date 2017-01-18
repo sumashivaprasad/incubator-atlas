@@ -65,7 +65,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
 
                 Optional<AtlasEdge> existingEdge = getEdgeAt(currentElements, index, arrType.getElementType());
 
-                GraphMutationContext arrCtx = new GraphMutationContext.Builder(ctx.getParentType(), ctx.getAttributeDef(),
+                GraphMutationContext arrCtx = new GraphMutationContext.Builder(ctx.getAttribute(),
                     arrType.getElementType(), newElements.get(index))
                     .referringVertex(ctx.getReferringVertex())
                     .edge(existingEdge)

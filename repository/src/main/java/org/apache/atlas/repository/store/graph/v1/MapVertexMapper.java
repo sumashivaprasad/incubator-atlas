@@ -79,7 +79,8 @@ public class MapVertexMapper implements InstanceGraphMapper<Map> {
                     String keyStr = entry.getKey().toString();
                     String propertyNameForKey = GraphHelper.getQualifiedNameForMapKey(ctx.getVertexPropertyKey(), keyStr);
                     Optional<AtlasEdge> existingEdge = getEdgeIfExists(mapType, currentMap, keyStr);
-                    GraphMutationContext mapCtx =  new GraphMutationContext.Builder(ctx.getParentType(), ctx.getAttributeDef(), mapType.getValueType(), entry.getValue())
+
+                    GraphMutationContext mapCtx =  new GraphMutationContext.Builder(ctx.getAttribute(), mapType.getValueType(), entry.getValue())
                         .referringVertex(ctx.getReferringVertex())
                         .edge(existingEdge)
                         .vertexProperty(propertyNameForKey).build();

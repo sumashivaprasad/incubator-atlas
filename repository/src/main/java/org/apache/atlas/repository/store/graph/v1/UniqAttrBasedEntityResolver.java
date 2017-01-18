@@ -12,6 +12,7 @@ import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.type.AtlasEntityType;
+import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -82,11 +83,11 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
 
     Optional<AtlasVertex> resolveByUniqueAttribute(AtlasEntity entity) throws AtlasBaseException {
         AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
-        for (AtlasStructDef.AtlasAttributeDef attrDef : entityType.getAllAttributeDefs().values()) {
-            if (attrDef.getIsUnique()) {
-                Object attrVal = entity.getAttribute(attrDef.getName());
+        for (AtlasStructType.AtlasAttribute attr : entityType.getAllAttributes().values()) {
+            if (attr.getAttributeDef().getIsUnique()) {
+                Object attrVal = entity.getAttribute(attr.getAttributeDef().getName());
                 if (attrVal != null) {
-                    String qualifiedAttrName = entityType.getQualifiedAttributeName(attrDef.getName());
+                    String qualifiedAttrName = entityType.getQualifiedAttributeName(attr.getAttributeDef().getName());
                     AtlasVertex vertex = null;
                     try {
                         vertex = graphHelper.findVertex(qualifiedAttrName, attrVal,
@@ -106,8 +107,10 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         return Optional.absent();
     }
 
+    @Override
     public void cleanUp() {
         //Nothing to cleanup
+        this.context = null;
     }
 
 }
