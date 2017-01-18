@@ -68,6 +68,7 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
     }
 
 
+    @Override
     public AtlasEdge toGraph(GraphMutationContext ctx) throws AtlasBaseException {
         AtlasEdge result = null;
 

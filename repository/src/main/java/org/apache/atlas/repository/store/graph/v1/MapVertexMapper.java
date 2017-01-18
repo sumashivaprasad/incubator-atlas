@@ -47,6 +47,7 @@ public class MapVertexMapper implements InstanceGraphMapper<Map> {
         this.structVertexMapper = structVertexMapper;
     }
 
+    @Override
     public Map<String, Object> toGraph(GraphMutationContext ctx) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {

@@ -16,13 +16,14 @@ import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static org.apache.atlas.repository.graph.GraphHelper.string;
 
+@Singleton
 public class ArrayVertexMapper implements InstanceGraphMapper<List> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ArrayVertexMapper.class);
@@ -58,7 +59,11 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
 
         if (!newAttributeEmpty) {
             for (int index = 0; index < newElements.size(); index++) {
-                Optional<AtlasEdge> existingEdge = getEdgeIfExists(arrType, currentElements, newElements, index);
+
+                LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
+                    (currentElements != null && index < currentElements.size()) ? currentElements.get(index) : null, newElements.get(index));
+
+                Optional<AtlasEdge> existingEdge = getEdgeAt(currentElements, index, arrType.getElementType());
 
                 GraphMutationContext arrCtx = new GraphMutationContext.Builder(ctx.getParentType(), ctx.getAttributeDef(),
                     arrType.getElementType(), newElements.get(index))
@@ -118,7 +123,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
                 }
             }
         }
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     @Monitored
@@ -132,13 +137,11 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
         }
     }
 
-    private Optional<AtlasEdge> getEdgeIfExists(AtlasArrayType arrType, List<Object> currentElements, List<Object> newElements, int index) {
+    private Optional<AtlasEdge> getEdgeAt(List<Object> currentElements, int index, AtlasType elemType) {
         Optional<AtlasEdge> existingEdge = Optional.absent();
-        if ( AtlasGraphUtilsV1.isReference(arrType.getElementType()) ) {
+        if ( AtlasGraphUtilsV1.isReference(elemType) ) {
             Object currentElement = (currentElements != null && index < currentElements.size()) ?
                 currentElements.get(index) : null;
-            LOG.debug("Adding/updating element at position {}, current element {}, new element {}", index,
-                currentElement, newElements.get(index));
 
             if ( currentElement != null) {
                 existingEdge = Optional.of((AtlasEdge) currentElement);

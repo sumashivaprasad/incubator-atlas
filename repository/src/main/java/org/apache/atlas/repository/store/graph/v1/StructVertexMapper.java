@@ -45,6 +45,7 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
         this.entityVertexMapper = entityVertexMapper;
     }
 
+    @Override
     public AtlasEdge toGraph(GraphMutationContext ctx) throws AtlasBaseException {
         AtlasEdge result = null;
 
