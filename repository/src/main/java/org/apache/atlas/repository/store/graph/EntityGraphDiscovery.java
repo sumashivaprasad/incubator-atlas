@@ -8,6 +8,9 @@ import java.util.List;
 
 public interface EntityGraphDiscovery {
 
+
+    void init() throws AtlasBaseException;
+
     /*
      * Return list of resolved and unresolved references.
      * Resolved references already exist in the ATLAS repository and have an assigned unique GUID
@@ -15,4 +18,5 @@ public interface EntityGraphDiscovery {
      */
     EntityGraphDiscoveryContext discoverEntities(List<AtlasEntity> entities) throws AtlasBaseException;
 
+    void cleanUp() throws AtlasBaseException;
 }

@@ -18,6 +18,7 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 
+import atlas.shaded.hbase.guava.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.GraphTransaction;
@@ -82,7 +83,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
             AtlasEntityType entityType = (AtlasEntityType) typeRegistry.getType(entity.getTypeName());
 
-            if ( discoveredEntities.isResolved(entity) ) {
+            if ( discoveredEntities.isResolved(entity.getGuid()) ) {
                 vertex = discoveredEntities.getResolvedReference(entity.getGuid());
                 context.addUpdated(entity, entityType, vertex);
 
@@ -221,10 +222,27 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
                 throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, messages);
             }
             AtlasEntity normalizedEntity = (AtlasEntity) type.getNormalizedValue(entity);
+            if ( normalizedEntity == null) {
+                //TODO - Fix this. Should not come here. Should ideally fail above
+                throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, "Failed to validate entity");
+            }
             normalizedEntities.add(normalizedEntity);
         }
 
         return normalizedEntities;
     }
 
+    @VisibleForTesting
+    EntityGraphDiscovery getGraphDiscoverer() {
+        return graphDiscoverer;
+    }
+
+    @VisibleForTesting
+    void setGraphDiscoverer(EntityGraphDiscovery discoverer) {
+        this.graphDiscoverer = discoverer;
+    }
+
+    public void cleanUp() throws AtlasBaseException {
+        this.graphDiscoverer.cleanUp();
+    }
 }

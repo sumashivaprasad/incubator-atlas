@@ -24,19 +24,32 @@ public class IDBasedEntityResolver implements EntityResolver {
 
     private GraphHelper graphHelper = GraphHelper.getInstance();
 
-    public EntityGraphDiscoveryContext resolveEntityReferences(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
+    private EntityGraphDiscoveryContext context;
 
-        init(entities);
+    @Override
+    public void init(EntityGraphDiscoveryContext context) throws AtlasBaseException {
+        this.context = context;
+        for (AtlasEntity entity : context.getRootEntities()) {
+
+            idToEntityMap.put(entity.getGuid(), entity);
+        }
+    }
+
+    public EntityGraphDiscoveryContext resolveEntityReferences() throws AtlasBaseException {
+
+        if ( context == null) {
+            throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, "Entity resolver not initialized");
+        }
 
         List<AtlasObjectId> resolvedReferences = new ArrayList<>();
 
-        for (AtlasObjectId typeIdPair : entities.getUnresolvedIdReferences()) {
+        for (AtlasObjectId typeIdPair : context.getUnresolvedIdReferences()) {
             if ( AtlasEntity.isAssigned(typeIdPair.getGuid())) {
                 //validate in graph repo that given guid, typename exists
                 Optional<AtlasVertex> vertex = resolveGuid(typeIdPair);
 
                 if ( vertex.isPresent() ) {
-                    entities.addRepositoryResolvedReference(typeIdPair, vertex.get());
+                    context.addRepositoryResolvedReference(typeIdPair, vertex.get());
                     resolvedReferences.add(typeIdPair);
                 }
             } else {
@@ -47,27 +60,20 @@ public class IDBasedEntityResolver implements EntityResolver {
             }
         }
 
-        entities.removeUnResolvedIdReferences(resolvedReferences);
+        context.removeUnResolvedIdReferences(resolvedReferences);
 
         //Resolve root references
-        for (AtlasEntity entity : entities.getRootEntities()) {
-            if ( !entities.isResolved(entity) && AtlasEntity.isAssigned(entity.getGuid())) {
+        for (AtlasEntity entity : context.getRootEntities()) {
+            if ( !context.isResolved(entity.getGuid()) && AtlasEntity.isAssigned(entity.getGuid())) {
                 AtlasObjectId typeIdPair = new AtlasObjectId(entity.getTypeName(), entity.getGuid());
                 Optional<AtlasVertex> vertex = resolveGuid(typeIdPair);
                 if (vertex.isPresent()) {
-                    entities.addRepositoryResolvedReference(typeIdPair, vertex.get());
-                    entities.removeUnResolvedIdReference(typeIdPair);
+                    context.addRepositoryResolvedReference(typeIdPair, vertex.get());
+                    context.removeUnResolvedIdReference(typeIdPair);
                 }
             }
         }
-        return entities;
-    }
-
-    private void init(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
-        for (AtlasEntity entity : entities.getRootEntities()) {
-
-            idToEntityMap.put(entity.getGuid(), entity);
-        }
+        return context;
     }
 
     private Optional<AtlasVertex> resolveGuid(AtlasObjectId typeIdPair) throws AtlasBaseException {
@@ -85,6 +91,11 @@ public class IDBasedEntityResolver implements EntityResolver {
         } else {
             throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, "Could not find an entity with the specified guid " + typeIdPair.getGuid() + " in Atlas respository");
         }
+    }
+
+    @Override
+    public void cleanUp() throws AtlasBaseException {
+        idToEntityMap.clear();
     }
 
 }

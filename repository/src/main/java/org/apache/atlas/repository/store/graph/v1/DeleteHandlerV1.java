@@ -200,9 +200,9 @@ public abstract class DeleteHandlerV1 {
         boolean forceDeleteStructTrait) throws AtlasBaseException {
         LOG.debug("Deleting {}", string(edge));
         boolean forceDelete =
-            (isReference(typeCategory))
+            (AtlasGraphUtilsV1.isReference(typeCategory))
                 ? forceDeleteStructTrait : false;
-        if (isReference(typeCategory) && isComposite) {
+        if (AtlasGraphUtilsV1.isReference(typeCategory) && isComposite) {
             //If the vertex is of type struct/trait, delete the edge and then the reference vertex as the vertex is not shared by any other entities.
             //If the vertex is of type class, and its composite attribute, this reference vertex' lifecycle is controlled
             //through this delete, hence delete the edge and the reference vertex.
@@ -231,9 +231,9 @@ public abstract class DeleteHandlerV1 {
 
             if (parentType instanceof AtlasStructType) {
                 AtlasStructType parentStructType = (AtlasStructType) parentType;
-                if (parentStructType.isForeignKeyAttribute(atlasEdgeLabel.getAttributeName()))
-                    getAttributeForEdge(edge.getLabel());
+                if (parentStructType.isForeignKeyAttribute(atlasEdgeLabel.getAttributeName())) {
                     deleteEdgeBetweenVertices(edge.getInVertex(), edge.getOutVertex(), atlasEdgeLabel.getAttributeName());
+                }
             }
         }
 
@@ -295,7 +295,7 @@ public abstract class DeleteHandlerV1 {
                     //For array attribute, if the element is struct/class, delete all the references
                     AtlasArrayType arrType = (AtlasArrayType) attrType;
                     AtlasType elemType = arrType.getElementType();
-                    if (isReference(elemType.getTypeCategory())) {
+                    if (AtlasGraphUtilsV1.isReference(elemType.getTypeCategory())) {
                         Iterator<AtlasEdge> edges = graphHelper.getOutGoingEdgesByLabel(instanceVertex, edgeLabel);
                         if (edges != null) {
                             while (edges.hasNext()) {
@@ -313,7 +313,7 @@ public abstract class DeleteHandlerV1 {
                     TypeCategory valueTypeCategory = mapType.getValueType().getTypeCategory();
                     String propertyName = AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(entityType, attributeInfo.getName());
 
-                    if (isReference(valueTypeCategory)) {
+                    if (AtlasGraphUtilsV1.isReference(valueTypeCategory)) {
                         List<Object> keys = ArrayVertexMapper.getArrayElementsProperty(keyType, instanceVertex, propertyName);
                         if (keys != null) {
                             for (Object key : keys) {
@@ -355,12 +355,10 @@ public abstract class DeleteHandlerV1 {
 
     protected AtlasStructDef.AtlasAttributeDef getAttributeForEdge(String edgeLabel) throws AtlasBaseException {
         AtlasEdgeLabel atlasEdgeLabel = new AtlasEdgeLabel(edgeLabel);
-//        IDataType referenceType = typeSystem.getDataType(IDataType.class, atlasEdgeLabel.getTypeName());
 
         AtlasType parentType = typeRegistry.getType(atlasEdgeLabel.getTypeName());
         AtlasStructType parentStructType = (AtlasStructType) parentType;
 
-//        return getFieldMapping(referenceType).fields.get(atlasEdgeLabel.getAttributeName());
         return parentStructType.getAttributeDef(atlasEdgeLabel.getAttributeName());
     }
 
@@ -386,13 +384,12 @@ public abstract class DeleteHandlerV1 {
             return;
         }
 
-        AtlasType parentType = typeRegistry.getType(typeName);
+        AtlasStructType parentType = (AtlasStructType) typeRegistry.getType(typeName);
         String propertyName = AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(parentType, attributeName);
         String edgeLabel = EDGE_LABEL_PREFIX + propertyName;
         AtlasEdge edge = null;
 
-        AtlasStructType parentStructType = (AtlasStructType) parentType;
-        AtlasStructDef.AtlasAttributeDef attrDef = parentStructType.getAttributeDef(attributeName);
+        AtlasStructDef.AtlasAttributeDef attrDef = parentType.getAttributeDef(attributeName);
         AtlasType attrType = typeRegistry.getType(attrDef.getTypeName());
 
         switch (attrType.getTypeCategory()) {
@@ -521,12 +518,6 @@ public abstract class DeleteHandlerV1 {
             }
         }
         _deleteVertex(instanceVertex, force);
-    }
-
-    private boolean isReference(TypeCategory typeCategory) {
-        return typeCategory == TypeCategory.STRUCT ||
-            typeCategory == TypeCategory.ENTITY ||
-            typeCategory == TypeCategory.CLASSIFICATION;
     }
 
     private Collection<AtlasStructDef.AtlasAttributeDef> getAttributeDefs(AtlasStructType structType) {

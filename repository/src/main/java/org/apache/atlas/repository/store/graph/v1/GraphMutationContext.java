@@ -18,11 +18,6 @@ public class GraphMutationContext {
     private AtlasStructType parentType;
 
     /**
-     * Current entity/struct definition
-     */
-    private AtlasStructDef structDef;
-
-    /**
      * Current attribute definition
      */
     private AtlasStructDef.AtlasAttributeDef attributeDef;
@@ -52,15 +47,14 @@ public class GraphMutationContext {
     /**
      * The current edge(in case of updates) from the parent entity/struct to the complex attribute like struct, trait
      */
-    Optional<AtlasEdge> currentEdge;
+    Optional<AtlasEdge> existingEdge;
 
 
     private GraphMutationContext(final Builder builder) {
         this.parentType = builder.parentType;
         this.attrType = builder.attrType;
-        this.structDef = builder.structDef;
         this.attributeDef = builder.attributeDef;
-        this.currentEdge = builder.currentEdge;
+        this.existingEdge = builder.currentEdge;
         this.value = builder.currentValue;
         this.referringVertex = builder.referringVertex;
         this.vertexPropertyKey = builder.vertexPropertyKey;
@@ -72,15 +66,7 @@ public class GraphMutationContext {
 
     @Override
     public int hashCode() {
-        int result = parentType != null ? parentType.hashCode() : 0;
-        result = 31 * result + (structDef != null ? structDef.hashCode() : 0);
-        result = 31 * result + (attributeDef != null ? attributeDef.hashCode() : 0);
-        result = 31 * result + (attrType != null ? attrType.hashCode() : 0);
-        result = 31 * result + (value != null ? value.hashCode() : 0);
-        result = 31 * result + (referringVertex != null ? referringVertex.hashCode() : 0);
-        result = 31 * result + (currentEdge != null ? currentEdge.hashCode() : 0);
-        result = 31 * result + (vertexPropertyKey != null ? vertexPropertyKey.hashCode() : 0);
-        return result;
+        return Objects.hash(parentType, attrType, value, referringVertex, vertexPropertyKey, existingEdge);
     }
 
     @Override
@@ -94,12 +80,11 @@ public class GraphMutationContext {
         } else {
             GraphMutationContext rhs = (GraphMutationContext) obj;
             return Objects.equals(parentType, rhs.getParentType())
-                 && Objects.equals(structDef, rhs.getStructDef())
                  && Objects.equals(attrType, rhs.getAttrType())
                  && Objects.equals(value, rhs.getValue())
                  && Objects.equals(referringVertex, rhs.getReferringVertex())
                  && Objects.equals(vertexPropertyKey, rhs.getReferringVertex())
-                 && Objects.equals(currentEdge, rhs.getCurrentEdge());
+                 && Objects.equals(existingEdge, rhs.getCurrentEdge());
         }
     }
 
@@ -107,8 +92,6 @@ public class GraphMutationContext {
     public static final class Builder {
 
         private final AtlasStructType parentType;
-
-        private final AtlasStructDef structDef;
 
         private final AtlasStructDef.AtlasAttributeDef attributeDef;
 
@@ -123,9 +106,8 @@ public class GraphMutationContext {
         private  String vertexPropertyKey;
 
 
-        public Builder(AtlasStructType parentType, AtlasStructDef structDef, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object currentValue) {
+        public Builder(AtlasStructType parentType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasType attrType, Object currentValue) {
             this.parentType = parentType;
-            this.structDef = structDef;
             this.attributeDef = attributeDef;
             this.attrType = attrType;
             this.currentValue = currentValue;
@@ -161,7 +143,7 @@ public class GraphMutationContext {
     }
 
     public AtlasStructDef getStructDef() {
-        return structDef;
+        return parentType.getStructDef();
     }
 
     public AtlasStructDef.AtlasAttributeDef getAttributeDef() {
@@ -181,18 +163,10 @@ public class GraphMutationContext {
     }
 
     public Optional<AtlasEdge> getCurrentEdge() {
-        return currentEdge;
+        return existingEdge;
     }
 
-    public void setReferringVertex(final AtlasVertex referringVertex) {
-        this.referringVertex = referringVertex;
-    }
-
-    public void setCurrentEdge(final Optional<AtlasEdge> currentEdge) {
-        this.currentEdge = currentEdge;
-    }
-
-    public void setVertexPropertyKey(final String vertexPropertyKey) {
-        this.vertexPropertyKey = vertexPropertyKey;
+    public void setAttrType(final AtlasType attrType) {
+        this.attrType = attrType;
     }
 }

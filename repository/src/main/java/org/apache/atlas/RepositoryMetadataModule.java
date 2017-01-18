@@ -136,7 +136,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         requestInjection(interceptor);
         bindInterceptor(Matchers.any(), Matchers.annotatedWith(GraphTransaction.class), interceptor);
 
-        bind(EntityGraphDiscovery.class).to(AtlasEntityGraphDiscoveryV1.class).asEagerSingleton();
+        bind(EntityGraphDiscovery.class).to(AtlasEntityGraphDiscoveryV1.class);
     }
 
     protected Configuration getConfiguration() {

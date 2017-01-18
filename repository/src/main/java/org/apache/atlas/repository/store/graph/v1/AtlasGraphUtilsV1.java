@@ -94,24 +94,29 @@ public class AtlasGraphUtilsV1 {
         return PROPERTY_PREFIX + "edge." + fromNode + "." + toNode;
     }
 
-    public static String getAttributeEdgeLabel(AtlasType parentType, String attributeName) throws AtlasBaseException {
-        return GraphHelper.EDGE_LABEL_PREFIX + getQualifiedAttributePropertyKey(parentType, attributeName);
+    public static String getAttributeEdgeLabel(AtlasStructType fromType, String attributeName) throws AtlasBaseException {
+        return GraphHelper.EDGE_LABEL_PREFIX + getQualifiedAttributePropertyKey(fromType, attributeName);
     }
 
-    public static String getQualifiedAttributePropertyKey(AtlasType parentType, String attributeName) throws AtlasBaseException {
-        switch (parentType.getTypeCategory()) {
+    public static String getQualifiedAttributePropertyKey(AtlasStructType fromType, String attributeName) throws AtlasBaseException {
+        switch (fromType.getTypeCategory()) {
          case STRUCT:
          case ENTITY:
          case CLASSIFICATION:
-             return ((AtlasStructType)(parentType)).getQualifiedAttributeName(attributeName);
+             return fromType.getQualifiedAttributeName(attributeName);
         default:
-            throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_TYPE, parentType.getTypeCategory().name());
+            throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_TYPE, fromType.getTypeCategory().name());
         }
     }
 
     public static boolean isReference(AtlasType type) {
-        return type.getTypeCategory() == TypeCategory.STRUCT ||
-            type.getTypeCategory() == TypeCategory.ENTITY;
+        return isReference(type.getTypeCategory());
+    }
+
+    public static boolean isReference(TypeCategory typeCategory) {
+        return typeCategory == TypeCategory.STRUCT ||
+            typeCategory == TypeCategory.ENTITY ||
+            typeCategory == TypeCategory.CLASSIFICATION;
     }
 
     public static String encodePropertyKey(String key) {
@@ -144,13 +149,13 @@ public class AtlasGraphUtilsV1 {
      * @param propertyName
      * @param value
      */
-    public static AtlasVertex addProperty(AtlasVertex element, String propertyName, Object value) {
+    public static AtlasVertex addProperty(AtlasVertex vertex, String propertyName, Object value) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("==> addProperty({}, {}, {})", toString(element), propertyName, value);
+            LOG.debug("==> addProperty({}, {}, {})", toString(vertex), propertyName, value);
         }
         propertyName = encodePropertyKey(propertyName);
-        element.addProperty(propertyName, value);
-        return element;
+        vertex.addProperty(propertyName, value);
+        return vertex;
     }
 
     public static <T extends AtlasElement> void setProperty(T element, String propertyName, Object value) {

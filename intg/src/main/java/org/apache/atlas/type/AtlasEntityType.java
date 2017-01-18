@@ -157,6 +157,10 @@ public class AtlasEntityType extends AtlasStructType {
         return entityType != null && allSuperTypes.contains(entityType.getTypeName());
     }
 
+    public boolean isSubTypeOf(String entityTypeName) {
+        return StringUtils.isNotEmpty(entityTypeName) && allSuperTypes.contains(entityTypeName);
+    }
+
     @Override
     public AtlasEntity createDefaultValue() {
         AtlasEntity ret = new AtlasEntity(entityDef.getName());
@@ -169,25 +173,28 @@ public class AtlasEntityType extends AtlasStructType {
     @Override
     public boolean isValidValue(Object obj) {
         if (obj != null) {
-            for (AtlasEntityType superType : superTypes) {
-                if (!superType.isValidValue(obj)) {
-                    return false;
-                }
-            }
-
             if (obj instanceof AtlasObjectId) {
                 AtlasObjectId objId = (AtlasObjectId ) obj;
-                if (StringUtils.isEmpty(objId.getTypeName())) {
+                if (StringUtils.isEmpty(objId.getTypeName()) || StringUtils.isEmpty(objId.getGuid())) {
                     return false;
-                } else if (StringUtils.isEmpty(objId.getGuid())) {
-                    return false;
-                }
-                return true;
-            } else if ( obj instanceof String) {
-                if ( StringUtils.isNotEmpty((String)obj)) {
-                    return ( AtlasEntity.isAssigned((String) obj) || AtlasEntity.isUnAssigned((String) obj));
+                } else {
+                    String typeName = objId.getTypeName();
+                    if ( !typeName.equals(getTypeName())) {
+                        //TODO - Enable below after enabling subType check
+//                        if ( !isSuperTypeOf(typeName)) {
+//                            return false;
+//                        }
+                        return false;
+                    }
+                    return AtlasEntity.isAssigned(objId.getGuid()) ||
+                            AtlasEntity.isUnAssigned(objId.getGuid());
                 }
             } else {
+                for (AtlasEntityType superType : superTypes) {
+                    if (!superType.isValidValue(obj)) {
+                        return false;
+                    }
+                }
                 return super.isValidValue(obj);
             }
         }
@@ -208,8 +215,6 @@ public class AtlasEntityType extends AtlasStructType {
                     normalizeAttributeValues((Map) obj);
                     ret = obj;
                 } else if (obj instanceof AtlasObjectId) {
-                    ret = obj;
-                }  else if (obj instanceof String) {
                     ret = obj;
                 }
             }

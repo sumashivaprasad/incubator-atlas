@@ -89,6 +89,11 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
         return result;
     }
 
+    @Override
+    public void cleanUp() throws AtlasBaseException {
+
+    }
+
     private AtlasEdge updateEdge(AtlasStructDef.AtlasAttributeDef attributeDef, Object value,  AtlasEdge currentEdge, final AtlasVertex entityVertex) throws AtlasBaseException {
 
         LOG.debug("Updating entity reference {} for reference attribute {}",  attributeDef.getName());
@@ -140,11 +145,9 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
     }
 
 
-    private String getId(Object value) throws AtlasBaseException {
+    public String getId(Object value) throws AtlasBaseException {
         if ( value != null) {
-            if (value instanceof String) {
-                return (String) value;
-            } else if ( value instanceof  AtlasObjectId) {
+            if ( value instanceof  AtlasObjectId) {
                 return ((AtlasObjectId) value).getGuid();
             } else if (value instanceof AtlasEntity) {
                 return ((AtlasEntity) value).getGuid();
@@ -156,5 +159,14 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
     private AtlasEntityHeader constructHeader(AtlasEntity entity, AtlasVertex vertex) {
         //TODO - enhance to return only selective attributes
         return new AtlasEntityHeader(entity.getTypeName(), AtlasGraphUtilsV1.getIdFromVertex(vertex), entity.getAttributes());
+    }
+
+    public EntityMutationContext getContext() {
+        return context;
+    }
+
+    public AtlasEntityType getInstanceType(Object val) throws AtlasBaseException {
+        String guid = getId(val);
+        return (AtlasEntityType) getContext().getType(guid);
     }
 }

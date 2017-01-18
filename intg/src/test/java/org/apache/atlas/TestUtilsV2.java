@@ -21,6 +21,7 @@ package org.apache.atlas;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
@@ -114,7 +115,7 @@ public final class TestUtilsV2 {
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
-                new AtlasAttributeDef("mentor", "Person", true,
+                new AtlasAttributeDef("mentor", EMPLOYEE_TYPE, true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
                         Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
@@ -286,7 +287,6 @@ public final class TestUtilsV2 {
         AtlasEntity hrDept = new AtlasEntity(DEPARTMENT_TYPE);
         AtlasEntity john = new AtlasEntity(EMPLOYEE_TYPE);
 
-//        AtlasEntity jane = new AtlasEntity("Manager", "SecurityClearance");
         AtlasEntity jane = new AtlasEntity("Manager");
         AtlasEntity johnAddr = new AtlasEntity("Address");
         AtlasEntity janeAddr = new AtlasEntity("Address");
@@ -295,9 +295,10 @@ public final class TestUtilsV2 {
         AtlasEntity max = new AtlasEntity(EMPLOYEE_TYPE);
         AtlasEntity maxAddr = new AtlasEntity("Address");
 
+        AtlasObjectId deptId = new AtlasObjectId(hrDept.getTypeName(), hrDept.getGuid());
         hrDept.setAttribute("name", "hr");
         john.setAttribute("name", "John");
-        john.setAttribute("department", hrDept.getGuid());
+        john.setAttribute("department", deptId);
         johnAddr.setAttribute("street", "Stewart Drive");
         johnAddr.setAttribute("city", "Sunnyvale");
         john.setAttribute("address", johnAddr);
@@ -314,26 +315,32 @@ public final class TestUtilsV2 {
         john.setAttribute("approximationOfPi", new BigDecimal("3.141592653589793238462643383279502884197169399375105820974944592307816406286"));
 
         jane.setAttribute("name", "Jane");
-        jane.setAttribute("department", hrDept.getGuid());
+        jane.setAttribute("department", deptId);
         janeAddr.setAttribute("street", "Great America Parkway");
         janeAddr.setAttribute("city", "Santa Clara");
         jane.setAttribute("address", janeAddr);
         janeAddr.setAttribute("street", "Great America Parkway");
 
         julius.setAttribute("name", "Julius");
-        julius.setAttribute("department", hrDept.getGuid());
+        julius.setAttribute("department", deptId);
         juliusAddr.setAttribute("street", "Madison Ave");
         juliusAddr.setAttribute("city", "Newtonville");
         julius.setAttribute("address", juliusAddr);
         julius.setAttribute("subordinates", ImmutableList.of());
 
+        AtlasObjectId janeId = new AtlasObjectId(jane.getTypeName(), jane.getGuid());
+
+        //TODO - Change to MANAGER_TYPE for JULIUS
+        AtlasObjectId maxId = new AtlasObjectId(EMPLOYEE_TYPE, max.getGuid());
+        AtlasObjectId juliusId = new AtlasObjectId(EMPLOYEE_TYPE, julius.getGuid());
+
         max.setAttribute("name", "Max");
-        max.setAttribute("department", hrDept.getGuid());
+        max.setAttribute("department", deptId);
         maxAddr.setAttribute("street", "Ripley St");
         maxAddr.setAttribute("city", "Newton");
         max.setAttribute("address", maxAddr);
-        max.setAttribute("manager", jane.getGuid());
-        max.setAttribute("mentor", julius.getGuid());
+        max.setAttribute("manager", janeId);
+        max.setAttribute("mentor", juliusId);
         max.setAttribute("birthday",new Date(1979, 3, 15));
         max.setAttribute("hasPets", true);
         max.setAttribute("age", 36);
@@ -345,8 +352,8 @@ public final class TestUtilsV2 {
         max.setAttribute("numberOfStarsEstimate", new BigInteger("1000000000000000000000000000000"));
         max.setAttribute("approximationOfPi", new BigDecimal("3.1415926535897932"));
 
-        john.setAttribute("manager", jane.getGuid());
-        john.setAttribute("mentor", max.getGuid());
+        john.setAttribute("manager", janeId);
+        john.setAttribute("mentor", maxId);
         hrDept.setAttribute("employees", ImmutableList.of(john, jane, julius, max));
 
         jane.setAttribute("subordinates", ImmutableList.of(john, max));

@@ -1,11 +1,9 @@
 package org.apache.atlas.repository.store.graph.v1;
 
+import atlas.shaded.hbase.guava.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
-import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.listener.EntityChangeListener;
-import org.apache.atlas.listener.TypesChangeListener;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasObjectId;
@@ -22,7 +20,6 @@ import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,12 +40,26 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
     private final Collection<EntityResolver> entityResolvers = new LinkedHashSet<>();
 
     @Inject
-    public AtlasEntityGraphDiscoveryV1(AtlasTypeRegistry typeRegistry, final Collection<Provider<EntityResolver>> entityListenerProviders) {
+    public AtlasEntityGraphDiscoveryV1(AtlasTypeRegistry typeRegistry, final Collection<Provider<EntityResolver>> entityResolverProviders) {
         this.typeRegistry = typeRegistry;
 
-        for (Provider<EntityResolver> entityResolverProvider : entityListenerProviders) {
-            entityResolvers.add(entityResolverProvider.get());
+        for (Provider<EntityResolver> entityResolverProvider : entityResolverProviders) {
+             entityResolvers.add(entityResolverProvider.get());
         }
+    }
+
+    @VisibleForTesting
+    public AtlasEntityGraphDiscoveryV1(AtlasTypeRegistry typeRegistry, final List<EntityResolver> entityResolvers) {
+        this.typeRegistry = typeRegistry;
+
+        for (EntityResolver entityResolver : entityResolvers) {
+            this.entityResolvers.add(entityResolver);
+        }
+    }
+
+    @Override
+    public void init() throws AtlasBaseException {
+        //Nothing to do
     }
 
     @Override
@@ -63,9 +74,21 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
         return discoveredEntities;
     }
 
+    @Override
+    public void cleanUp() throws AtlasBaseException {
+        processedIds.clear();
+        discoveredEntities.cleanUp();
+        final Collection<EntityResolver> entityResolvers = this.entityResolvers;
+        for (EntityResolver resolver : entityResolvers) {
+            resolver.cleanUp();
+        }
+    }
+
+
     protected void resolveReferences() throws AtlasBaseException {
         for (EntityResolver resolver : entityResolvers ) {
-            resolver.resolveEntityReferences(discoveredEntities);
+            resolver.init(discoveredEntities);
+            resolver.resolveEntityReferences();
         }
     }
 

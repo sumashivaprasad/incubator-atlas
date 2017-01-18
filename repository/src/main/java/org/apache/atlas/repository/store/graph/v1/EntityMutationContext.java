@@ -66,11 +66,21 @@ public class EntityMutationContext {
         return entityVsType.get(entity.getGuid());
     }
 
+    public AtlasType getType(String entityId) {
+        return entityVsType.get(entityId);
+    }
+
     public AtlasVertex getVertex(AtlasEntity entity) {
         return entityVsVertex.get(entity.getGuid());
+    }
+
+    public AtlasVertex getVertex(String entityId) {
+        return entityVsVertex.get(entityId);
     }
 
     public EntityGraphDiscoveryContext getDiscoveryContext() {
         return this.context;
     }
+
+    //TODO - equals/hashCode/toString
 }

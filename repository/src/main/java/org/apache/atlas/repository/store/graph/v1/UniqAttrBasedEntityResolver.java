@@ -34,39 +34,50 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         this.typeRegistry = typeRegistry;
     }
 
+    private EntityGraphDiscoveryContext context;
+
     @Override
-    public EntityGraphDiscoveryContext resolveEntityReferences(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
+    public void init(EntityGraphDiscoveryContext entities) throws AtlasBaseException {
+        this.context = entities;
+    }
+
+    @Override
+    public EntityGraphDiscoveryContext resolveEntityReferences() throws AtlasBaseException {
+
+        if ( context == null) {
+            throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, "Unique attribute based entity resolver not initialized");
+        }
 
         //Resolve attribute references
         List<AtlasEntity> resolvedReferences = new ArrayList<>();
 
-        for (AtlasEntity entity : entities.getUnResolvedEntityReferences()) {
+        for (AtlasEntity entity : context.getUnResolvedEntityReferences()) {
             //query in graph repo that given unique attribute - check for deleted also?
             Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
             if (vertex.isPresent()) {
-                entities.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
+                context.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
                 resolvedReferences.add(entity);
             }
         }
 
-        entities.removeUnResolvedEntityReferences(resolvedReferences);
+        context.removeUnResolvedEntityReferences(resolvedReferences);
 
-        if (entities.getUnResolvedEntityReferences().size() > 0) {
-            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_BY_UNIQUE_ATTRIBUTE_NOT_FOUND, entities.getUnResolvedEntityReferences().toString());
+        if (context.getUnResolvedEntityReferences().size() > 0) {
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_BY_UNIQUE_ATTRIBUTE_NOT_FOUND, context.getUnResolvedEntityReferences().toString());
         }
 
         //Resolve root references
-        for (AtlasEntity entity : entities.getRootEntities()) {
-            if ( !entities.isResolved(entity) ) {
+        for (AtlasEntity entity : context.getRootEntities()) {
+            if ( !context.isResolved(entity.getGuid()) ) {
                 Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
                 if (vertex.isPresent()) {
-                    entities.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
-                    entities.removeUnResolvedEntityReference(entity);
+                    context.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
+                    context.removeUnResolvedEntityReference(entity);
                 }
             }
         }
 
-        return entities;
+        return context;
     }
 
     Optional<AtlasVertex> resolveByUniqueAttribute(AtlasEntity entity) throws AtlasBaseException {
@@ -94,5 +105,10 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         }
         return Optional.absent();
     }
+
+    public void cleanUp() {
+        //Nothing to cleanup
+    }
+
 }
 

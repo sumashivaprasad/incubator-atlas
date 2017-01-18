@@ -12,6 +12,7 @@ import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasArrayType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +27,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ArrayVertexMapper.class);
 
-    protected DeleteHandlerV1 deleteHandler;
+    protected final DeleteHandlerV1 deleteHandler;
 
     protected StructVertexMapper structVertexMapper;
 
@@ -39,6 +40,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
         this.structVertexMapper = structVertexMapper;
     }
 
+    @Override
     public List toGraph(GraphMutationContext ctx) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {
@@ -55,20 +57,17 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
         List<Object> newElementsCreated = new ArrayList<>();
 
         if (!newAttributeEmpty) {
-            if (newElements != null && !newElements.isEmpty()) {
-                for (int index = 0; index < newElements.size(); index++) {
-                    Optional<AtlasEdge> existingEdge = getEdgeIfExists(arrType, currentElements, newElements, index);
-                    ctx.setCurrentEdge(existingEdge);
+            for (int index = 0; index < newElements.size(); index++) {
+                Optional<AtlasEdge> existingEdge = getEdgeIfExists(arrType, currentElements, newElements, index);
 
-                    GraphMutationContext arrCtx = new GraphMutationContext.Builder(ctx.getParentType(), ctx.getStructDef(), ctx.getAttributeDef(),
-                        arrType.getElementType(), newElements.get(index))
-                        .referringVertex(ctx.getReferringVertex())
-                        .edge(existingEdge)
-                        .vertexProperty(ctx.getVertexPropertyKey()).build();
+                GraphMutationContext arrCtx = new GraphMutationContext.Builder(ctx.getParentType(), ctx.getAttributeDef(),
+                    arrType.getElementType(), newElements.get(index))
+                    .referringVertex(ctx.getReferringVertex())
+                    .edge(existingEdge)
+                    .vertexProperty(ctx.getVertexPropertyKey()).build();
 
-                    Object newEntry = structVertexMapper.mapCollectionElementsToVertex(arrCtx);
-                    newElementsCreated.add(newEntry);
-                }
+                Object newEntry = structVertexMapper.mapCollectionElementsToVertex(arrCtx);
+                newElementsCreated.add(newEntry);
             }
         }
 
@@ -82,6 +81,11 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
         return newElementsCreated;
     }
 
+    @Override
+    public void cleanUp() throws AtlasBaseException {
+
+    }
+
     //Removes unused edges from the old collection, compared to the new collection
     private List<AtlasEdge> removeUnusedArrayEntries(
         AtlasStructType entityType,
@@ -93,14 +97,15 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
             LOG.debug("Removing unused entries from the old collection");
             if (AtlasGraphUtilsV1.isReference(entryType)) {
 
-                //Remove the edges for (current edges - new edges)
-                List<AtlasEdge> cloneElements = new ArrayList<>(currentEntries);
-                cloneElements.removeAll(newEntries);
-                List<AtlasEdge> additionalElements = new ArrayList<>();
-                LOG.debug("Removing unused entries from the old collection - {}", cloneElements);
+                Collection<AtlasEdge> edgesToRemove = CollectionUtils.subtract(currentEntries, newEntries);
 
-                if (!cloneElements.isEmpty()) {
-                    for (AtlasEdge edge : cloneElements) {
+                LOG.debug("Removing unused entries from the old collection - {}", edgesToRemove);
+
+                if (!edgesToRemove.isEmpty()) {
+                    //Remove the edges for (current edges - new edges)
+                    List<AtlasEdge> additionalElements = new ArrayList<>();
+
+                    for (AtlasEdge edge : edgesToRemove) {
                         boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(entityType, attributeDef.getName());
                         boolean deleted = deleteHandler.deleteEdgeReference(edge, entryType.getTypeCategory(),
                             deleteChildReferences, true);
@@ -108,8 +113,9 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
                             additionalElements.add(edge);
                         }
                     }
+
+                    return additionalElements;
                 }
-                return additionalElements;
             }
         }
         return new ArrayList<>();

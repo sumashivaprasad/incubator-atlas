@@ -16,4 +16,7 @@ public interface InstanceGraphMapper<T> {
      */
     T toGraph(GraphMutationContext ctx) throws AtlasBaseException;
 
+
+    void cleanUp() throws AtlasBaseException;
+
 }

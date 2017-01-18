@@ -31,8 +31,11 @@ import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasStructDef;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.apache.atlas.repository.graph.DeleteHandler;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
+import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
+import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasArrayType;
@@ -48,15 +51,20 @@ import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
 import org.apache.atlas.typesystem.persistence.StructInstance;
+import org.apache.atlas.util.AtlasRepositoryConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +80,6 @@ public class AtlasEntityStoreV1Test {
     @Inject
     AtlasTypeDefStore typeDefStore;
 
-    @Inject
     AtlasEntityStore entityStore;
 
     @Inject
@@ -90,8 +97,26 @@ public class AtlasEntityStoreV1Test {
     }
 
     @AfterClass
-    public void clear(){
+    public void clear() {
         AtlasGraphProvider.cleanup();
+    }
+
+    @BeforeTest
+    public void init() throws Exception {
+        final Class<? extends DeleteHandlerV1> deleteHandlerImpl = AtlasRepositoryConfiguration.getDeleteHandlerV1Impl();
+        final Constructor<? extends DeleteHandlerV1> deleteHandlerImplConstructor = deleteHandlerImpl.getConstructor(AtlasTypeRegistry.class);
+        DeleteHandlerV1 deleteHandler = deleteHandlerImplConstructor.newInstance(typeRegistry);
+        ArrayVertexMapper arrVertexMapper = new ArrayVertexMapper(deleteHandler);
+        MapVertexMapper mapVertexMapper = new MapVertexMapper(deleteHandler);
+
+        List<EntityResolver> entityResolvers = new ArrayList<>();
+        entityResolvers.add(new IDBasedEntityResolver());
+        entityResolvers.add(new UniqAttrBasedEntityResolver(typeRegistry));
+
+        EntityGraphDiscovery graphDiscovery = new AtlasEntityGraphDiscoveryV1(typeRegistry, entityResolvers);
+
+        entityStore = new AtlasEntityStoreV1(new EntityGraphMapper(arrVertexMapper, mapVertexMapper));
+        entityStore.init(typeRegistry, graphDiscovery);
     }
 
     @Test
@@ -176,12 +201,15 @@ public class AtlasEntityStoreV1Test {
 
     @Test(dependsOnMethods = "testCreate")
     public void testArrayUpdate() throws Exception {
+        //clear state
+        init();
+
         AtlasEntity entityClone = new AtlasEntity(entityCreated);
 
         List<AtlasEntity> employees = (List<AtlasEntity>) entityClone.getAttribute("employees");
 
         List<AtlasEntity> updatedEmployees = new ArrayList<>(employees);
-        clearSubOrdinates(updatedEmployees);
+        clearSubOrdinates(updatedEmployees, 1);
         entityClone.setAttribute("employees", updatedEmployees);
 
         EntityMutationResponse response = entityStore.createOrUpdate(entityClone);
@@ -198,11 +226,11 @@ public class AtlasEntityStoreV1Test {
 
     }
 
-    private void clearSubOrdinates(List<AtlasEntity> updatedEmployees) {
-        List<AtlasEntity> subOrdinates = (List<AtlasEntity>) updatedEmployees.get(1).getAttribute("subordinates");
+    private void clearSubOrdinates(List<AtlasEntity> updatedEmployees, int index) {
+        List<AtlasEntity> subOrdinates = (List<AtlasEntity>) updatedEmployees.get(index).getAttribute("subordinates");
         List<AtlasEntity> subOrdClone = new ArrayList<>(subOrdinates);
-        subOrdClone.remove(1);
+        subOrdClone.remove(index);
 
-        updatedEmployees.get(1).setAttribute("subordinates", subOrdClone);
+        updatedEmployees.get(index).setAttribute("subordinates", subOrdClone);
     }
 }

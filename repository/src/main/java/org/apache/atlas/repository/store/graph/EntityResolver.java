@@ -5,5 +5,9 @@ import org.apache.atlas.exception.AtlasBaseException;
 
 public interface EntityResolver {
 
-    EntityGraphDiscoveryContext resolveEntityReferences(EntityGraphDiscoveryContext entities) throws AtlasBaseException;
+    void init(EntityGraphDiscoveryContext entities) throws AtlasBaseException;
+
+    EntityGraphDiscoveryContext resolveEntityReferences() throws AtlasBaseException;
+
+    void cleanUp() throws AtlasBaseException;
 }

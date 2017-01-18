@@ -13,6 +13,7 @@ import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
@@ -59,6 +60,10 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
         return result;
     }
 
+    @Override
+    public void cleanUp() throws AtlasBaseException {
+    }
+
     public static boolean shouldManageChildReferences(AtlasStructType type, String attributeName) {
         return type.isMappedFromRefAttribute(attributeName);
     }
@@ -78,7 +83,7 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
                 AtlasType attributeType = structType.getAttributeType(attrName);
                 if ( attributeType != null) {
                     final AtlasStructDef.AtlasAttributeDef attributeDef = structType.getAttribute(attrName);
-                    GraphMutationContext ctx =  new GraphMutationContext.Builder(structType, structType.getStructDef(), attributeDef, attributeType, value)
+                    GraphMutationContext ctx =  new GraphMutationContext.Builder(structType, attributeDef, attributeType, value)
                         .referringVertex(vertex)
                         .vertexProperty(AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(structType, attrName)).build();
                     mapToVertexByTypeCategory(ctx);
@@ -96,6 +101,8 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
         case STRUCT:
             return toGraph(ctx);
         case ENTITY:
+            AtlasEntityType instanceType = entityVertexMapper.getInstanceType(ctx.getValue());
+            ctx.setAttrType(instanceType);
             return entityVertexMapper.toGraph(ctx);
         case MAP:
             return mapVertexMapper.toGraph(ctx);
@@ -115,11 +122,12 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
         return ctx.getValue();
     }
 
-    private AtlasEdge createVertex(AtlasStructType parentType, AtlasStructType structAttributeType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct struct, AtlasVertex referringVertex, String edgeLabel) throws AtlasBaseException {
-        AtlasVertex vertex = createVertexTemplate(struct, structAttributeType);
-        mapAttributestoVertex(structAttributeType, struct, vertex);
+    private AtlasEdge createVertex(AtlasStructType parentType, AtlasStructType attrType, AtlasStructDef.AtlasAttributeDef attributeDef, AtlasStruct struct, AtlasVertex referringVertex, String edgeLabel) throws AtlasBaseException {
+        AtlasVertex vertex = createVertexTemplate(struct, attrType);
+        mapAttributestoVertex(attrType, struct, vertex);
 
         try {
+            //TODO - Map directly in AtlasGraphUtilsV1
             return graphHelper.getOrCreateEdge(referringVertex, vertex, edgeLabel);
         } catch (RepositoryException e) {
             throw new AtlasBaseException(AtlasErrorCode.INTERNAL_ERROR, e);
@@ -156,6 +164,8 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
         case STRUCT:
             return toGraph(ctx);
         case ENTITY:
+            AtlasEntityType instanceType = entityVertexMapper.getInstanceType(ctx.getValue());
+            ctx.setAttrType(instanceType);
             return entityVertexMapper.toGraph(ctx);
         case MAP:
         case ARRAY:

@@ -176,4 +176,5 @@ public interface AtlasEntityStore {
      * @throws AtlasBaseException
      */
     AtlasEntity.AtlasEntities searchEntities(SearchFilter searchFilter) throws AtlasBaseException;
+
 }
