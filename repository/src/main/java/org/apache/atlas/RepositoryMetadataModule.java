@@ -24,9 +24,11 @@ import com.google.inject.matcher.Matchers;
 import com.google.inject.multibindings.Multibinder;
 
 import org.aopalliance.intercept.MethodInterceptor;
+import org.apache.atlas.discovery.AtlasDiscoveryService;
 import org.apache.atlas.discovery.AtlasLineageService;
 import org.apache.atlas.discovery.DataSetLineageService;
 import org.apache.atlas.discovery.DiscoveryService;
+import org.apache.atlas.discovery.EntityDiscoveryService;
 import org.apache.atlas.discovery.EntityLineageService;
 import org.apache.atlas.discovery.LineageService;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
@@ -103,6 +105,7 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
 
         // bind the DiscoveryService interface to an implementation
         bind(DiscoveryService.class).to(GraphBackedDiscoveryService.class).asEagerSingleton();
+        bind(AtlasDiscoveryService.class).to(EntityDiscoveryService.class).asEagerSingleton();
 
         bind(LineageService.class).to(DataSetLineageService.class).asEagerSingleton();
         bind(AtlasLineageService.class).to(EntityLineageService.class).asEagerSingleton();
