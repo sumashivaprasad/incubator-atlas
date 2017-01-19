@@ -38,3 +38,41 @@ Software Foundation (ASF), sponsored by the Apache Incubator PMC.
 For more information about the incubation status of the Apache Atlas
 project you can go to the following page:
 http://incubator.apache.org/projects/atlas.html
+
+Build Process
+=============
+
+1. Get Atlas sources to your local directory, for example with following commands
+   $ cd <your-local-directory>
+   $ git clone https://github.com/apache/incubator-atlas.git
+   $ cd incubator-atlas
+
+   # Checkout the branch or tag you would like to build
+   #
+   # to checkout a branch
+     $ git checkout <branch>
+
+   # to checkout a tag
+     $ git checkout tags/<tag>
+
+2. Execute the following commands to build Apache Atlas
+
+   $ export MAVEN_OPTS="-Xms2g -Xmx2g -XX:MaxPermSize=512M"
+   $ mvn clean install
+
+   # currently few tests might fail in some environments
+   # (timing issue?), the community is reviewing and updating
+   # such tests.
+   #
+   # if you see test failures, please run the following command:
+      $ mvn clean -DskipTests install
+
+   $ mvn clean package -Pdist
+
+3. After above build commands successfully complete, you should see the following files
+
+   webapp/target/atlas-webapp-<version>.war
+   addons/falcon-bridge/target/falcon-bridge-<version>.jar
+   addons/hive-bridge/target/hive-bridge-<version>.jar
+   addons/sqoop-bridge/target/sqoop-bridge-<version>.jar
+   addons/storm-bridge/target/storm-bridge-<version>.jar
