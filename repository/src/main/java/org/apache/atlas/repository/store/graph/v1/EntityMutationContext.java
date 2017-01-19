@@ -83,4 +83,42 @@ public class EntityMutationContext {
     }
 
     //TODO - equals/hashCode/toString
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final EntityMutationContext that = (EntityMutationContext) o;
+
+        if (entitiesCreated != null ? !entitiesCreated.equals(that.entitiesCreated) : that.entitiesCreated != null)
+            return false;
+        if (entitiesUpdated != null ? !entitiesUpdated.equals(that.entitiesUpdated) : that.entitiesUpdated != null)
+            return false;
+        if (context != null ? !context.equals(that.context) : that.context != null) return false;
+        if (entityVsType != null ? !entityVsType.equals(that.entityVsType) : that.entityVsType != null) return false;
+        return !(entityVsVertex != null ? !entityVsVertex.equals(that.entityVsVertex) : that.entityVsVertex != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = entitiesCreated != null ? entitiesCreated.hashCode() : 0;
+        result = 31 * result + (entitiesUpdated != null ? entitiesUpdated.hashCode() : 0);
+        result = 31 * result + (context != null ? context.hashCode() : 0);
+        result = 31 * result + (entityVsType != null ? entityVsType.hashCode() : 0);
+        result = 31 * result + (entityVsVertex != null ? entityVsVertex.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "EntityMutationContext{" +
+            "entitiesCreated=" + entitiesCreated +
+            ", entitiesUpdated=" + entitiesUpdated +
+            ", context=" + context +
+            ", entityVsType=" + entityVsType +
+            ", entityVsVertex=" + entityVsVertex +
+            '}';
+    }
 }

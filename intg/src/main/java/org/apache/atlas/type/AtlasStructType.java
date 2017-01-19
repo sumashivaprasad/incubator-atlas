@@ -77,7 +77,7 @@ public class AtlasStructType extends AtlasType {
         return attribute != null ? attribute.getAttributeType() : null;
     }
 
-    public AtlasAttributeDef getAttributeDef(String attributeName) { return structDef.getAttribute(attributeName); }
+    public AtlasAttributeDef getAttributeDef(String attributeName) { return allAttributes.get(attributeName) != null ? allAttributes.get(attributeName).getAttributeDef() : null; }
 
     public boolean isForeignKeyAttribute(String attributeName) {
         return foreignKeyAttributes.contains(attributeName);
@@ -111,7 +111,7 @@ public class AtlasStructType extends AtlasType {
         for (AtlasAttributeDef attributeDef : structDef.getAttributeDefs()) {
 
             AtlasType attrType = typeRegistry.getType(attributeDef.getTypeName());
-            AtlasAttribute attribute = new AtlasAttribute(this, structDef, attributeDef, attrType, getQualifiedAttributeName(structDef, attributeDef.getName()));
+            AtlasAttribute attribute = new AtlasAttribute(this, structDef, attributeDef, attrType);
 
             resolveConstraints(attributeDef, attrType);
 
@@ -261,11 +261,6 @@ public class AtlasStructType extends AtlasType {
                         }
                     }
                 }
-            } else if (obj instanceof String) {
-                return AtlasEntity.isAssigned((String) obj) || AtlasEntity.isUnAssigned((String) obj);
-            } else if (obj instanceof AtlasObjectId) {
-                return AtlasEntity.isAssigned(((AtlasObjectId) obj).getGuid()) || AtlasEntity.isUnAssigned(((AtlasObjectId) obj).getGuid());
-
             } else {
                 ret = false;
                 messages.add(objName + "=" + obj + ": invalid value for type " + getTypeName());
@@ -461,8 +456,8 @@ public class AtlasStructType extends AtlasType {
                     String.valueOf(constraintDef.getParams()));
         }
 
-        AtlasStructType   structType = (AtlasStructType)attribType;
-        AtlasAttributeDef refAttrib  = structType.getAttributeDef(refAttribName);
+        AtlasStructType   structType = (AtlasStructType) attribType;
+        AtlasAttributeDef refAttrib  = structType.getStructDef().getAttribute(refAttribName);
 
         if (refAttrib == null) {
             throw new AtlasBaseException(AtlasErrorCode.CONSTRAINT_NOT_EXIST,
@@ -491,18 +486,11 @@ public class AtlasStructType extends AtlasType {
     }
 
     public String getQualifiedAttributeName(String attrName) throws AtlasBaseException {
-//        final String typeName = structDef.getName();
-//        return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
         if ( allAttributes.containsKey(attrName)) {
             return allAttributes.get(attrName).getQualifiedName();
         }
 
         throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attrName, structDef.getName());
-    }
-
-    public static String getQualifiedAttributeName(AtlasStructDef structDef, String attrName) {
-        final String typeName = structDef.getName();
-        return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
     }
 
     public static class AtlasAttribute {
@@ -513,12 +501,12 @@ public class AtlasStructType extends AtlasType {
         private final AtlasAttributeDef attributeDef;
         private final String qualifiedName;
 
-        public AtlasAttribute(AtlasStructType structType, AtlasStructDef structDef, AtlasAttributeDef attrDef, AtlasType attributeType, String qualifiedName) {
+        public AtlasAttribute(AtlasStructType structType, AtlasStructDef structDef, AtlasAttributeDef attrDef, AtlasType attributeType) {
             this.structType = structType;
             this.structDef = structDef;
             this.attributeDef = attrDef;
             this.attributeType = attributeType;
-            this.qualifiedName = qualifiedName;
+            this.qualifiedName = getQualifiedAttributeName(structDef, attributeDef.getName());
         }
 
         public AtlasStructType getStructType() {
@@ -539,6 +527,15 @@ public class AtlasStructType extends AtlasType {
 
         public AtlasAttributeDef getAttributeDef() {
             return attributeDef;
+        }
+
+        public String getQualifiedAttributeName() {
+            return qualifiedName;
+        }
+
+        public static String getQualifiedAttributeName(AtlasStructDef structDef, String attrName) {
+            final String typeName = structDef.getName();
+            return attrName.contains(".") ? attrName : String.format("%s.%s", typeName, attrName);
         }
     }
 }

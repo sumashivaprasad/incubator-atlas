@@ -62,7 +62,7 @@ public enum AtlasErrorCode {
     INSTANCE_LINEAGE_INVALID_PARAMS(404, "ATLAS4046E", "Invalid lineage query parameters passed {0}: {1}"),
     INSTANCE_LINEAGE_QUERY_FAILED(404, "ATLAS4047E", "Instance lineage query failed {0}"),
     DISCOVERY_QUERY_FAILED(404, "ATLAS4048E", "Discovery query failed {0}"),
-    INSTANCE_CRUD_INVALID_PARAMS(404, "ATLAS4049E", "Invalid instamce creation/updation parameters passed : {0}"),
+    INSTANCE_CRUD_INVALID_PARAMS(404, "ATLAS4049E", "Invalid instance creation/updation parameters passed : {0}"),
 
 
     // All data conflict errors go here

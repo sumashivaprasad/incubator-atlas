@@ -83,7 +83,7 @@ public final class TestUtilsV2 {
                 AtlasTypeUtil.createClassTypeDef(DEPARTMENT_TYPE, "Department"+_description, ImmutableSet.<String>of(),
                         AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                         new AtlasAttributeDef("employees", String.format("array<%s>", "Employee"), true,
-                                AtlasAttributeDef.Cardinality.SINGLE, 0, Integer.MAX_VALUE, false, false,
+                                AtlasAttributeDef.Cardinality.SINGLE, 0, 1, false, false,
                                 new ArrayList<AtlasStructDef.AtlasConstraintDef>()));
 
         deptTypeDef.getAttribute("employees").addConstraint(

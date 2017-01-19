@@ -87,6 +87,7 @@ public class AtlasClassificationType extends AtlasStructType {
 
         this.superTypes        = Collections.unmodifiableList(s);
         this.allSuperTypes     = Collections.unmodifiableSet(allS);
+        this.allAttributes     = Collections.unmodifiableMap(allA);
     }
 
     public Set<String> getSuperTypes() {
@@ -94,35 +95,6 @@ public class AtlasClassificationType extends AtlasStructType {
     }
 
     public Set<String> getAllSuperTypes() { return allSuperTypes; }
-
-    public Map<String, AtlasAttribute> getAllAttributes() { return allAttributes; }
-
-    @Override
-    public AtlasType getAttributeType(String attributeName) {
-//        AtlasType ret = allAttributeTypes.get(attributeName);
-//
-//        if (ret == null) {
-//            ret = super.getAttributeType(attributeName);
-//
-//            if (ret == null) {
-//                for (AtlasClassificationType superType : superTypes) {
-//                    ret = superType.getAttributeType(attributeName);
-//
-//                    if (ret != null) {
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            if (ret != null) {
-//                allAttributeTypes.put(attributeName, ret);
-//            }
-//        }
-//
-//        return ret;
-        return super.getAttributeType(attributeName);
-    }
-
 
     @Override
     public AtlasAttributeDef getAttributeDef(String attributeName) {
@@ -278,17 +250,8 @@ public class AtlasClassificationType extends AtlasStructType {
         if (CollectionUtils.isNotEmpty(classificationDef.getAttributeDefs())) {
             for (AtlasAttributeDef attributeDef : classificationDef.getAttributeDefs()) {
                 AtlasType type = typeRegistry.getType(attributeDef.getTypeName());
-                allAttributes.put(attributeDef.getName(), new AtlasAttribute(this, classificationDef, attributeDef, type, getQualifiedAttributeName(classificationDef, attributeDef.getName())));
+                allAttributes.put(attributeDef.getName(), new AtlasAttribute(this, classificationDef, attributeDef, type));
             }
         }
     }
-
-//    public String getQualifiedAttributeName(String attrName) throws AtlasBaseException {
-//        if ( allQualifiedAttributeNames.containsKey(attrName)) {
-//            return allQualifiedAttributeNames.get(attrName);
-//        }
-//
-//        throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attrName, getStructDef().getName());
-//    }
-
 }

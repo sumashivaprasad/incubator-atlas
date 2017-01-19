@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.atlas.repository.store.graph.v1;
 
 import org.apache.atlas.AtlasErrorCode;
@@ -27,9 +44,9 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
 
     private final GraphHelper graphHelper = GraphHelper.getInstance();
 
-    private MapVertexMapper mapVertexMapper;
+    private final MapVertexMapper mapVertexMapper;
 
-    private ArrayVertexMapper arrVertexMapper;
+    private final ArrayVertexMapper arrVertexMapper;
 
     private EntityGraphMapper entityVertexMapper;
 
@@ -91,6 +108,10 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
                     mapToVertexByTypeCategory(ctx);
                 }
             }
+
+            //Set updated timestamp
+            AtlasGraphUtilsV1.setProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, RequestContextV1.get().getRequestTime());
+            GraphHelper.setProperty(vertex, Constants.MODIFIED_BY_KEY, RequestContextV1.get().getUser());
         }
         return vertex;
     }
@@ -154,6 +175,10 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
         AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.TIMESTAMP_PROPERTY_KEY, RequestContextV1.get().getRequestTime());
         AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY,
             RequestContextV1.get().getRequestTime());
+
+        AtlasGraphUtilsV1.setProperty(vertexWithoutIdentity, Constants.CREATED_BY_KEY, RequestContextV1.get().getUser());
+
+        GraphHelper.setProperty(vertexWithoutIdentity, Constants.MODIFIED_BY_KEY, RequestContextV1.get().getUser());
 
         return vertexWithoutIdentity;
     }

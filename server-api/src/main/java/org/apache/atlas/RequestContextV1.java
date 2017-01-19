@@ -44,34 +44,27 @@ public class RequestContextV1 {
     private Set<String> deletedEntityIds = new LinkedHashSet<>();
 
     private String user;
-    private long requestTime;
+    private final long requestTime;
 
     TypeSystem typeSystem = TypeSystem.getInstance();
     private Metrics metrics = new Metrics();
 
     private RequestContextV1() {
+        requestTime = System.currentTimeMillis();
     }
 
     //To handle gets from background threads where createContext() is not called
     //createContext called for every request in the filter
     public static RequestContextV1 get() {
-        if (CURRENT_CONTEXT.get() == null) {
-            synchronized (RequestContextV1.class) {
-                if (CURRENT_CONTEXT.get() == null) {
-                    createContext();
-                }
-            }
+        RequestContextV1 ret = CURRENT_CONTEXT.get();
+
+        if (ret == null) {
+            ret = new RequestContextV1();
+            CURRENT_CONTEXT.set(ret);
         }
-        return CURRENT_CONTEXT.get();
-    }
 
-    public static RequestContextV1 createContext() {
-        RequestContextV1 context = new RequestContextV1();
-        context.requestTime = System.currentTimeMillis();
-        CURRENT_CONTEXT.set(context);
-        return context;
+        return ret;
     }
-
     public static void clear() {
         CURRENT_CONTEXT.remove();
     }
@@ -103,16 +96,16 @@ public class RequestContextV1 {
         deletedEntityIds.add(entityId);
     }
 
-    public List<String> getCreatedEntityIds() {
-        return new ArrayList<>(createdEntityIds);
+    public Collection<String> getCreatedEntityIds() {
+        return createdEntityIds;
     }
 
-    public List<String> getUpdatedEntityIds() {
-        return new ArrayList<>(updatedEntityIds);
+    public Collection<String> getUpdatedEntityIds() {
+        return updatedEntityIds;
     }
 
-    public List<String> getDeletedEntityIds() {
-        return new ArrayList<>(deletedEntityIds);
+    public Collection<String> getDeletedEntityIds() {
+        return deletedEntityIds;
     }
 
     public long getRequestTime() {
