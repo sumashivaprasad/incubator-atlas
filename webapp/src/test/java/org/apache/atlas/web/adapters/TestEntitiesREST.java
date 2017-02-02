@@ -68,6 +68,10 @@ public class TestEntitiesREST {
 
     private List<String> createdGuids = new ArrayList<>();
 
+    private Map<String, AtlasEntity> dbEntityMap;
+
+    private Map<String, AtlasEntity> tableEntityMap;
+
     private AtlasEntity dbEntity;
 
     private AtlasEntity tableEntity;
@@ -78,9 +82,12 @@ public class TestEntitiesREST {
     public void setUp() throws Exception {
         AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
         typeStore.createTypesDef(typesDef);
-        dbEntity = TestUtilsV2.createDBEntity();
+        dbEntityMap = TestUtilsV2.createDBEntity();
+        dbEntity = dbEntityMap.values().iterator().next();
 
-        tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+        tableEntityMap = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+        tableEntity = tableEntityMap.values().iterator().next();
+
         final AtlasEntity colEntity = TestUtilsV2.createColumnEntity(tableEntity.getGuid());
         columns = new ArrayList<AtlasEntity>() {{ add(colEntity); }};
         tableEntity.setAttribute("columns", columns);
@@ -98,9 +105,9 @@ public class TestEntitiesREST {
 
     @Test
     public void testCreateOrUpdateEntities() throws Exception {
-        List<AtlasEntity> entities = new ArrayList<AtlasEntity>();
-        entities.add(dbEntity);
-        entities.add(tableEntity);
+        Map<String, AtlasEntity> entities = new HashMap<>();
+        entities.put(dbEntity.getGuid(), dbEntity);
+        entities.put(tableEntity.getGuid(), tableEntity);
 
         EntityMutationResponse response = entitiesREST.createOrUpdate(entities);
         List<AtlasEntityHeader> guids = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE);
@@ -129,9 +136,12 @@ public class TestEntitiesREST {
     public void testUpdateWithSerializedEntities() throws  Exception {
         //Check with serialization and deserialization of entity attributes for the case
         // where attributes which are de-serialized into a map
-        AtlasEntity dbEntity = TestUtilsV2.createDBEntity();
+        Map<String, AtlasEntity> dbEntityMap = TestUtilsV2.createDBEntity();
+        AtlasEntity dbEntity = dbEntityMap.values().iterator().next();
 
-        AtlasEntity tableEntity = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+        Map<String, AtlasEntity> tableEntityMap = TestUtilsV2.createTableEntity(dbEntity.getGuid());
+        AtlasEntity tableEntity = tableEntityMap.values().iterator().next();
+
         final AtlasEntity colEntity = TestUtilsV2.createColumnEntity(tableEntity.getGuid());
         List<AtlasEntity> columns = new ArrayList<AtlasEntity>() {{ add(colEntity); }};
         tableEntity.setAttribute("columns", columns);
@@ -139,9 +149,9 @@ public class TestEntitiesREST {
         AtlasEntity newDBEntity = serDeserEntity(dbEntity);
         AtlasEntity newTableEntity = serDeserEntity(tableEntity);
 
-        List<AtlasEntity> newEntities = new ArrayList<AtlasEntity>();
-        newEntities.add(newDBEntity);
-        newEntities.add(newTableEntity);
+        Map<String, AtlasEntity> newEntities = new HashMap<>();
+        newEntities.put(newDBEntity.getGuid(), newDBEntity);
+        newEntities.put(newTableEntity.getGuid(), newTableEntity);
         EntityMutationResponse response2 = entitiesREST.createOrUpdate(newEntities);
 
         List<AtlasEntityHeader> newGuids = response2.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE);

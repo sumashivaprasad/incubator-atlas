@@ -71,7 +71,7 @@ public class IDBasedEntityResolver implements EntityResolver {
             } else {
                 //check if root references have this temporary id
                if (!idToEntityMap.containsKey(typeIdPair.getGuid()) ) {
-                   throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, "Could not find an entity with the specified id " + typeIdPair + " in the request");
+                   throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, typeIdPair.toString());
                }
             }
         }

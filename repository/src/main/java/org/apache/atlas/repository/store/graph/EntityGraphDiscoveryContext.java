@@ -48,7 +48,7 @@ public final class EntityGraphDiscoveryContext {
     /**
      * Unresolved entity references
      */
-    private List<AtlasEntity> unresolvedEntityReferences = new ArrayList<>();
+    private List<AtlasObjectId> unresolvedEntityReferences = new ArrayList<>();
 
     /**
      * Unresolved entity id references
@@ -59,8 +59,8 @@ public final class EntityGraphDiscoveryContext {
         repositoryResolvedReferences.put(id.getGuid(), vertex);
     }
 
-    public void addUnResolvedEntityReference(AtlasEntity entity) {
-        this.unresolvedEntityReferences.add(entity);
+    public void addUnResolvedEntityReference(AtlasObjectId entityId) {
+        this.unresolvedEntityReferences.add(entityId);
     }
 
     public void addUnResolvedIdReference(AtlasEntityType entityType, String id) {
@@ -87,7 +87,7 @@ public final class EntityGraphDiscoveryContext {
         return repositoryResolvedReferences.get(id);
     }
 
-    public List<AtlasEntity> getUnResolvedEntityReferences() {
+    public List<AtlasObjectId> getUnResolvedEntityReferences() {
         return unresolvedEntityReferences;
     }
 
@@ -103,7 +103,7 @@ public final class EntityGraphDiscoveryContext {
         return unresolvedEntityReferences.remove(entity);
     }
 
-    public boolean removeUnResolvedEntityReferences(final List<AtlasEntity> entities) {
+    public boolean removeUnResolvedEntityReferences(final List<AtlasObjectId> entities) {
         return unresolvedEntityReferences.removeAll(entities);
     }
 

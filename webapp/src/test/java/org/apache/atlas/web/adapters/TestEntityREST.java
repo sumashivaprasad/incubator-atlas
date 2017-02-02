@@ -29,6 +29,7 @@ import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.store.AtlasTypeDefStore;
+import org.apache.atlas.web.rest.EntitiesREST;
 import org.apache.atlas.web.rest.EntityREST;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -41,6 +42,7 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Guice(modules = {RepositoryMetadataModule.class})
 public class TestEntityREST {
@@ -50,6 +52,9 @@ public class TestEntityREST {
 
     @Inject
     private EntityREST entityREST;
+
+    @Inject
+    private EntitiesREST entitiesREST;
 
     private AtlasEntity dbEntity;
 
@@ -61,7 +66,8 @@ public class TestEntityREST {
     public void setUp() throws Exception {
         AtlasTypesDef typesDef = TestUtilsV2.defineHiveTypes();
         typeStore.createTypesDef(typesDef);
-        dbEntity = TestUtilsV2.createDBEntity();
+        Map<String, AtlasEntity> dbEntityMap = TestUtilsV2.createDBEntity();
+        dbEntity = dbEntityMap.values().iterator().next();
     }
 
     @AfterClass
@@ -74,9 +80,10 @@ public class TestEntityREST {
         RequestContext.clear();
     }
 
-    @Test
-    public void testCreateOrUpdateEntity() throws Exception {
-        final EntityMutationResponse response = entityREST.createOrUpdate(dbEntity);
+    public void createOrUpdateEntity() throws Exception {
+        Map<String, AtlasEntity> dbEntityMap = new HashMap<>();
+        dbEntityMap.put(dbEntity.getGuid(), dbEntity);
+        final EntityMutationResponse response = entitiesREST.createOrUpdate(dbEntityMap);
 
         Assert.assertNotNull(response);
         List<AtlasEntityHeader> entitiesMutated = response.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE);
@@ -88,18 +95,19 @@ public class TestEntityREST {
         Assert.assertEquals(entitiesMutated.size(), 1);
     }
 
-    @Test(dependsOnMethods = "testCreateOrUpdateEntity")
+    @Test
     public void testGetEntityById() throws Exception {
-
+        createOrUpdateEntity();
         final AtlasEntity response = entityREST.getById(dbGuid);
 
         Assert.assertNotNull(response);
         TestEntitiesREST.verifyAttributes(response.getAttributes(), dbEntity.getAttributes());
     }
 
-    @Test(dependsOnMethods = "testCreateOrUpdateEntity")
+    @Test
     public void  testAddAndGetClassification() throws Exception {
 
+        createOrUpdateEntity();
         List<AtlasClassification> classifications = new ArrayList<>();
         testClassification = new AtlasClassification(TestUtilsV2.CLASSIFICATION, new HashMap<String, Object>() {{ put("tag", "tagName"); }});
         classifications.add(testClassification);
@@ -151,8 +159,8 @@ public class TestEntityREST {
     @Test
     public void  testUpdateGetDeleteEntityByUniqueAttribute() throws Exception {
 
-        AtlasEntity dbEntity = TestUtilsV2.createDBEntity();
-        entityREST.createOrUpdate(dbEntity);
+        Map<String, AtlasEntity> dbEntityMap = TestUtilsV2.createDBEntity();
+        entitiesREST.createOrUpdate(dbEntityMap);
 
         final String prevDBName = (String) dbEntity.getAttribute(TestUtilsV2.NAME);
         final String updatedDBName = "updatedDBName";

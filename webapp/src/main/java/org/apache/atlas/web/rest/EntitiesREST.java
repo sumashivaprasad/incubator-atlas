@@ -92,9 +92,10 @@ public class EntitiesREST {
     @POST
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse createOrUpdate(List<AtlasEntity> entities) throws AtlasBaseException {
+    public EntityMutationResponse createOrUpdate(Map<String, AtlasEntity> entities) throws AtlasBaseException {
         EntityMutationResponse response = null;
-        ITypedReferenceableInstance[] entitiesInOldFormat = restAdapters.getITypedReferenceables(entities);
+
+        ITypedReferenceableInstance[] entitiesInOldFormat = restAdapters.getITypedReferenceables(entities.values());
 
         try {
             final AtlasClient.EntityResult result = metadataService.updateEntities(entitiesInOldFormat);
@@ -114,7 +115,7 @@ public class EntitiesREST {
     @PUT
     @Consumes(Servlets.JSON_MEDIA_TYPE)
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse update(List<AtlasEntity> entities) throws AtlasBaseException {
+    public EntityMutationResponse update(Map<String, AtlasEntity> entities) throws AtlasBaseException {
        return createOrUpdate(entities);
     }
 
@@ -168,28 +169,6 @@ public class EntitiesREST {
     }
 
     /**
-     * Bulk retrieval API for searching on entities by certain predefined attributes ( typeName, superType, name, qualifiedName etc) + optional user defined attributes
-     *
-     * @throws AtlasBaseException
-     */
-    @GET
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public AtlasEntityHeader.AtlasEntityHeaders searchEntities() throws AtlasBaseException {
-        SearchFilter searchFilter = getSearchFilter();
-        AtlasEntity.AtlasEntities atlasEntities = entitiesStore.searchEntities(searchFilter);
-        AtlasEntityHeader.AtlasEntityHeaders entityHeaders = new AtlasEntityHeader.AtlasEntityHeaders();
-        entityHeaders.setList(new LinkedList<AtlasEntityHeader>());
-
-        if (atlasEntities != null) {
-            for (AtlasEntity atlasEntity : atlasEntities.getList()) {
-                entityHeaders.getList().add(new AtlasEntityHeader(atlasEntity.getTypeName(), atlasEntity.getAttributes()));
-            }
-        }
-
-        return entityHeaders;
-    }
-
-    /**
      * Bulk API to associate a tag to multiple entities
      *
      */
@@ -219,15 +198,4 @@ public class EntitiesREST {
             throw toAtlasBaseException(e);
         }
     }
-
-    private SearchFilter getSearchFilter() {
-        SearchFilter searchFilter = new SearchFilter();
-        if (null != httpServletRequest && null != httpServletRequest.getParameterMap()) {
-            for (Map.Entry<String, String[]> entry : httpServletRequest.getParameterMap().entrySet()) {
-                searchFilter.setParam(entry.getKey(), Arrays.asList(entry.getValue()));
-            }
-        }
-        return searchFilter;
-    }
-
 }

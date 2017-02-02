@@ -47,6 +47,8 @@ import org.apache.atlas.typesystem.exception.TypeNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 @Singleton
@@ -63,11 +65,12 @@ public class AtlasInstanceRestAdapters {
     @Inject
     private MetadataService metadataService;
 
-    public ITypedReferenceableInstance[] getITypedReferenceables(List<AtlasEntity> entities) throws AtlasBaseException {
+    public ITypedReferenceableInstance[] getITypedReferenceables(Collection<AtlasEntity> entities) throws AtlasBaseException {
         ITypedReferenceableInstance[] entitiesInOldFormat = new ITypedReferenceableInstance[entities.size()];
-
+        final Iterator<AtlasEntity> entityIterator = entities.iterator();
         for (int i = 0; i < entities.size(); i++) {
-            ITypedReferenceableInstance typedInstance = getITypedReferenceable(entities.get(i));
+
+            ITypedReferenceableInstance typedInstance = getITypedReferenceable(entityIterator.next());
             entitiesInOldFormat[i] = typedInstance;
         }
 

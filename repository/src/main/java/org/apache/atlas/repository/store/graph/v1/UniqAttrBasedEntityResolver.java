@@ -33,6 +33,7 @@ import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.exception.EntityNotFoundException;
+import org.apache.commons.collections.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,14 +69,14 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
         }
 
         //Resolve attribute references
-        List<AtlasEntity> resolvedReferences = new ArrayList<>();
+        List<AtlasObjectId> resolvedReferences = new ArrayList<>();
 
-        for (AtlasEntity entity : context.getUnResolvedEntityReferences()) {
+        for (AtlasObjectId entityId : context.getUnResolvedEntityReferences()) {
             //query in graph repo that given unique attribute - check for deleted also?
-            Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entity);
+            Optional<AtlasVertex> vertex = resolveByUniqueAttribute(entityId);
             if (vertex.isPresent()) {
-                context.addRepositoryResolvedReference(new AtlasObjectId(entity.getTypeName(), entity.getGuid()), vertex.get());
-                resolvedReferences.add(entity);
+                context.addRepositoryResolvedReference(new AtlasObjectId(entityId.getTypeName(), entityId.getGuid()), vertex.get());
+                resolvedReferences.add(entityId);
             }
         }
 
@@ -125,6 +126,42 @@ public class UniqAttrBasedEntityResolver implements EntityResolver {
                         }
                     } catch (EntityNotFoundException e) {
                         //Ignore if not found
+                    }
+                }
+            }
+        }
+        return Optional.absent();
+    }
+
+    Optional<AtlasVertex> resolveByUniqueAttribute(AtlasObjectId entityId) throws AtlasBaseException {
+        AtlasEntityType entityType = typeRegistry.getEntityTypeByName(entityId.getTypeName());
+
+        if (entityType == null) {
+            throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_INVALID, TypeCategory.ENTITY.name(), entityId.getTypeName());
+        }
+
+        if (MapUtils.isNotEmpty(entityId.getUniqueAttributes())) {
+            for (AtlasStructType.AtlasAttribute attr : entityType.getAllAttributes().values()) {
+                if (attr.getAttributeDef().getIsUnique()) {
+                    Object attrVal = entityId.getUniqueAttributes().get(attr.getAttributeDef().getName());
+                    if (attrVal != null) {
+                        String qualifiedAttrName = attr.getQualifiedAttributeName();
+                        AtlasVertex vertex = null;
+                        try {
+                            vertex = graphHelper.findVertex(qualifiedAttrName, attrVal,
+                                Constants.ENTITY_TYPE_PROPERTY_KEY, entityType.getTypeName(),
+                                Constants.STATE_PROPERTY_KEY, AtlasEntity.Status.ACTIVE
+                                    .name());
+
+                            if (LOG.isDebugEnabled()) {
+                                LOG.debug("Found vertex by unique attribute : " + qualifiedAttrName + "=" + attrVal);
+                            }
+                            if (vertex != null) {
+                                return Optional.of(vertex);
+                            }
+                        } catch (EntityNotFoundException e) {
+                            //Ignore if not found
+                        }
                     }
                 }
             }

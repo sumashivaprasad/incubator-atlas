@@ -28,6 +28,7 @@ import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.type.AtlasTypeRegistry;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Persistence/Retrieval API for AtlasEntity
@@ -38,13 +39,6 @@ public interface AtlasEntityStore {
      * Initialization
      */
     void init(AtlasTypeRegistry typeRegistry, EntityGraphDiscovery graphDiscovery) throws AtlasBaseException;
-
-    /**
-     * Create or update an entity if it already exists.
-     * @param entity
-     * @return
-     */
-    EntityMutationResponse createOrUpdate(AtlasEntity entity) throws AtlasBaseException;
 
 
     /**
@@ -72,13 +66,13 @@ public interface AtlasEntityStore {
 
 
     /**
-     * Create or update a list of entities
-     * @param entities List of AtlasEntity objects that need to be created
+     * Create or update  entities
+     * @param entities Map of the entity Id(guid or transient Id) to AtlasEntity objects that need to be created
      * @return EntityMutationResponse Entity mutations operations with the correspomding set of entities on which these operations were performed
      * @throws AtlasBaseException
      */
 
-    EntityMutationResponse createOrUpdate(List<AtlasEntity> entities) throws AtlasBaseException;
+    EntityMutationResponse createOrUpdate(Map<String, AtlasEntity> entities) throws AtlasBaseException;
 
     /**
      *
@@ -145,14 +139,6 @@ public interface AtlasEntityStore {
     EntityMutationResponse deleteByUniqueAttribute(String typeName, String attributeName, String attributeValue) throws AtlasBaseException;
 
     /**
-     * Compose any type of mutation op - EntityMutation.EntityOperation - CREATE_OR_UPDATE, PARTIAL_UPDATE, DELETE etc in a single transaction
-     * @param mutations
-     * @return
-     * @throws AtlasBaseException
-     */
-    EntityMutationResponse batchMutate(EntityMutations mutations) throws AtlasBaseException;
-
-    /**
      * Add classification(s)
      */
     void addClassifications(String guid, List<AtlasClassification> classification) throws AtlasBaseException;
@@ -167,14 +153,5 @@ public interface AtlasEntityStore {
      * Delete classification(s)
      */
     void deleteClassifications(String guid, List<String> classificationNames) throws AtlasBaseException;
-
-    /**
-     *
-     * Search by AND filters like typename, pre-defined attribute(s) eg: name, qualifiedName
-     * @param searchFilter
-     * @return
-     * @throws AtlasBaseException
-     */
-    AtlasEntity.AtlasEntities searchEntities(SearchFilter searchFilter) throws AtlasBaseException;
 
 }

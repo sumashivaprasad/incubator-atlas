@@ -407,15 +407,23 @@ public class AtlasEntityType extends AtlasStructType {
     }
 
     private boolean validateAtlasObjectId(AtlasObjectId objId) {
-        if (StringUtils.isEmpty(objId.getTypeName()) || StringUtils.isEmpty(objId.getGuid())) {
+        if (StringUtils.isEmpty(objId.getTypeName())) {
             return false;
         } else {
             String typeName = objId.getTypeName();
             if (!typeName.equals(getTypeName()) && !isSuperTypeOf(typeName)) {
                 return false;
             }
+
+            if (StringUtils.isEmpty(objId.getGuid()) && MapUtils.isEmpty(objId.getUniqueAttributes())) {
+                return false;
+            }
+
+            if ( !StringUtils.isEmpty(objId.getGuid())) {
+                return AtlasEntity.isAssigned(objId.getGuid()) || AtlasEntity.isUnAssigned((objId.getGuid()));
+            }
         }
-        return AtlasEntity.isAssigned(objId.getGuid()) || AtlasEntity.isUnAssigned((objId.getGuid()));
+        return true;
     }
 
     public static class ForeignKeyReference {

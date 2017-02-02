@@ -74,45 +74,6 @@ public class EntityREST {
     }
 
     /**
-     * Create or Update an entity if it  already exists
-     *
-     * @param entity The updated entity
-     * @return
-     */
-    @POST
-    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse createOrUpdate(final AtlasEntity entity) throws AtlasBaseException {
-        EntityMutationResponse response = null;
-        ITypedReferenceableInstance[] entitiesInOldFormat = restAdapters.getITypedReferenceables(new ArrayList<AtlasEntity>() {{ add(entity); }});
-
-        try {
-            final AtlasClient.EntityResult result = metadataService.updateEntities(entitiesInOldFormat);
-            response = toEntityMutationResponse(result);
-        } catch (AtlasException e) {
-            LOG.error("Exception while getting a typed reference for the entity ", e);
-            throw AtlasInstanceRestAdapters.toAtlasBaseException(e);
-        }
-        return response;
-    }
-
-    /**
-     * Complete Update of an entity identified by its GUID
-     *
-     * @param guid
-     * @param entity The updated entity
-     * @return
-     */
-    @PUT
-    @Path("guid/{guid}")
-    @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
-    @Produces(Servlets.JSON_MEDIA_TYPE)
-    public EntityMutationResponse updateByGuid(@PathParam("guid") String guid, AtlasEntity entity, @DefaultValue("false") @QueryParam("partialUpdate") boolean partialUpdate) throws AtlasBaseException {
-        return createOrUpdate(entity);
-    }
-
-
-    /**
      * Fetch the complete definition of an entity given its GUID.
      *
      * @param guid GUID for the entity

@@ -35,6 +35,7 @@ import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
 import java.util.Collection;
@@ -121,25 +122,32 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
             discoveredEntities.addRootEntity(entity);
             walkEntityGraph(type, entity);
         }
+
+
     }
 
     private void visitReference(AtlasEntityType type, Object entity, boolean isManagedEntity) throws AtlasBaseException {
         if (entity != null) {
             if (entity instanceof AtlasObjectId) {
                 final String guid = ((AtlasObjectId) entity).getGuid();
-                discoveredEntities.addUnResolvedIdReference(type, guid);
-            } else if (entity instanceof AtlasEntity) {
-                AtlasEntity entityObj = (AtlasEntity) entity;
-                if (isManagedEntity) {
-                    if (!processedIds.contains(entityObj.getGuid())) {
-                        processedIds.add(entityObj.getGuid());
-
-                        discoveredEntities.addRootEntity(entityObj);
-                        visitStruct(type, entityObj);
-                    }
+                if (!StringUtils.isEmpty(guid) && (AtlasEntity.isAssigned(guid) || AtlasEntity.isUnAssigned(guid))) {
+                    discoveredEntities.addUnResolvedIdReference(type, guid);
                 } else {
-                    discoveredEntities.addUnResolvedEntityReference(entityObj);
+                    discoveredEntities.addUnResolvedEntityReference(((AtlasObjectId) entity));
                 }
+            } else if (entity instanceof AtlasEntity) {
+//                AtlasEntity entityObj = (AtlasEntity) entity;
+//                if (isManagedEntity) {
+//                    if (!processedIds.contains(entityObj.getGuid())) {
+//                        processedIds.add(entityObj.getGuid());
+//
+//                        discoveredEntities.addRootEntity(entityObj);
+//                        visitStruct(type, entityObj);
+//                    }
+//                } else {
+//                    discoveredEntities.addUnResolvedEntityReference(entityObj);
+//                }
+                throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, "Use AtlasObjectId to refer to another instance instead of AtlasEntity " + type.getTypeName());
             } else {
                 throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, "Invalid object type " + entity.getClass());
             }

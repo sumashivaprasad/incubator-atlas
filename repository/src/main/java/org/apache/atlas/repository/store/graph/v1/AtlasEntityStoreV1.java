@@ -42,7 +42,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
@@ -65,11 +67,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     }
 
     @Override
-    public EntityMutationResponse createOrUpdate(final AtlasEntity entity) throws AtlasBaseException {
-        return createOrUpdate(new ArrayList<AtlasEntity>() {{ add(entity); }});
-    }
-
-    @Override
     public EntityMutationResponse updateById(final String guid, final AtlasEntity entity) {
         return null;
     }
@@ -86,7 +83,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
     @Override
     @GraphTransaction
-    public EntityMutationResponse createOrUpdate(final List<AtlasEntity> entities) throws AtlasBaseException {
+    public EntityMutationResponse createOrUpdate(final Map<String, AtlasEntity> entities) throws AtlasBaseException {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("==> AtlasEntityStoreV1.createOrUpdate({}, {})", entities);
@@ -141,12 +138,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     }
 
     @Override
-    public EntityMutationResponse batchMutate(final EntityMutations mutations) throws AtlasBaseException {
-        return null;
-    }
-
-
-    @Override
     public void addClassifications(final String guid, final List<AtlasClassification> classification) throws AtlasBaseException {
 
     }
@@ -159,12 +150,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     @Override
     public void deleteClassifications(final String guid, final List<String> classificationNames) throws AtlasBaseException {
 
-    }
-
-    @Override
-    public AtlasEntity.AtlasEntities searchEntities(final SearchFilter searchFilter) throws AtlasBaseException {
-        // TODO: Add checks here to ensure that typename and supertype are mandatory in the request
-        return null;
     }
 
     private EntityMutationContext preCreateOrUpdate(final List<AtlasEntity> atlasEntities) throws AtlasBaseException {
@@ -208,12 +193,24 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
         return context;
     }
 
-    private List<AtlasEntity> validateAndNormalize(final List<AtlasEntity> entities) throws AtlasBaseException {
+    private List<AtlasEntity> validateAndNormalize(final Map<String, AtlasEntity> entities) throws AtlasBaseException {
 
         List<AtlasEntity> normalizedEntities = new ArrayList<>();
         List<String> messages = new ArrayList<>();
 
-        for (AtlasEntity entity : entities) {
+
+        for (String entityId : entities.keySet()) {
+
+            if ( !AtlasEntity.isAssigned(entityId) && !AtlasEntity.isUnAssigned(entityId)) {
+                throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, ": Guid in map key is invalid " + entityId);
+            }
+
+            AtlasEntity entity = entities.get(entityId);
+
+            if ( entity == null) {
+                throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, ": Entity is null for guid " + entityId);
+            }
+
             AtlasEntityType type = typeRegistry.getEntityTypeByName(entity.getTypeName());
             if (type == null) {
                 throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_INVALID, TypeCategory.ENTITY.name(), entity.getTypeName());
