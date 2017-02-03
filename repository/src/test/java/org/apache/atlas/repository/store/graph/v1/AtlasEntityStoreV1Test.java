@@ -103,6 +103,7 @@ public class AtlasEntityStoreV1Test {
 
     @BeforeClass
     public void setUp() throws Exception {
+        metadataService = TestUtils.addSessionCleanupWrapper(metadataService);
         new GraphBackedSearchIndexer(typeRegistry);
         final AtlasTypesDef deptTypesDef = TestUtilsV2.defineDeptEmployeeTypes();
         typeDefStore.createTypesDef(deptTypesDef);
@@ -122,6 +123,7 @@ public class AtlasEntityStoreV1Test {
     @AfterClass
     public void clear() {
         AtlasGraphProvider.cleanup();
+        TestUtils.resetRequestContext();
     }
 
     @BeforeTest

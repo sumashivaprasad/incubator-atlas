@@ -8,13 +8,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public class InMemoryMapSeekableInputStream implements  SeekableEntityStream {
+public class InMemoryMapEntityStream implements EntityStream {
 
     private Map<AtlasObjectId, AtlasEntity> entities = new HashMap<>();
 
     private Iterator<Map.Entry<AtlasObjectId, AtlasEntity>> iterator;
 
-    public InMemoryMapSeekableInputStream(Map<String, AtlasEntity> entityMap) {
+    public InMemoryMapEntityStream(Map<String, AtlasEntity> entityMap) {
         for (AtlasEntity entity : entityMap.values()) {
             entities.put(entity.getAtlasObjectId(), entity);
         }
@@ -34,7 +34,6 @@ public class InMemoryMapSeekableInputStream implements  SeekableEntityStream {
 
     @Override
     public void reset() {
-        iterator = null;
         iterator = entities.entrySet().iterator();
     }
 

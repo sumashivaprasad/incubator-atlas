@@ -87,6 +87,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
     public void setUp() throws Exception {
         super.setUp();
 
+        repositoryService = TestUtils.addTransactionWrapper(repositoryService);
         final TypeSystem typeSystem = TypeSystem.getInstance();
         Collection<String> oldTypeNames = new HashSet<>();
         oldTypeNames.addAll(typeSystem.getTypeNames());
@@ -508,6 +509,9 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
                 {"from hive_db limit 3 offset 1", 2},
                 {"hive_db", 3},
                 {"hive_db where hive_db.name=\"Reporting\"", 1},
+                {"hive_db where hive_db.name=\"Reporting\" or hive_db.name=\"Sales\" or hive_db.name=\"Logging\" limit 1 offset 1", 1},
+                {"hive_db where hive_db.name=\"Reporting\" or hive_db.name=\"Sales\" or hive_db.name=\"Logging\" limit 1 offset 2", 1},
+                {"hive_db where hive_db.name=\"Reporting\" or hive_db.name=\"Sales\" or hive_db.name=\"Logging\" limit 2 offset 1", 2},
                 {"hive_db where hive_db.name=\"Reporting\" limit 10 ", 1},
                 {"hive_db hive_db.name = \"Reporting\"", 1},
                 {"hive_db where hive_db.name=\"Reporting\" select name, owner", 1},

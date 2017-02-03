@@ -17,6 +17,8 @@
  */
 package org.apache.atlas.groovy;
 
+import java.util.List;
+
 /**
  * Represents an expression that compares two expressions using
  * the Groovy "spaceship" operator.  This is basically the
@@ -28,5 +30,11 @@ public class ComparisonOperatorExpression extends BinaryExpression {
 
     public ComparisonOperatorExpression(GroovyExpression left, GroovyExpression right) {
         super(left, "<=>", right);
+    }
+
+    @Override
+    public GroovyExpression copy(List<GroovyExpression> newChildren) {
+        assert newChildren.size() == 2;
+        return new ComparisonOperatorExpression(newChildren.get(0), newChildren.get(1));
     }
 }
