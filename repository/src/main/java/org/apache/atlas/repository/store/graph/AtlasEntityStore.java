@@ -42,14 +42,6 @@ public interface AtlasEntityStore {
 
 
     /**
-     * Update entity identified by its guid
-     * @param guid
-     * @param entity
-     * @return
-     */
-    EntityMutationResponse updateById(String guid, AtlasEntity entity);
-
-    /**
      *
      * Get entity definition by its guid
      * @param guid
@@ -64,7 +56,6 @@ public interface AtlasEntityStore {
      */
     EntityMutationResponse deleteById(String guid);
 
-
     /**
      * Create or update  entities
      * @param entities Map of the entity Id(guid or transient Id) to AtlasEntity objects that need to be created
@@ -73,16 +64,6 @@ public interface AtlasEntityStore {
      */
 
     EntityMutationResponse createOrUpdate(Map<String, AtlasEntity> entities) throws AtlasBaseException;
-
-    /**
-     *
-     * Provides list of updated entity guids including any child entities
-     * @param guid
-     * @param entity
-     * @return
-     * @throws AtlasBaseException
-     */
-    EntityMutationResponse updateByIds(String guid, AtlasEntity entity) throws AtlasBaseException;
 
     /**
      * Batch GET to retrieve entities by their ID

@@ -34,6 +34,7 @@ import org.codehaus.jackson.annotate.JsonAutoDetect;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
@@ -55,6 +56,9 @@ public class AtlasObjectId  implements Serializable {
     private String              typeName;
     private String              guid;
     private Map<String, Object> uniqueAttributes;
+
+    private boolean isAssignedGuid = false;
+    private boolean isUnAssignedGuid = false;
 
     public AtlasObjectId() {
         this(null, null, null);
@@ -106,6 +110,16 @@ public class AtlasObjectId  implements Serializable {
         }
     }
 
+    @JsonIgnore
+    public boolean isAssignedGuid() {
+        return isAssignedGuid;
+    }
+
+    @JsonIgnore
+    public boolean isUnAssignedGuid() {
+        return isUnAssignedGuid;
+    }
+
     public String getTypeName() {
         return typeName;
     }
@@ -120,6 +134,10 @@ public class AtlasObjectId  implements Serializable {
 
     public void setGuid(String guid) {
         this.guid = guid;
+        if ( guid != null) {
+            this.isAssignedGuid = AtlasEntity.isAssigned(guid);
+            this.isUnAssignedGuid = AtlasEntity.isUnAssigned(guid);
+        }
     }
 
     public Map<String, Object> getUniqueAttributes() {

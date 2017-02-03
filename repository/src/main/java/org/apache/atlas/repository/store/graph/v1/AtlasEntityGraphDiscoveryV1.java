@@ -53,13 +53,14 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
 
     private Set<String> processedIds = new HashSet<>();
 
-    private EntityGraphDiscoveryContext discoveredEntities = new EntityGraphDiscoveryContext();
+    private EntityGraphDiscoveryContext discoveredEntities;
 
     private final Collection<EntityResolver> entityResolvers = new LinkedHashSet<>();
 
     @Inject
     public AtlasEntityGraphDiscoveryV1(AtlasTypeRegistry typeRegistry, final Collection<Provider<EntityResolver>> entityResolverProviders) {
         this.typeRegistry = typeRegistry;
+        this.discoveredEntities = new EntityGraphDiscoveryContext(typeRegistry);
 
         for (Provider<EntityResolver> entityResolverProvider : entityResolverProviders) {
              entityResolvers.add(entityResolverProvider.get());
@@ -69,6 +70,7 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
     @VisibleForTesting
     public AtlasEntityGraphDiscoveryV1(AtlasTypeRegistry typeRegistry, final List<EntityResolver> entityResolvers) {
         this.typeRegistry = typeRegistry;
+        this.discoveredEntities = new EntityGraphDiscoveryContext(typeRegistry);
 
         for (EntityResolver entityResolver : entityResolvers) {
             this.entityResolvers.add(entityResolver);
@@ -122,31 +124,18 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
             discoveredEntities.addRootEntity(entity);
             walkEntityGraph(type, entity);
         }
-
-
     }
 
-    private void visitReference(AtlasEntityType type, Object entity, boolean isManagedEntity) throws AtlasBaseException {
+    private void visitReference(AtlasEntityType type, Object entity) throws AtlasBaseException {
         if (entity != null) {
             if (entity instanceof AtlasObjectId) {
                 final String guid = ((AtlasObjectId) entity).getGuid();
-                if (!StringUtils.isEmpty(guid) && (AtlasEntity.isAssigned(guid) || AtlasEntity.isUnAssigned(guid))) {
+                if (!StringUtils.isEmpty(guid) && (((AtlasObjectId) entity).isAssignedGuid() || ((AtlasObjectId) entity).isUnAssignedGuid())) {
                     discoveredEntities.addUnResolvedIdReference(type, guid);
                 } else {
                     discoveredEntities.addUnResolvedEntityReference(((AtlasObjectId) entity));
                 }
             } else if (entity instanceof AtlasEntity) {
-//                AtlasEntity entityObj = (AtlasEntity) entity;
-//                if (isManagedEntity) {
-//                    if (!processedIds.contains(entityObj.getGuid())) {
-//                        processedIds.add(entityObj.getGuid());
-//
-//                        discoveredEntities.addRootEntity(entityObj);
-//                        visitStruct(type, entityObj);
-//                    }
-//                } else {
-//                    discoveredEntities.addUnResolvedEntityReference(entityObj);
-//                }
                 throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, "Use AtlasObjectId to refer to another instance instead of AtlasEntity " + type.getTypeName());
             } else {
                 throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, "Invalid object type " + entity.getClass());
@@ -171,15 +160,9 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
                 visitStruct(attrType, val);
             } else if (attrType.getTypeCategory() == TypeCategory.ENTITY) {
                 if ( val instanceof AtlasObjectId) {
-                    visitReference((AtlasEntityType) attrType,  val, false);
+                    visitReference((AtlasEntityType) attrType,  val);
                 } else if ( val instanceof AtlasEntity ) {
-                    //TODO - Change this to foreign key checks after changes in the model
-                   if ((parentType instanceof AtlasEntityType) &&
-                       ((AtlasEntityType)parentType).isMappedFromRefAttribute(attrDef.getName())) {
-                       visitReference((AtlasEntityType) attrType,  val, true);
-                   } else {
-                       visitReference((AtlasEntityType) attrType,  val, false);
-                   }
+                    visitReference((AtlasEntityType) attrType,  val);
                 }
             }
         }

@@ -65,8 +65,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
     private Date   updateTime = null;
     private Long   version    = new Long(0);
 
-    private AtlasObjectId id  = null;
-
     @JsonIgnore
     private static AtomicLong s_nextId = new AtomicLong(System.nanoTime());
 
@@ -92,7 +90,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
         setUpdatedBy(null);
         setCreateTime(null);
         setUpdateTime(null);
-        id = new AtlasObjectId(typeName, guid);
     }
 
     public AtlasEntity(AtlasEntity other) {
@@ -106,7 +103,6 @@ public class AtlasEntity extends AtlasStruct implements Serializable {
             setCreateTime(other.getCreateTime());
             setUpdateTime(other.getUpdateTime());
             setVersion(other.getVersion());
-            id = new AtlasObjectId(other.getTypeName(), other.getGuid());
         }
     }
 

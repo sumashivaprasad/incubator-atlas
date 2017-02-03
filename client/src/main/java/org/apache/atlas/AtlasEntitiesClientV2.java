@@ -34,6 +34,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.atlas.model.instance.AtlasEntity.AtlasEntities;
 
@@ -155,15 +156,11 @@ public class AtlasEntitiesClientV2 extends AtlasBaseClient {
         return null;
     }
 
-    public List<AtlasEntity> createEntities(List<AtlasEntity> atlasEntities) throws AtlasServiceException {
+    public List<AtlasEntity> createEntities(Map<String, AtlasEntity> atlasEntities) throws AtlasServiceException {
         return (List<AtlasEntity>)callAPI(CREATE_ENTITIES, atlasEntities, List.class);
     }
 
-    public List<AtlasEntity> updateEntities(List<AtlasEntity> atlasEntities) throws AtlasServiceException {
+    public List<AtlasEntity> updateEntities(Map<String, AtlasEntity> atlasEntities) throws AtlasServiceException {
         return (List<AtlasEntity>)callAPI(UPDATE_ENTITIES, atlasEntities, List.class);
-    }
-
-    public AtlasEntity.AtlasEntities searchEntities(SearchFilter searchFilter) throws AtlasServiceException {
-        return callAPI(GET_ENTITIES, AtlasEntity.AtlasEntities.class, searchFilter.getParams());
     }
 }

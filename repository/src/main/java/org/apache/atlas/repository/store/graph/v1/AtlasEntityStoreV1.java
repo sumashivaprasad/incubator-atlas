@@ -67,11 +67,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     }
 
     @Override
-    public EntityMutationResponse updateById(final String guid, final AtlasEntity entity) {
-        return null;
-    }
-
-    @Override
     public AtlasEntity getById(final String guid) {
         return null;
     }
@@ -100,11 +95,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
         }
 
         return graphMapper.mapAttributes(ctx);
-    }
-
-    @Override
-    public EntityMutationResponse updateByIds(final String guid, final AtlasEntity entity) throws AtlasBaseException {
-        return null;
     }
 
     @Override
@@ -169,8 +159,9 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
                 throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_INVALID, TypeCategory.ENTITY.name(), entity.getTypeName());
             }
 
-            if ( discoveredEntities.isResolved(entity.getGuid()) ) {
-                vertex = discoveredEntities.getResolvedReference(entity.getGuid());
+            AtlasObjectId objId = entity.getAtlasObjectId();
+            if ( discoveredEntities.isResolved(objId) ) {
+                vertex = discoveredEntities.getResolvedReference(objId);
                 context.addUpdated(entity, entityType, vertex);
 
                 String guid = AtlasGraphUtilsV1.getIdFromVertex(vertex);
@@ -197,7 +188,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
         List<AtlasEntity> normalizedEntities = new ArrayList<>();
         List<String> messages = new ArrayList<>();
-
 
         for (String entityId : entities.keySet()) {
 

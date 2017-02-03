@@ -98,10 +98,10 @@ public class TestEntityREST {
     @Test
     public void testGetEntityById() throws Exception {
         createOrUpdateEntity();
-        final AtlasEntity response = entityREST.getById(dbGuid);
+        final List<AtlasEntityWithAssociations> response = entityREST.getById(dbGuid);
 
         Assert.assertNotNull(response);
-        TestEntitiesREST.verifyAttributes(response.getAttributes(), dbEntity.getAttributes());
+        TestEntitiesREST.verifyAttributes(response.get(0).getAttributes(), dbEntity.getAttributes());
     }
 
     @Test
@@ -130,8 +130,8 @@ public class TestEntityREST {
     @Test(dependsOnMethods = "testAddAndGetClassification")
     public void  testGetEntityWithAssociations() throws Exception {
 
-        AtlasEntityWithAssociations entity = entityREST.getWithAssociationsByGuid(dbGuid);
-        final List<AtlasClassification> retrievedClassifications = entity.getClassifications();
+        List<AtlasEntityWithAssociations> entity = entityREST.getWithAssociationsByGuid(dbGuid);
+        final List<AtlasClassification> retrievedClassifications = entity.get(0).getClassifications();
 
         Assert.assertNotNull(retrievedClassifications);
         Assert.assertEquals(new ArrayList<AtlasClassification>() {{ add(testClassification); }}, retrievedClassifications);
@@ -172,11 +172,11 @@ public class TestEntityREST {
         Assert.assertTrue(AtlasEntity.isAssigned(dbGuid));
 
         //Get By unique attribute
-        AtlasEntity entity = entityREST.getByUniqueAttribute(TestUtilsV2.DATABASE_TYPE, TestUtilsV2.NAME, updatedDBName);
-        Assert.assertNotNull(entity);
-        Assert.assertNotNull(entity.getGuid());
-        Assert.assertEquals(entity.getGuid(), dbGuid);
-        TestEntitiesREST.verifyAttributes(entity.getAttributes(), dbEntity.getAttributes());
+        List<AtlasEntityWithAssociations> entities = entityREST.getByUniqueAttribute(TestUtilsV2.DATABASE_TYPE, TestUtilsV2.NAME, updatedDBName);
+        Assert.assertNotNull(entities);
+        Assert.assertNotNull(entities.get(0).getGuid());
+        Assert.assertEquals(entities.get(0).getGuid(), dbGuid);
+        TestEntitiesREST.verifyAttributes(entities.get(0).getAttributes(), dbEntity.getAttributes());
 
         final EntityMutationResponse deleteResponse = entityREST.deleteByUniqueAttribute(TestUtilsV2.DATABASE_TYPE, TestUtilsV2.NAME, (String) dbEntity.getAttribute(TestUtilsV2.NAME));
 

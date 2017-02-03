@@ -19,6 +19,7 @@ package org.apache.atlas.repository.store.graph.v1;
 
 import org.apache.atlas.model.instance.AtlasEntity;
 
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.type.AtlasEntityType;
@@ -36,23 +37,25 @@ public class EntityMutationContext {
     private List<AtlasEntity> entitiesUpdated  = new ArrayList<>();
 
     private EntityGraphDiscoveryContext context;
-    private Map<String, AtlasEntityType> entityVsType = new HashMap<>();
-    private Map<String, AtlasVertex> entityVsVertex = new HashMap<>();
+    private Map<AtlasObjectId, AtlasEntityType> entityVsType = new HashMap<>();
+    private Map<AtlasObjectId, AtlasVertex> entityVsVertex = new HashMap<>();
 
     public EntityMutationContext(final EntityGraphDiscoveryContext context) {
         this.context = context;
     }
 
     public void addCreated(AtlasEntity entity, AtlasEntityType type, AtlasVertex atlasVertex) {
+        AtlasObjectId objId = entity.getAtlasObjectId();
         entitiesCreated.add(entity);
-        entityVsVertex.put(entity.getGuid(), atlasVertex);
-        entityVsType.put(entity.getGuid(), type);
+        entityVsVertex.put(objId, atlasVertex);
+        entityVsType.put(objId, type);
     }
 
     public void addUpdated(AtlasEntity entity, AtlasEntityType type, AtlasVertex atlasVertex) {
+        AtlasObjectId objId = entity.getAtlasObjectId();
         entitiesUpdated.add(entity);
-        entityVsVertex.put(entity.getGuid(), atlasVertex);
-        entityVsType.put(entity.getGuid(), type);
+        entityVsVertex.put(objId, atlasVertex);
+        entityVsType.put(objId, type);
     }
 
     public Collection<AtlasEntity> getCreatedEntities() {
@@ -64,18 +67,18 @@ public class EntityMutationContext {
     }
 
     public AtlasEntityType getType(AtlasEntity entity) {
-        return entityVsType.get(entity.getGuid());
+        return entityVsType.get(entity.getAtlasObjectId());
     }
 
-    public AtlasType getType(String entityId) {
+    public AtlasType getType(AtlasObjectId entityId) {
         return entityVsType.get(entityId);
     }
 
     public AtlasVertex getVertex(AtlasEntity entity) {
-        return entityVsVertex.get(entity.getGuid());
+        return entityVsVertex.get(entity.getAtlasObjectId());
     }
 
-    public AtlasVertex getVertex(String entityId) {
+    public AtlasVertex getVertex(AtlasObjectId entityId) {
         return entityVsVertex.get(entityId);
     }
 

@@ -35,6 +35,7 @@ import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.Referenceable;
+import org.apache.atlas.web.adapters.AtlasFormatConverter;
 import org.apache.atlas.web.adapters.AtlasInstanceRestAdapters;
 import org.apache.atlas.web.util.Servlets;
 import org.apache.commons.lang3.StringUtils;
@@ -47,6 +48,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.atlas.web.adapters.AtlasInstanceRestAdapters.toAtlasBaseException;
 import static org.apache.atlas.web.adapters.AtlasInstanceRestAdapters.toEntityMutationResponse;
@@ -81,10 +83,14 @@ public class EntityREST {
     @GET
     @Path("/guid/{guid}")
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public AtlasEntity getById(@PathParam("guid") String guid) throws AtlasBaseException {
+    public List<AtlasEntityWithAssociations> getById(@PathParam("guid") String guid) throws AtlasBaseException {
+        List<AtlasEntityWithAssociations> entityList = new ArrayList<>();
+
         try {
             ITypedReferenceableInstance ref = metadataService.getEntityDefinition(guid);
-            return restAdapters.getAtlasEntity(ref);
+            Map<String, AtlasEntityWithAssociations> entityRet = restAdapters.getAtlasEntity(ref);
+            entityList.addAll(entityRet.values());
+            return entityList;
         } catch (AtlasException e) {
             throw toAtlasBaseException(e);
         }
@@ -99,10 +105,14 @@ public class EntityREST {
     @GET
     @Path("/guid/{guid}/associations")
     @Produces(Servlets.JSON_MEDIA_TYPE)
-    public AtlasEntityWithAssociations getWithAssociationsByGuid(@PathParam("guid") String guid) throws AtlasBaseException {
+    public List<AtlasEntityWithAssociations> getWithAssociationsByGuid(@PathParam("guid") String guid) throws AtlasBaseException {
+
+        List<AtlasEntityWithAssociations> entityList = new ArrayList<>();
         try {
             ITypedReferenceableInstance ref = metadataService.getEntityDefinition(guid);
-            return restAdapters.getAtlasEntity(ref);
+            Map<String, AtlasEntityWithAssociations> entityRet = restAdapters.getAtlasEntity(ref);
+            entityList.addAll(entityRet.values());
+            return entityList;
         } catch (AtlasException e) {
             throw toAtlasBaseException(e);
         }
@@ -151,7 +161,9 @@ public class EntityREST {
         AtlasEntityType type = (AtlasEntityType) validateType(entityType, TypeCategory.ENTITY);
         validateUniqueAttribute(type, attribute);
 
-        Referenceable ref = restAdapters.getReferenceable(entity);
+        AtlasFormatConverter.ConverterContext ctx = new AtlasFormatConverter.ConverterContext();
+        ctx.addEntity(entity);
+        Referenceable ref = restAdapters.getReferenceable(entity, ctx);
         AtlasClient.EntityResult result = metadataService.updateEntityByUniqueAttribute(entityType, attribute, value, ref);
         return toEntityMutationResponse(result);
     }
@@ -181,19 +193,23 @@ public class EntityREST {
     @Consumes({Servlets.JSON_MEDIA_TYPE, MediaType.APPLICATION_JSON})
     @Produces(Servlets.JSON_MEDIA_TYPE)
     @Path("/uniqueAttribute/type/{typeName}/attribute/{attrName}")
-    public AtlasEntity getByUniqueAttribute(@PathParam("typeName") String entityType,
+    public List<AtlasEntityWithAssociations> getByUniqueAttribute(@PathParam("typeName") String entityType,
         @PathParam("attrName") String attribute,
         @QueryParam("value") String value) throws AtlasBaseException {
 
+        List<AtlasEntityWithAssociations> entityList = new ArrayList<>();
         AtlasEntityType type = (AtlasEntityType) validateType(entityType, TypeCategory.ENTITY);
         validateUniqueAttribute(type, attribute);
 
         try {
             final ITypedReferenceableInstance entityDefinitionReference = metadataService.getEntityDefinitionReference(entityType, attribute, value);
-            return restAdapters.getAtlasEntity(entityDefinitionReference);
+            Map<String, AtlasEntityWithAssociations> entityRet = restAdapters.getAtlasEntity(entityDefinitionReference);
+            entityList.addAll(entityRet.values());
         } catch (AtlasException e) {
             throw toAtlasBaseException(e);
         }
+
+        return entityList;
     }
 
 

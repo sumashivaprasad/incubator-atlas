@@ -60,7 +60,7 @@ public class IDBasedEntityResolver implements EntityResolver {
         List<AtlasObjectId> resolvedReferences = new ArrayList<>();
 
         for (AtlasObjectId typeIdPair : context.getUnresolvedIdReferences()) {
-            if ( AtlasEntity.isAssigned(typeIdPair.getGuid())) {
+            if ( typeIdPair.isAssignedGuid()) {
                 //validate in graph repo that given guid, typename exists
                 Optional<AtlasVertex> vertex = resolveGuid(typeIdPair);
 
@@ -80,7 +80,7 @@ public class IDBasedEntityResolver implements EntityResolver {
 
         //Resolve root references
         for (AtlasEntity entity : context.getRootEntities()) {
-            if ( !context.isResolved(entity.getGuid()) && AtlasEntity.isAssigned(entity.getGuid())) {
+            if ( !context.isResolved(entity.getAtlasObjectId()) && AtlasEntity.isAssigned(entity.getGuid())) {
                 AtlasObjectId typeIdPair = new AtlasObjectId(entity.getTypeName(), entity.getGuid());
                 Optional<AtlasVertex> vertex = resolveGuid(typeIdPair);
                 if (vertex.isPresent()) {

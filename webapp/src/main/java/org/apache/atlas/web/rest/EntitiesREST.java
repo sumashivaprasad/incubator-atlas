@@ -25,6 +25,7 @@ import org.apache.atlas.model.SearchFilter;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.ClassificationAssociateRequest;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
@@ -53,6 +54,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -136,8 +138,10 @@ public class EntitiesREST {
         for (String guid : guids) {
             try {
                ITypedReferenceableInstance ref = metadataService.getEntityDefinition(guid);
-               AtlasEntity entity = restAdapters.getAtlasEntity(ref);
-               entityList.add(entity);
+               Map<String, AtlasEntityWithAssociations> entityRet = restAdapters.getAtlasEntity(ref);
+
+               addToEntityList(entityList, entityRet.values());
+
             } catch (AtlasException e) {
                 throw toAtlasBaseException(e);
             }
@@ -145,6 +149,14 @@ public class EntitiesREST {
 
         entities.setList(entityList);
         return entities;
+    }
+
+    private void addToEntityList(final List<AtlasEntity> entityList, final Collection<AtlasEntityWithAssociations> values) {
+        for (AtlasEntityWithAssociations val : values) {
+            if ( !entityList.contains(val)) {
+                entityList.add(val);
+            }
+        }
     }
 
     /*******

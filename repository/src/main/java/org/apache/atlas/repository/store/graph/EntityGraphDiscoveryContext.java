@@ -17,10 +17,13 @@
  */
 package org.apache.atlas.repository.store.graph;
 
+import org.apache.atlas.AtlasErrorCode;
+import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasEntityType;
+import org.apache.atlas.type.AtlasTypeRegistry;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,6 +37,8 @@ import java.util.Set;
 
 public final class EntityGraphDiscoveryContext {
 
+    private AtlasTypeRegistry typeRegistry;
+
     /**
      *  Keeps track of all the entities that need to be created/updated including its child entities *
      */
@@ -43,7 +48,7 @@ public final class EntityGraphDiscoveryContext {
     /**
      * These references have been resolved using a unique identifier like guid or a qualified name etc in Atlas repository
      */
-    private Map<String, AtlasVertex> repositoryResolvedReferences = new LinkedHashMap<>();
+    private Map<AtlasObjectId, AtlasVertex> repositoryResolvedReferences = new LinkedHashMap<>();
 
     /**
      * Unresolved entity references
@@ -55,8 +60,12 @@ public final class EntityGraphDiscoveryContext {
      */
     private Set<AtlasObjectId> unresolvedIdReferences = new HashSet<>();
 
+    public EntityGraphDiscoveryContext(AtlasTypeRegistry typeRegistry) {
+        this.typeRegistry = typeRegistry;
+    }
+
     public void addRepositoryResolvedReference(AtlasObjectId id, AtlasVertex vertex) {
-        repositoryResolvedReferences.put(id.getGuid(), vertex);
+        repositoryResolvedReferences.put(id, vertex);
     }
 
     public void addUnResolvedEntityReference(AtlasObjectId entityId) {
@@ -71,15 +80,35 @@ public final class EntityGraphDiscoveryContext {
         return unresolvedIdReferences;
     }
 
-    public boolean isResolved(String guid) {
-        return repositoryResolvedReferences.containsKey(guid);
+    public boolean isResolved(AtlasObjectId id) {
+        return repositoryResolvedReferences.containsKey(id);
     }
 
-    public AtlasVertex getResolvedReference(AtlasObjectId ref) {
-        return repositoryResolvedReferences.get(ref.getGuid());
+    public AtlasVertex getResolvedReference(AtlasObjectId ref) throws AtlasBaseException {
+
+        AtlasVertex vertex = repositoryResolvedReferences.get(ref);
+
+        if (vertex == null) {
+            String typeName = ref.getTypeName();
+            AtlasEntityType entityType = typeRegistry.getEntityTypeByName(typeName);
+            final Set<String> allSubTypes = entityType.getAllSubTypes();
+
+            for (String subType : allSubTypes) {
+                AtlasObjectId subTypeObjId = new AtlasObjectId(subType, ref.getGuid(), ref.getUniqueAttributes());
+                vertex = repositoryResolvedReferences.get(subTypeObjId);
+                if ( vertex != null) {
+                    repositoryResolvedReferences.put(ref, vertex);
+                    return vertex;
+                }
+            }
+        } else {
+            return vertex;
+        }
+
+        throw new AtlasBaseException(AtlasErrorCode.INSTANCE_CRUD_INVALID_PARAMS, " : Could not find an entity with " + ref.toString());
     }
 
-    public Map<String, AtlasVertex> getRepositoryResolvedReferences() {
+    public Map<AtlasObjectId, AtlasVertex> getRepositoryResolvedReferences() {
         return repositoryResolvedReferences;
     }
 
