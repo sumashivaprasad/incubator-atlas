@@ -362,6 +362,10 @@ public class AtlasEntityType extends AtlasStructType {
                     attribType = ((AtlasArrayType)attribType).getElementType();
                 }
 
+                if (attribType.getTypeCategory() == TypeCategory.MAP) {
+                    attribType = ((AtlasMapType)attribType).getValueType();
+                }
+
                 if (attribType.getTypeCategory() != TypeCategory.ENTITY) {
                     throw new AtlasBaseException(AtlasErrorCode.CONSTRAINT_NOT_SATISFIED, getTypeName(),
                                                  attribDef.getName(), CONSTRAINT_TYPE_MAPPED_FROM_REF,
