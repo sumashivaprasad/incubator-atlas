@@ -87,10 +87,6 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
     public void cleanUp() throws AtlasBaseException {
     }
 
-    public static boolean shouldManageChildReferences(AtlasStructType type, String attributeName) {
-        return (type instanceof AtlasEntityType) && ((AtlasEntityType)type).isMappedFromRefAttribute(attributeName);
-    }
-
     /**
      * Map attributes for entity, struct or trait
      *
@@ -181,7 +177,7 @@ public class StructVertexMapper implements InstanceGraphMapper<AtlasEdge> {
             newEdge = entityVertexMapper.toGraph(ctx);
 
             if (currentEdge != null && !currentEdge.equals(newEdge)) {
-                deleteHandler.deleteEdgeReference(currentEdge, ctx.getAttrType().getTypeCategory(), shouldManageChildReferences(ctx.getParentType(), ctx.getAttributeDef().getName()), true);
+                deleteHandler.deleteEdgeReference(currentEdge, ctx.getAttrType().getTypeCategory(), deleteHandler.shouldDeleteChildReferences(instanceType, ctx.getAttrType()), true);
             }
             return newEdge;
         case MAP:

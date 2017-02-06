@@ -40,6 +40,7 @@ import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,14 +61,14 @@ public abstract class DeleteHandlerV1 {
     public static final Logger LOG = LoggerFactory.getLogger(DeleteHandlerV1.class);
 
     private AtlasTypeRegistry typeRegistry;
-    private boolean shouldUpdateReverseAttribute;
+    private boolean shouldUpdateReferenceAttributes;
     private boolean softDelete;
 
     protected static final GraphHelper graphHelper = GraphHelper.getInstance();
 
-    public DeleteHandlerV1(AtlasTypeRegistry typeRegistry, boolean shouldUpdateReverseAttribute, boolean softDelete) {
+    public DeleteHandlerV1(AtlasTypeRegistry typeRegistry, boolean shouldUpdateReferenceAttributes, boolean softDelete) {
         this.typeRegistry = typeRegistry;
-        this.shouldUpdateReverseAttribute = shouldUpdateReverseAttribute;
+        this.shouldUpdateReferenceAttributes = shouldUpdateReferenceAttributes;
         this.softDelete = softDelete;
     }
 
@@ -138,20 +139,14 @@ public abstract class DeleteHandlerV1 {
                 throw new AtlasBaseException(AtlasErrorCode.TYPE_NAME_INVALID, TypeCategory.ENTITY.name(), typeName);
             }
 
-            for (AtlasStructType.AtlasAttribute attributeInfo : entityType.getAllAttributes().values()) {
-                if (!entityType.isMappedFromRefAttribute(attributeInfo.getName())) {
-                    continue;
-                }
-
-                AtlasVertex embeddedVertex = getEmbeddedVertexForReferenceAttribute(attributeInfo, entityVertex);
-                vertices.push(embeddedVertex);
-            }
 
             for (AtlasEntityType.ForeignKeyReference foreignKey : entityType.getForeignKeyReferences()) {
-                //if contained attribute
-                AtlasStructType.AtlasAttribute fromAttribute = foreignKey.fromAttribute();
-                AtlasVertex embeddedVertex = getEmbeddedVertexForReferenceAttribute(fromAttribute, entityVertex);
-                vertices.push(embeddedVertex);
+                if (foreignKey.isOnDeleteCascade()) {
+                    //if contained attribute
+                    AtlasStructType.AtlasAttribute fromAttribute = foreignKey.fromAttribute();
+                    AtlasVertex embeddedVertex = getEmbeddedVertexForReferenceAttribute(fromAttribute, entityVertex);
+                    vertices.push(embeddedVertex);
+                }
             }
         }
         return result;
@@ -211,7 +206,7 @@ public abstract class DeleteHandlerV1 {
      * Force delete is used to remove struct/trait in case of entity updates
      * @param edge
      * @param typeCategory
-     * @param isComposite
+     * @param isEmbeddedEntity
      * @param forceDeleteStructTrait
      * @return returns true if the edge reference is hard deleted
      * @throws AtlasException
@@ -228,30 +223,30 @@ public abstract class DeleteHandlerV1 {
             //through this delete, hence delete the edge and the reference vertex.
             AtlasVertex vertexForDelete = edge.getInVertex();
 
-            //If deleting the edge and then the in vertex, reverse attribute shouldn't be updated
+            //If deleting the edge and then the in vertex, reference attribute shouldn't be updated
             deleteEdge(edge, false, forceDelete);
             deleteTypeVertex(vertexForDelete, typeCategory, forceDelete);
         } else {
             //If the vertex is of type class, and its not a composite attributes, the reference AtlasVertex' lifecycle is not controlled
             //through this delete. Hence just remove the reference edge. Leave the reference AtlasVertex as is
 
-            //If deleting just the edge, reverse attribute should be updated for any references
+            //If deleting just the edge, reference attribute should be updated for any references
             //For example, for the department type system, if the person's manager edge is deleted, subordinates of manager should be updated
             deleteEdge(edge, true, false);
         }
         return !softDelete || forceDelete;
     }
 
-    protected void deleteEdge(AtlasEdge edge, boolean updateReverseAttribute, boolean force) throws AtlasBaseException {
-        //update reverse attribute
-        if (updateReverseAttribute) {
+    protected void deleteEdge(AtlasEdge edge, boolean shouldUpdateReferenceAttributes, boolean force) throws AtlasBaseException {
+        //update referring attribute
+        if (shouldUpdateReferenceAttributes) {
             AtlasEdgeLabel atlasEdgeLabel = new AtlasEdgeLabel(edge.getLabel());
 
             AtlasType parentType = typeRegistry.getType(atlasEdgeLabel.getTypeName());
 
             if (parentType instanceof AtlasStructType) {
                 AtlasStructType parentStructType = (AtlasStructType) parentType;
-                //TODO - Fix this later
+                //TODO - Fix this later to check for mappedFromRef - if this is the ref attribute ?
 //                if (parentStructType.isForeignKeyAttribute(atlasEdgeLabel.getAttributeName())) {
 //                    deleteEdgeBetweenVertices(edge.getInVertex(), edge.getOutVertex(), atlasEdgeLabel.getAttributeName());
 //                }
@@ -291,11 +286,9 @@ public abstract class DeleteHandlerV1 {
 
         if (parentType instanceof AtlasStructType) {
             AtlasStructType structType   = (AtlasStructType) parentType;
-            boolean         isEntityType = (parentType instanceof AtlasEntityType);
 
             for (AtlasStructType.AtlasAttribute attributeInfo : getAttributes(structType)) {
                 LOG.debug("Deleting attribute {} for {}", attributeInfo.getName(), string(instanceVertex));
-                boolean isComposite = isEntityType && ((AtlasEntityType)structType).isMappedFromRefAttribute(attributeInfo.getName());
 
                 AtlasType attrType = typeRegistry.getType(attributeInfo.getTypeName());
 
@@ -304,7 +297,8 @@ public abstract class DeleteHandlerV1 {
                 switch (attrType.getTypeCategory()) {
                 case ENTITY:
                     //If its class attribute, delete the reference
-                    deleteEdgeReference(instanceVertex, edgeLabel, TypeCategory.ENTITY, isComposite);
+                    boolean shouldDeleteChildref = shouldDeleteChildReferences((AtlasEntityType) structType, attrType);
+                    deleteEdgeReference(instanceVertex, edgeLabel, TypeCategory.ENTITY, shouldDeleteChildref);
                     break;
 
                 case STRUCT:
@@ -321,7 +315,8 @@ public abstract class DeleteHandlerV1 {
                         if (edges != null) {
                             while (edges.hasNext()) {
                                 AtlasEdge edge = edges.next();
-                                deleteEdgeReference(edge, elemType.getTypeCategory(), isComposite, false);
+                                shouldDeleteChildref = shouldDeleteChildReferences((AtlasEntityType) structType, attrType);
+                                deleteEdgeReference(edge, elemType.getTypeCategory(), shouldDeleteChildref, false);
                             }
                         }
                     }
@@ -339,7 +334,8 @@ public abstract class DeleteHandlerV1 {
                         if (keys != null) {
                             for (Object key : keys) {
                                 String mapEdgeLabel = GraphHelper.getQualifiedNameForMapKey(edgeLabel, (String) key);
-                                deleteEdgeReference(instanceVertex, mapEdgeLabel, valueTypeCategory, isComposite);
+                                shouldDeleteChildref = shouldDeleteChildReferences((AtlasEntityType) structType, attrType);
+                                deleteEdgeReference(instanceVertex, mapEdgeLabel, valueTypeCategory, shouldDeleteChildref);
                             }
                         }
                     }
@@ -351,10 +347,10 @@ public abstract class DeleteHandlerV1 {
     }
 
     public void deleteEdgeReference(AtlasVertex outVertex, String edgeLabel, TypeCategory typeCategory,
-        boolean isComposite) throws AtlasBaseException {
+        boolean isEmbeddedEntity) throws AtlasBaseException {
         AtlasEdge edge = graphHelper.getEdgeForLabel(outVertex, edgeLabel);
         if (edge != null) {
-            deleteEdgeReference(edge, typeCategory, isComposite, false);
+            deleteEdgeReference(edge, typeCategory, isEmbeddedEntity, false);
         }
     }
 
@@ -406,8 +402,8 @@ public abstract class DeleteHandlerV1 {
         }
 
         AtlasStructType parentType = (AtlasStructType) typeRegistry.getType(typeName);
-        String propertyName = AtlasGraphUtilsV1.getQualifiedAttributePropertyKey(parentType, attributeName);
-        String edgeLabel = EDGE_LABEL_PREFIX + propertyName;
+        String propertyName = parentType.getQualifiedAttributeName(attributeName);
+        String edgeLabel = AtlasGraphUtilsV1.getEdgeLabel(propertyName);
         AtlasEdge edge = null;
 
         AtlasAttributeDef attrDef = parentType.getAttributeDef(attributeName);
@@ -418,7 +414,7 @@ public abstract class DeleteHandlerV1 {
             //If its class attribute, its the only edge between two vertices
             if (attrDef.getIsOptional()) {
                 edge = graphHelper.getEdgeForLabel(outVertex, edgeLabel);
-                if (shouldUpdateReverseAttribute) {
+                if (shouldUpdateReferenceAttributes) {
                     GraphHelper.setProperty(outVertex, propertyName, null);
                 }
             } else {
@@ -453,7 +449,7 @@ public abstract class DeleteHandlerV1 {
                                     + GraphHelper.getVertexDetails(outVertex) + " " + GraphHelper.getEdgeDetails(elementEdge));
                         }
 
-                        if (shouldUpdateReverseAttribute) {
+                        if (shouldUpdateReferenceAttributes) {
                             //if composite attribute, remove the reference as well. else, just remove the edge
                             //for example, when table is deleted, process still references the table
                             //but when column is deleted, table will not reference the deleted column
@@ -494,7 +490,7 @@ public abstract class DeleteHandlerV1 {
                                         propertyName + " on " + GraphHelper.getVertexDetails(outVertex) + " " + GraphHelper.getEdgeDetails(mapEdge));
                             }
 
-                            if (shouldUpdateReverseAttribute) {
+                            if (shouldUpdateReferenceAttributes) {
                                 //remove this key
                                 LOG.debug("Removing edge {}, key {} from the map attribute {}", string(mapEdge), key,
                                     attributeName);
@@ -550,14 +546,29 @@ public abstract class DeleteHandlerV1 {
         if (structType.getTypeCategory() == TypeCategory.STRUCT) {
             ret = structType.getAllAttributes().values();
         } else if (structType.getTypeCategory() == TypeCategory.CLASSIFICATION) {
-            ret = ((AtlasClassificationType)structType).getAllAttributes().values();
+            ret = structType.getAllAttributes().values();
         } else if (structType.getTypeCategory() == TypeCategory.ENTITY) {
-            ret = ((AtlasEntityType)structType).getAllAttributes().values();
+            ret = structType.getAllAttributes().values();
         } else {
             ret = Collections.emptyList();
         }
 
         return ret;
+    }
+
+    public boolean shouldDeleteChildReferences(AtlasStructType entityType, AtlasType attrType) {
+        boolean shouldDeleteChildref = false;
+
+        if ( entityType instanceof  AtlasEntityType) {
+            final List<AtlasEntityType.ForeignKeyReference> foreignKeyReferences = ((AtlasEntityType)entityType).getForeignKeyReferences();
+            for (AtlasEntityType.ForeignKeyReference ref : foreignKeyReferences) {
+                if (ref.isOnDeleteCascade() && StringUtils.equals(ref.toTypeName(), attrType.getTypeName())) {
+                    shouldDeleteChildref = true;
+                }
+            }
+        }
+
+        return shouldDeleteChildref;
     }
 
 }

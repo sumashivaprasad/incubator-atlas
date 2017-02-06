@@ -93,7 +93,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
         }
 
         if (AtlasGraphUtilsV1.isReference(elementType)) {
-            List<AtlasEdge> additionalEdges = removeUnusedArrayEntries(ctx.getParentType(), ctx.getAttributeDef(), (List) currentElements, (List) newElementsCreated, elementType);
+            List<AtlasEdge> additionalEdges = removeUnusedArrayEntries(ctx.getParentType(), ctx.getAttribute(), (List) currentElements, (List) newElementsCreated, elementType);
             newElementsCreated.addAll(additionalEdges);
         }
 
@@ -110,7 +110,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
     //Removes unused edges from the old collection, compared to the new collection
     private List<AtlasEdge> removeUnusedArrayEntries(
         AtlasStructType entityType,
-        AtlasAttributeDef attributeDef,
+        AtlasStructType.AtlasAttribute attribute,
         List<AtlasEdge> currentEntries,
         List<AtlasEdge> newEntries,
         AtlasType entryType) throws AtlasBaseException {
@@ -127,7 +127,8 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
                     List<AtlasEdge> additionalElements = new ArrayList<>();
 
                     for (AtlasEdge edge : edgesToRemove) {
-                        boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(entityType, attributeDef.getName());
+
+                        boolean deleteChildReferences = deleteHandler.shouldDeleteChildReferences(entityType, attribute.getAttributeType());
                         boolean deleted = deleteHandler.deleteEdgeReference(edge, entryType.getTypeCategory(),
                             deleteChildReferences, true);
                         if (!deleted) {

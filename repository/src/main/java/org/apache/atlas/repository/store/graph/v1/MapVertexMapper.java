@@ -23,10 +23,12 @@ import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasMapType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasType;
@@ -108,7 +110,7 @@ public class MapVertexMapper implements InstanceGraphMapper<Map> {
             }
 
             Map<String, Object> finalMap =
-                removeUnusedMapEntries(ctx.getParentType(), mapType, ctx.getAttributeDef(), ctx.getReferringVertex(), ctx.getVertexPropertyKey(), currentMap, newMap);
+                removeUnusedMapEntries(ctx.getParentType(), mapType, ctx.getAttribute(), ctx.getReferringVertex(), ctx.getVertexPropertyKey(), currentMap, newMap);
 
             Set<String> newKeys = new HashSet<>(newMap.keySet());
             newKeys.addAll(finalMap.keySet());
@@ -154,7 +156,7 @@ public class MapVertexMapper implements InstanceGraphMapper<Map> {
     //Remove unused entries from map
     private Map<String, Object> removeUnusedMapEntries(
         AtlasStructType entityType,
-        AtlasMapType mapType, AtlasAttributeDef attributeDef,
+        AtlasMapType mapType, AtlasStructType.AtlasAttribute attribute,
         AtlasVertex instanceVertex, String propertyName,
         Map<String, Object> currentMap,
         Map<String, Object> newMap)
@@ -170,7 +172,7 @@ public class MapVertexMapper implements InstanceGraphMapper<Map> {
                 AtlasEdge currentEdge = (AtlasEdge)currentMap.get(currentKey);
 
                 if (!newMap.values().contains(currentEdge)) {
-                    boolean deleteChildReferences = StructVertexMapper.shouldManageChildReferences(entityType, attributeDef.getName());
+                    boolean deleteChildReferences = deleteHandler.shouldDeleteChildReferences(entityType, attribute.getAttributeType());
                     boolean deleted =
                         deleteHandler.deleteEdgeReference(currentEdge, mapType.getValueType().getTypeCategory(), deleteChildReferences, true);
                     if (!deleted) {
