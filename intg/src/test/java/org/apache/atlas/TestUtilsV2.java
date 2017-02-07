@@ -87,11 +87,11 @@ public final class TestUtilsV2 {
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1, false, false,
                                 new ArrayList<AtlasConstraintDef>()));
 
-        deptTypeDef.getAttribute("employees").addConstraint(
-            new AtlasConstraintDef(
-                AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF, new HashMap<String, Object>() {{
-                put(AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "department");
-            }}));
+//        deptTypeDef.getAttribute("employees").addConstraint(
+//            new AtlasConstraintDef(
+//                AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF, new HashMap<String, Object>() {{
+//                put(AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "department");
+//            }}));
 
         AtlasEntityDef personTypeDef = AtlasTypeUtil.createClassTypeDef("Person", "Person"+_description, ImmutableSet.<String>of(),
                 AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
@@ -582,13 +582,7 @@ public final class TestUtilsV2 {
                                 true,
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                                 false, false,
-                                new ArrayList<AtlasStructDef.AtlasConstraintDef>() {{
-                                    add(new AtlasStructDef.AtlasConstraintDef(
-                                            AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF,
-                                            new HashMap<String, Object>() {{
-                                                put(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "table");
-                                        }}));
-                                }}),
+                                Collections.<AtlasConstraintDef>emptyList()),
                         // array of structs
                         new AtlasAttributeDef("partitions", String.format("array<%s>", "partition_struct_type"),
                                 true,

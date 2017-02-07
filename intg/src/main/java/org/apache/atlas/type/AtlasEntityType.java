@@ -134,7 +134,7 @@ public class AtlasEntityType extends AtlasStructType {
         for (Map.Entry<String, AtlasAttribute> e : mappedFromRefAttributes.entrySet()) {
             AtlasAttribute attribute = e.getValue();
 
-            if(StringUtils.equals(attribute.getStructType().getTypeName(), typeName) && StringUtils.equals(attribute.getName(), attribName)) {
+            if(StringUtils.equals(attribute.getDefinedInType().getTypeName(), typeName) && StringUtils.equals(attribute.getName(), attribName)) {
                 ret = e.getKey();
 
                 break;
@@ -358,7 +358,7 @@ public class AtlasEntityType extends AtlasStructType {
 
                 AtlasType attribType = attribute.getAttributeType();
 
-                if (attribType.getTypeCategory() == TypeCategory.ARRAY) {
+                if (attribType instanceof AtlasArrayType) {
                     attribType = ((AtlasArrayType)attribType).getElementType();
                 }
 
@@ -431,20 +431,28 @@ public class AtlasEntityType extends AtlasStructType {
 
         public String toTypeName() { return fromAttribute.getTypeName(); }
 
-        public AtlasStructType fromType() { return fromAttribute.getStructType(); }
+        public AtlasStructType fromType() { return fromAttribute.getDefinedInType(); }
 
         public AtlasAttribute fromAttribute() { return fromAttribute; }
 
-        public AtlasEntityType toType() { return (AtlasEntityType)fromAttribute.getAttributeType(); }
+        public AtlasEntityType toType() {
+            AtlasType attrType = fromAttribute.getAttributeType();
+
+            if (attrType instanceof AtlasArrayType) {
+                attrType = ((AtlasArrayType)attrType).getElementType();
+            }
+
+            if (attrType instanceof AtlasEntityType) {
+                return (AtlasEntityType)attrType;
+            }
+
+            return null;
+        }
 
         public AtlasConstraintDef getConstraint() { return refConstraint; }
 
         public boolean isOnDeleteCascade() {
             return StringUtils.equals(getOnDeleteAction(), CONSTRAINT_PARAM_VAL_CASCADE);
-        }
-
-        public boolean isOnDeleteUpdate() {
-            return StringUtils.equals(getOnDeleteAction(), CONSTRAINT_PARAM_VAL_UPDATE);
         }
 
         private String getOnDeleteAction() {

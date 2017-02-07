@@ -128,7 +128,7 @@ public class ArrayVertexMapper implements InstanceGraphMapper<List> {
 
                     for (AtlasEdge edge : edgesToRemove) {
 
-                        boolean deleteChildReferences = deleteHandler.shouldDeleteChildReferences(entityType, attribute.getAttributeType());
+                        boolean deleteChildReferences = deleteHandler.shouldDeleteChildReferences(entityType, entryType);
                         boolean deleted = deleteHandler.deleteEdgeReference(edge, entryType.getTypeCategory(),
                             deleteChildReferences, true);
                         if (!deleted) {

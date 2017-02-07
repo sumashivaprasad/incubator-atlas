@@ -562,7 +562,7 @@ public abstract class DeleteHandlerV1 {
         if ( entityType instanceof  AtlasEntityType) {
             final List<AtlasEntityType.ForeignKeyReference> foreignKeyReferences = ((AtlasEntityType)entityType).getForeignKeyReferences();
             for (AtlasEntityType.ForeignKeyReference ref : foreignKeyReferences) {
-                if (ref.isOnDeleteCascade() && StringUtils.equals(ref.toTypeName(), attrType.getTypeName())) {
+                if (ref.isOnDeleteCascade() && StringUtils.equals(ref.fromTypeName(), attrType.getTypeName())) {
                     shouldDeleteChildref = true;
                 }
             }
