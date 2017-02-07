@@ -87,12 +87,6 @@ public final class TestUtilsV2 {
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1, false, false,
                                 new ArrayList<AtlasConstraintDef>()));
 
-        deptTypeDef.getAttribute("employees").addConstraint(
-            new AtlasConstraintDef(
-                AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF, new HashMap<String, Object>() {{
-                put(AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "department");
-            }}));
-
         AtlasEntityDef personTypeDef = AtlasTypeUtil.createClassTypeDef("Person", "Person"+_description, ImmutableSet.<String>of(),
                 AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                 AtlasTypeUtil.createOptionalAttrDef("address", "Address"),
@@ -442,6 +436,7 @@ public final class TestUtilsV2 {
                 ImmutableList.of(newSuperTypeDefinition));
     }
 
+
     public static AtlasTypesDef defineHiveTypes() {
         String _description = "_description";
         AtlasEntityDef superTypeDefinition =
@@ -582,13 +577,7 @@ public final class TestUtilsV2 {
                                 true,
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                                 false, false,
-                                new ArrayList<AtlasStructDef.AtlasConstraintDef>() {{
-                                    add(new AtlasStructDef.AtlasConstraintDef(
-                                            AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF,
-                                            new HashMap<String, Object>() {{
-                                                put(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "table");
-                                        }}));
-                                }}),
+                                Collections.<AtlasConstraintDef>emptyList()),
                         // array of structs
                         new AtlasAttributeDef("partitions", String.format("array<%s>", "partition_struct_type"),
                                 true,
@@ -608,17 +597,6 @@ public final class TestUtilsV2 {
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                                 false, false,
                                 Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()
-                                /* TODO - Fix map validation in type store and enable this
-                                 *
-                                new ArrayList<AtlasStructDef.AtlasConstraintDef>() {{
-                                    add(new AtlasStructDef.AtlasConstraintDef(
-                                            AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_MAPPED_FROM_REF,
-                                            new HashMap<String, Object>() {{
-                                                put(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_REF_ATTRIBUTE, "table");
-                                        }}));
-                                    }}
-                                  *
-                                  */
                                 ),
                         //map of structs
                         new AtlasAttributeDef("partitionsMap",
@@ -713,6 +691,19 @@ public final class TestUtilsV2 {
         entity.setAttribute("type", "VARCHAR(32)");
         entity.setAttribute("table", new AtlasObjectId(TABLE_TYPE, tableId));
         return entity;
+    }
+
+    public static Map<String, AtlasEntity> createProcessEntity(List<AtlasObjectId> inputs, List<AtlasObjectId> outputs) {
+
+        Map<String, AtlasEntity> ret = new HashMap<>();
+
+        AtlasEntity entity = new AtlasEntity(PROCESS_TYPE);
+        entity.setAttribute(NAME, RandomStringUtils.randomAlphanumeric(10));
+        entity.setAttribute("inputs", inputs);
+        entity.setAttribute("outputs", outputs);
+
+        ret.put(entity.getGuid(), entity);
+        return ret;
     }
 
     public static List<AtlasClassificationDef> getClassificationWithValidSuperType() {

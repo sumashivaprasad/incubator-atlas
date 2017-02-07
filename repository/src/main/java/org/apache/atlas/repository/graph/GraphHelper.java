@@ -538,8 +538,7 @@ public final class GraphHelper {
      *
      *  @return propertyValue to AtlasVertex map with the result.
      */
-    public Map<String, AtlasVertex> getVerticesForPropertyValues(String property, List<String> values)
-            throws RepositoryException {
+    public Map<String, AtlasVertex> getVerticesForPropertyValues(String property, List<String> values) {
 
         if(values.isEmpty()) {
             return Collections.emptyMap();
@@ -579,8 +578,7 @@ public final class GraphHelper {
      *
      *  @return GUID to AtlasVertex map with the result.
      */
-    public Map<String, AtlasVertex> getVerticesForGUIDs(List<String> guids)
-            throws RepositoryException {
+    public Map<String, AtlasVertex> getVerticesForGUIDs(List<String> guids) {
 
         return getVerticesForPropertyValues(Constants.GUID_PROPERTY_KEY, guids);
     }

@@ -35,8 +35,6 @@ import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
-import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
-import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasArrayType;
@@ -123,7 +121,6 @@ public class AtlasEntityStoreV1Test {
     @AfterClass
     public void clear() {
         AtlasGraphProvider.cleanup();
-        TestUtils.resetRequestContext();
     }
 
     @BeforeTest
@@ -134,8 +131,7 @@ public class AtlasEntityStoreV1Test {
         ArrayVertexMapper arrVertexMapper = new ArrayVertexMapper(deleteHandler);
         MapVertexMapper mapVertexMapper = new MapVertexMapper(deleteHandler);
 
-
-        entityStore = new AtlasEntityStoreV1(new EntityGraphMapper(arrVertexMapper, mapVertexMapper, deleteHandler));
+        entityStore = new AtlasEntityStoreV1(new EntityGraphMapper(arrVertexMapper, mapVertexMapper, deleteHandler), deleteHandler);
         entityStore.init(typeRegistry);
 
         RequestContextV1.clear();
@@ -148,7 +144,7 @@ public class AtlasEntityStoreV1Test {
         validateMutationResponse(response, EntityMutations.EntityOperation.CREATE, 5);
         AtlasEntityHeader deptEntity = response.getFirstCreatedEntityByTypeName(TestUtilsV2.DEPARTMENT_TYPE);
 
-        final Map<EntityMutations.EntityOperation, List<AtlasEntityHeader>> entitiesMutated = response.getEntitiesMutated();
+        final Map<EntityMutations.EntityOperation, List<AtlasEntityHeader>> entitiesMutated = response.getMutatedEntities();
         List<AtlasEntityHeader> entitiesCreated = entitiesMutated.get(EntityMutations.EntityOperation.CREATE);
 
         for (AtlasEntityHeader header : entitiesCreated) {

@@ -54,7 +54,7 @@ public interface AtlasEntityStore {
      * @param guid
      * @return
      */
-    EntityMutationResponse deleteById(String guid);
+    EntityMutationResponse deleteById(String guid) throws AtlasBaseException;
 
     /**
      * Create or update  entities

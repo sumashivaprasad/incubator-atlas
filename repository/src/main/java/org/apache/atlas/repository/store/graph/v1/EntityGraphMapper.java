@@ -159,7 +159,7 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
 
         RequestContextV1 req = RequestContextV1.get();
         for (AtlasObjectId id : req.getDeletedEntityIds()) {
-            resp.addEntity(EntityMutations.EntityOperation.DELETE, constructHeader(id));
+            resp.addEntity(EntityMutations.EntityOperation.DELETE, AtlasEntityStoreV1.constructHeader(id));
         }
 
         return resp;
@@ -205,12 +205,7 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
         return header;
     }
 
-    private AtlasEntityHeader constructHeader(AtlasObjectId id) {
-        AtlasEntityHeader entity = new AtlasEntityHeader(id.getTypeName());
-        entity.setGuid(id.getGuid());
 
-        return entity;
-    }
 
     public EntityMutationContext getContext() {
         return context;

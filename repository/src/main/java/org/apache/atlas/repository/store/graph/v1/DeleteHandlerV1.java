@@ -60,14 +60,14 @@ public abstract class DeleteHandlerV1 {
     public static final Logger LOG = LoggerFactory.getLogger(DeleteHandlerV1.class);
 
     private AtlasTypeRegistry typeRegistry;
-    private boolean shouldUpdateReverseAttribute;
+    private boolean shouldUpdateInverseReferences;
     private boolean softDelete;
 
     protected static final GraphHelper graphHelper = GraphHelper.getInstance();
 
-    public DeleteHandlerV1(AtlasTypeRegistry typeRegistry, boolean shouldUpdateReverseAttribute, boolean softDelete) {
+    public DeleteHandlerV1(AtlasTypeRegistry typeRegistry, boolean shouldUpdateInverseReference, boolean softDelete) {
         this.typeRegistry = typeRegistry;
-        this.shouldUpdateReverseAttribute = shouldUpdateReverseAttribute;
+        this.shouldUpdateInverseReferences = shouldUpdateInverseReference;
         this.softDelete = softDelete;
     }
 
@@ -79,7 +79,7 @@ public abstract class DeleteHandlerV1 {
      * @param instanceVertices
      * @throws AtlasException
      */
-    public void deleteEntities(List<AtlasVertex> instanceVertices) throws AtlasBaseException {
+    public void deleteEntities(Collection<AtlasVertex> instanceVertices) throws AtlasBaseException {
         RequestContextV1 requestContext = RequestContextV1.get();
 
         Set<AtlasVertex> deletionCandidateVertices = new HashSet<>();
@@ -199,18 +199,18 @@ public abstract class DeleteHandlerV1 {
      * Force delete is used to remove struct/trait in case of entity updates
      * @param edge
      * @param typeCategory
-     * @param isComposite
+     * @param isOwned
      * @param forceDeleteStructTrait
      * @return returns true if the edge reference is hard deleted
      * @throws AtlasException
      */
-    public boolean deleteEdgeReference(AtlasEdge edge, TypeCategory typeCategory, boolean isComposite,
+    public boolean deleteEdgeReference(AtlasEdge edge, TypeCategory typeCategory, boolean isOwned,
         boolean forceDeleteStructTrait) throws AtlasBaseException {
         LOG.debug("Deleting {}", string(edge));
         boolean forceDelete =
             (typeCategory == TypeCategory.STRUCT || typeCategory == TypeCategory.CLASSIFICATION) && forceDeleteStructTrait;
         if (typeCategory == TypeCategory.STRUCT || typeCategory == TypeCategory.CLASSIFICATION
-            || (typeCategory == TypeCategory.ENTITY && isComposite)) {
+            || (typeCategory == TypeCategory.ENTITY && isOwned)) {
             //If the vertex is of type struct/trait, delete the edge and then the reference vertex as the vertex is not shared by any other entities.
             //If the vertex is of type class, and its composite attribute, this reference vertex' lifecycle is controlled
             //through this delete, hence delete the edge and the reference vertex.
@@ -284,7 +284,7 @@ public abstract class DeleteHandlerV1 {
 
             for (AtlasStructType.AtlasAttribute attributeInfo : getAttributes(structType)) {
                 LOG.debug("Deleting attribute {} for {}", attributeInfo.getName(), string(instanceVertex));
-                boolean isComposite = isEntityType && ((AtlasEntityType)structType).isMappedFromRefAttribute(attributeInfo.getName());
+                boolean isOwned = isEntityType && ((AtlasEntityType)structType).isMappedFromRefAttribute(attributeInfo.getName());
 
                 AtlasType attrType = typeRegistry.getType(attributeInfo.getTypeName());
 
@@ -293,7 +293,7 @@ public abstract class DeleteHandlerV1 {
                 switch (attrType.getTypeCategory()) {
                 case ENTITY:
                     //If its class attribute, delete the reference
-                    deleteEdgeReference(instanceVertex, edgeLabel, TypeCategory.ENTITY, isComposite);
+                    deleteEdgeReference(instanceVertex, edgeLabel, TypeCategory.ENTITY, isOwned);
                     break;
 
                 case STRUCT:
@@ -310,7 +310,7 @@ public abstract class DeleteHandlerV1 {
                         if (edges != null) {
                             while (edges.hasNext()) {
                                 AtlasEdge edge = edges.next();
-                                deleteEdgeReference(edge, elemType.getTypeCategory(), isComposite, false);
+                                deleteEdgeReference(edge, elemType.getTypeCategory(), isOwned, false);
                             }
                         }
                     }
@@ -328,7 +328,7 @@ public abstract class DeleteHandlerV1 {
                         if (keys != null) {
                             for (Object key : keys) {
                                 String mapEdgeLabel = GraphHelper.getQualifiedNameForMapKey(edgeLabel, (String) key);
-                                deleteEdgeReference(instanceVertex, mapEdgeLabel, valueTypeCategory, isComposite);
+                                deleteEdgeReference(instanceVertex, mapEdgeLabel, valueTypeCategory, isOwned);
                             }
                         }
                     }
@@ -340,10 +340,10 @@ public abstract class DeleteHandlerV1 {
     }
 
     public void deleteEdgeReference(AtlasVertex outVertex, String edgeLabel, TypeCategory typeCategory,
-        boolean isComposite) throws AtlasBaseException {
+        boolean isOwned) throws AtlasBaseException {
         AtlasEdge edge = graphHelper.getEdgeForLabel(outVertex, edgeLabel);
         if (edge != null) {
-            deleteEdgeReference(edge, typeCategory, isComposite, false);
+            deleteEdgeReference(edge, typeCategory, isOwned, false);
         }
     }
 
@@ -407,7 +407,7 @@ public abstract class DeleteHandlerV1 {
             //If its class attribute, its the only edge between two vertices
             if (attrDef.getIsOptional()) {
                 edge = graphHelper.getEdgeForLabel(outVertex, edgeLabel);
-                if (shouldUpdateReverseAttribute) {
+                if (shouldUpdateInverseReferences) {
                     GraphHelper.setProperty(outVertex, propertyName, null);
                 }
             } else {
@@ -442,7 +442,7 @@ public abstract class DeleteHandlerV1 {
                                     + GraphHelper.getVertexDetails(outVertex) + " " + GraphHelper.getEdgeDetails(elementEdge));
                         }
 
-                        if (shouldUpdateReverseAttribute) {
+                        if (shouldUpdateInverseReferences) {
                             //if composite attribute, remove the reference as well. else, just remove the edge
                             //for example, when table is deleted, process still references the table
                             //but when column is deleted, table will not reference the deleted column
@@ -483,7 +483,7 @@ public abstract class DeleteHandlerV1 {
                                         propertyName + " on " + GraphHelper.getVertexDetails(outVertex) + " " + GraphHelper.getEdgeDetails(mapEdge));
                             }
 
-                            if (shouldUpdateReverseAttribute) {
+                            if (shouldUpdateInverseReferences) {
                                 //remove this key
                                 LOG.debug("Removing edge {}, key {} from the map attribute {}", string(mapEdge), key,
                                     attributeName);

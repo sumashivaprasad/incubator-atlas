@@ -34,6 +34,8 @@ import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
+
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
@@ -173,4 +175,10 @@ public class AtlasEntityHeader extends AtlasStruct implements Serializable {
             super(list, startIndex, pageSize, totalCount, sortType, sortBy);
         }
     }
+
+    @JsonIgnore
+    public AtlasObjectId getAtlasObjectId() {
+        return new AtlasObjectId(getTypeName(), getGuid());
+    }
+
 }
