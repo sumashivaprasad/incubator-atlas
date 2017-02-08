@@ -29,6 +29,16 @@ public class SoftDeleteHandlerV1Test extends AtlasDeleteHandlerV1Test {
     }
 
     @Override
+    protected void assertDeletedColumn(final ITypedReferenceableInstance tableInstance) throws AtlasException {
+
+    }
+
+    @Override
+    protected void assertTestDeleteEntities(final ITypedReferenceableInstance tableInstance) throws Exception {
+
+    }
+
+    @Override
     protected void assertTableForTestDeleteReference(final String tableId) throws Exception {
 
         //TODO - Fix after GET is ready
