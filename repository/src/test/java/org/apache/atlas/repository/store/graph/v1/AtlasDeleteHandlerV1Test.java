@@ -61,6 +61,7 @@ import javax.inject.Inject;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -321,14 +322,15 @@ public abstract class AtlasDeleteHandlerV1Test {
     @Test
     public void testUpdateEntity_MultiplicityOneNonCompositeReference() throws Exception {
         Map<String, AtlasEntity> hrDept = TestUtilsV2.createDeptEg1();
+        final EntityMutationResponse hrDeptCreationResponse = entityStore.createOrUpdate(hrDept);
 
-        ITypedReferenceableInstance hrDept = metadataService.getEntityDefinition(hrDeptGuid);
-        Map<String, String> nameGuidMap = getEmployeeNameGuidMap(hrDept);
+        ITypedReferenceableInstance hrDeptInstance = metadataService.getEntityDefinition(hrDeptCreationResponse.getFirstCreatedEntityByTypeName(TestUtilsV2.DEPARTMENT_TYPE).getGuid());
+        Map<String, String> nameGuidMap = getEmployeeNameGuidMap(hrDeptInstance);
 
-        ITypedReferenceableInstance john = repositoryService.getEntityDefinition(nameGuidMap.get("John"));
+        ITypedReferenceableInstance john = metadataService.getEntityDefinition(nameGuidMap.get("John"));
         Id johnGuid = john.getId();
 
-        ITypedReferenceableInstance max = repositoryService.getEntityDefinition(nameGuidMap.get("Max"));
+        ITypedReferenceableInstance max = metadataService.getEntityDefinition(nameGuidMap.get("Max"));
         String maxGuid = max.getId()._getId();
         AtlasVertex vertex = GraphHelper.getInstance().getVertexForGUID(maxGuid);
         Long creationTimestamp = GraphHelper.getSingleValuedProperty(vertex, Constants.TIMESTAMP_PROPERTY_KEY, Long.class);
@@ -337,7 +339,7 @@ public abstract class AtlasDeleteHandlerV1Test {
         Long modificationTimestampPreUpdate = GraphHelper.getSingleValuedProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, Long.class);
         Assert.assertNotNull(modificationTimestampPreUpdate);
 
-        ITypedReferenceableInstance jane = repositoryService.getEntityDefinition(nameGuidMap.get("Jane"));
+        ITypedReferenceableInstance jane = metadataService.getEntityDefinition(nameGuidMap.get("Jane"));
         Id janeGuid = jane.getId();
 
         // Update max's mentor reference to john.
@@ -392,6 +394,23 @@ public abstract class AtlasDeleteHandlerV1Test {
         Assert.assertEquals(refTarget.getId()._getId(), juliusGuid._getId());
 
         assertTestUpdateEntity_MultiplicityOneNonCompositeReference(janeGuid._getId());
+    }
+
+    private Map<String, String> getEmployeeNameGuidMap(final ITypedReferenceableInstance hrDept) throws AtlasException {
+        Object refValue = hrDept.get("employees");
+        Assert.assertTrue(refValue instanceof List);
+        List<Object> employees = (List<Object>)refValue;
+        Assert.assertEquals(employees.size(), 4);
+        Map<String, String> nameGuidMap = new HashMap<String, String>() {{
+            put("hr", hrDept.getId()._getId());
+        }};
+
+        for (Object listValue : employees) {
+            Assert.assertTrue(listValue instanceof ITypedReferenceableInstance);
+            ITypedReferenceableInstance employee = (ITypedReferenceableInstance) listValue;
+            nameGuidMap.put((String)employee.get("name"), employee.getId()._getId());
+        }
+        return nameGuidMap;
     }
 
     protected abstract void assertTestUpdateEntity_MultiplicityOneNonCompositeReference(String janeGuid) throws Exception;
