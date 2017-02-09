@@ -43,6 +43,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.atlas.type.AtlasTypeUtil.createStructTypeDef;
 
@@ -53,6 +54,8 @@ import static org.apache.atlas.type.AtlasTypeUtil.createStructTypeDef;
 public final class TestUtilsV2 {
 
     public static final long TEST_DATE_IN_LONG = 1418265358440L;
+
+    private static AtomicInteger seq = new AtomicInteger();
 
     private TestUtilsV2() {
     }
@@ -120,8 +123,8 @@ public final class TestUtilsV2 {
 
         employeeTypeDef.getAttribute("department").addConstraint(
             new AtlasConstraintDef(
-                AtlasConstraintDef.CONSTRAINT_TYPE_FOREIGN_KEY, new HashMap<String, Object>() {{
-                put(AtlasConstraintDef.CONSTRAINT_PARAM_ON_DELETE, AtlasConstraintDef.CONSTRAINT_PARAM_VAL_CASCADE);
+                AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "employees");
             }}));
 
         AtlasEntityDef managerTypeDef = AtlasTypeUtil.createClassTypeDef("Manager", "Manager"+_description, ImmutableSet.of("Employee"),
@@ -469,14 +472,14 @@ public final class TestUtilsV2 {
                         ImmutableSet.<String>of(),
                         AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                         AtlasTypeUtil.createRequiredAttrDef("type", "string"),
-                    new AtlasAttributeDef("table", TABLE_TYPE,
-                        false,
+                        new AtlasAttributeDef("table", TABLE_TYPE,
+                        true,
                         AtlasAttributeDef.Cardinality.SINGLE, 1, 1,
                         false, false,
                         new ArrayList<AtlasStructDef.AtlasConstraintDef>() {{
                             add(new AtlasStructDef.AtlasConstraintDef(
-                                AtlasStructDef.AtlasConstraintDef.CONSTRAINT_TYPE_FOREIGN_KEY, new HashMap<String, Object>() {{
-                                put(AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_ON_DELETE, AtlasStructDef.AtlasConstraintDef.CONSTRAINT_PARAM_VAL_CASCADE);
+                                AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                                put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "columns");
                             }}));
                         }})
                         );
@@ -577,7 +580,9 @@ public final class TestUtilsV2 {
                                 true,
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                                 false, false,
-                                Collections.<AtlasConstraintDef>emptyList()),
+                                new ArrayList<AtlasStructDef.AtlasConstraintDef>() {{
+                                    add(new AtlasStructDef.AtlasConstraintDef(AtlasConstraintDef.CONSTRAINT_TYPE_OWNED_REF));
+                                }}),
                         // array of structs
                         new AtlasAttributeDef("partitions", String.format("array<%s>", "partition_struct_type"),
                                 true,
@@ -687,7 +692,7 @@ public final class TestUtilsV2 {
     public static AtlasEntity createColumnEntity(String tableId) {
 
         AtlasEntity entity = new AtlasEntity(COLUMN_TYPE);
-        entity.setAttribute(NAME, RandomStringUtils.randomAlphanumeric(10));
+        entity.setAttribute(NAME, "col" + seq.addAndGet(1));
         entity.setAttribute("type", "VARCHAR(32)");
         entity.setAttribute("table", new AtlasObjectId(TABLE_TYPE, tableId));
         return entity;

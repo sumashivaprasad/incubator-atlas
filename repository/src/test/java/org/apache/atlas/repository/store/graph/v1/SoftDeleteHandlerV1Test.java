@@ -4,6 +4,7 @@ package org.apache.atlas.repository.store.graph.v1;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.type.AtlasTypeRegistry;
@@ -70,7 +71,7 @@ public class SoftDeleteHandlerV1Test extends AtlasDeleteHandlerV1Test {
     }
 
     @Override
-    protected void assertProcessForTestDeleteReference(final AtlasEntity processInstance) throws Exception {
+    protected void assertProcessForTestDeleteReference(final AtlasEntityHeader processInstance) throws Exception {
         //
         ITypedReferenceableInstance process = metadataService.getEntityDefinition(processInstance.getGuid());
         List<ITypedReferenceableInstance> outputs =

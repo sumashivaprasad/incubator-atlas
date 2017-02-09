@@ -215,12 +215,9 @@
                     "name": "sd",
                     "typeName": "hive_storagedesc",
                     "cardinality": "SINGLE",
-                    "constraintDefs": [
+                    "constraints": [
                         {
-                            "type": "mappedFromRef",
-                            "params": {
-                                "refAttribute": "table"
-                            }
+                            "type": "ownedRef"
                         }
                     ],
                     "isIndexable": false,
@@ -231,7 +228,11 @@
                     "name": "partitionKeys",
                     "typeName": "array<hive_column>",
                     "cardinality": "SINGLE",
-                    "constraintDefs": [],
+                    "constraints": [
+                        {
+                            "type": "ownedRef"
+                        }
+                    ],
                     "isIndexable": false,
                     "isOptional": true,
                     "isUnique": false
@@ -248,7 +249,11 @@
                     "name": "columns",
                     "typeName": "array<hive_column>",
                     "cardinality": "SINGLE",
-                    "constraintDefs": [],
+                    "constraints": [
+                        {
+                            "type": "ownedRef"
+                        }
+                    ],
                     "isIndexable": false,
                     "isOptional": true,
                     "isUnique": false
@@ -306,16 +311,16 @@
                     "name": "table",
                     "typeName": "hive_table",
                     "cardinality": "SINGLE",
-                    "constraintDefs": [
+                    "constraints": [
                         {
-                            "type": "foreignKey",
+                            "type": "inverseRef",
                             "params": {
-                                "onDelete": "cascade"
+                                "attribute": "sd"
                             }
                         }
                     ],
                     "isIndexable": false,
-                    "isOptional": false,
+                    "isOptional": true,
                     "isUnique": false
                 },
                 {
@@ -469,16 +474,16 @@
                     "name": "table",
                     "typeName": "hive_table",
                     "cardinality": "SINGLE",
-                    "constraintDefs": [
+                    "constraints": [
                         {
-                            "type": "foreignKey",
+                            "type": "inverseRef",
                             "params": {
-                                "onDelete": "cascade"
+                                "attribute": "columns"
                             }
                         }
                     ],
                     "isIndexable": false,
-                    "isOptional": false,
+                    "isOptional": true,
                     "isUnique": false
                 }
             ]

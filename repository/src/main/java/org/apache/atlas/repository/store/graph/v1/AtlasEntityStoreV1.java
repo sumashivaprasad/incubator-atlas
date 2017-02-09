@@ -116,6 +116,10 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
             response.addEntity(EntityMutations.EntityOperation.DELETE, AtlasEntityStoreV1.constructHeader(id));
         }
 
+        for (AtlasObjectId id : req.getUpdatedEntityIds()) {
+            response.addEntity(EntityMutations.EntityOperation.UPDATE, AtlasEntityStoreV1.constructHeader(id));
+        }
+
         return response;
     }
 
