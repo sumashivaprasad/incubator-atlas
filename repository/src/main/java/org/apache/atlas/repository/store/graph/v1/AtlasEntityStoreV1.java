@@ -18,12 +18,7 @@
 package org.apache.atlas.repository.store.graph.v1;
 
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.atlas.AtlasClient;
+import com.google.inject.Inject;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.GraphTransaction;
@@ -33,13 +28,18 @@ import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntity.AtlasEntityWithExtInfo;
+import org.apache.atlas.model.instance.AtlasEntity.AtlasEntitiesWithExtInfo;
+import org.apache.atlas.model.instance.AtlasEntity.Status;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
-import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
 import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
-import org.apache.atlas.repository.RepositoryException;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graph.GraphHelper;
+import org.apache.atlas.repository.Constants;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
+import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.repository.store.graph.EntityGraphDiscovery;
@@ -47,20 +47,24 @@ import org.apache.atlas.repository.store.graph.EntityGraphDiscoveryContext;
 import org.apache.atlas.repository.store.graph.EntityResolver;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-
-import com.google.inject.Inject;
 
 
 public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
     protected AtlasTypeRegistry typeRegistry;
 
-    private EntityGraphMapper graphMapper;
+    private final EntityGraphMapper graphMapper;
+    private final AtlasGraph        graph;
 
     private DeleteHandlerV1 deleteHandler;
 
@@ -72,6 +76,7 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     public AtlasEntityStoreV1(EntityGraphMapper vertexMapper, DeleteHandlerV1 deleteHandler) {
         this.graphMapper = vertexMapper;
         this.deleteHandler = deleteHandler;
+        this.graph        = AtlasGraphProvider.getGraphInstance();
     }
 
     @Inject
@@ -80,8 +85,14 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     }
 
     @Override
-    public AtlasEntity getById(final String guid) {
-        return null;
+    public AtlasEntityWithExtInfo getById(final String guid) throws AtlasBaseException {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Retrieving entity with guid={}", guid);
+        }
+
+        EntityGraphRetriever entityRetriever = new EntityGraphRetriever(typeRegistry);
+
+        return entityRetriever.toAtlasEntityWithExtInfo(guid);
     }
 
     @Override
@@ -95,15 +106,17 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
         EntityMutationResponse response = new EntityMutationResponse();
 
         // Retrieve vertices for requested guids.
-        Map<String, AtlasVertex> vertices = graphHelper.getVerticesForGUIDs(new ArrayList<String>() {{ add(guid); }} );
+        Map<String, AtlasVertex> vertices = graphHelper.getVerticesForGUIDs(new ArrayList<String>() {{
+            add(guid);
+        }});
         Collection<AtlasVertex> deletionCandidates = vertices.values();
 
         if (LOG.isDebugEnabled()) {
-                if(! vertices.containsKey(guid)) {
-                    // Entity does not exist - treat as non-error, since the caller
-                    // wanted to delete the entity and it's already gone.
-                    LOG.debug("Deletion request ignored for non-existent entity with guid " + guid);
-                }
+            if (!vertices.containsKey(guid)) {
+                // Entity does not exist - treat as non-error, since the caller
+                // wanted to delete the entity and it's already gone.
+                LOG.debug("Deletion request ignored for non-existent entity with guid " + guid);
+            }
         }
 
         if (deletionCandidates.isEmpty()) {
@@ -121,6 +134,38 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
         }
 
         return response;
+    }
+
+    public AtlasEntityWithExtInfo getByUniqueAttribute(AtlasEntityType entityType, Map<String, Object> uniqAttributes) throws AtlasBaseException {
+        String entityTypeName = entityType.getTypeName();
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Retrieving entity with type={} and attributes={}: values={}", entityTypeName, uniqAttributes);
+        }
+
+        AtlasGraphQuery query = graph.query();
+
+        for (Map.Entry<String, Object> e : uniqAttributes.entrySet()) {
+            String attrName = e.getKey();
+            Object attrValue = e.getValue();
+
+            query = query.has(entityType.getQualifiedAttributeName(attrName), attrValue);
+        }
+
+        Iterator<AtlasVertex> result = query.has(Constants.ENTITY_TYPE_PROPERTY_KEY, entityTypeName)
+                                            .has(Constants.STATE_PROPERTY_KEY, Status.ACTIVE.name())
+                                            .vertices().iterator();
+        AtlasVertex entityVertex = result.hasNext() ? result.next() : null;
+
+        if (entityVertex == null) {
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_BY_UNIQUE_ATTRIBUTE_NOT_FOUND, entityTypeName, uniqAttributes.keySet().toString(), uniqAttributes.values().toString());
+        }
+
+        String guid = GraphHelper.getGuid(entityVertex);
+
+        EntityGraphRetriever entityRetriever = new EntityGraphRetriever(typeRegistry);
+
+        return entityRetriever.toAtlasEntityWithExtInfo(guid);
     }
 
     @Override
@@ -145,31 +190,51 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
     }
 
     @Override
-    @GraphTransaction
-    public AtlasEntity.AtlasEntities getByIds(final List<String> guid) throws AtlasBaseException {
+    public AtlasEntitiesWithExtInfo getByIds(final List<String> guids) throws AtlasBaseException {
         return null;
     }
 
     @Override
-    @GraphTransaction
-    public AtlasEntityWithAssociations getWithAssociationsByIds(final List<String> guid) throws AtlasBaseException {
-        return null;
+    public EntityMutationResponse deleteByIds(final List<String> guids) throws AtlasBaseException {
+        if (CollectionUtils.isEmpty(guids)) {
+            throw new AtlasBaseException(AtlasErrorCode.INSTANCE_GUID_NOT_FOUND, guids);
+        }
+
+        EntityMutationResponse response = new EntityMutationResponse();
+
+        // Retrieve vertices for requested guids.
+        Map<String, AtlasVertex> vertices = graphHelper.getVerticesForGUIDs(guids);
+        Collection<AtlasVertex> deletionCandidates = vertices.values();
+
+        if(LOG.isDebugEnabled()) {
+            for(String guid : guids) {
+                if(! vertices.containsKey(guid)) {
+                    // Entity does not exist - treat as non-error, since the caller
+                    // wanted to delete the entity and it's already gone.
+                    LOG.debug("Deletion request ignored for non-existent entity with guid " + guid);
+                }
+            }
+        }
+
+        if (deletionCandidates.isEmpty()) {
+            LOG.info("No deletion candidate entities were found for guids %s", guids);
+        }
+
+        deleteHandler.deleteEntities(deletionCandidates);
+        RequestContextV1 req = RequestContextV1.get();
+        for (AtlasObjectId id : req.getDeletedEntityIds()) {
+            response.addEntity(EntityMutations.EntityOperation.DELETE, AtlasEntityStoreV1.constructHeader(id));
+        }
+
+        for (AtlasObjectId id : req.getUpdatedEntityIds()) {
+            response.addEntity(EntityMutations.EntityOperation.UPDATE, AtlasEntityStoreV1.constructHeader(id));
+        }
+
+        return response;
+
     }
 
     @Override
-    @GraphTransaction
-    public EntityMutationResponse deleteByIds(final List<String> guid) throws AtlasBaseException {
-        return null;
-    }
-
-    @Override
-    @GraphTransaction
-    public AtlasEntity getByUniqueAttribute(final String typeName, final String attrName, final String attrValue) {
-        return null;
-    }
-
-    @Override
-    @GraphTransaction
     public EntityMutationResponse updateByUniqueAttribute(final String typeName, final String attributeName, final String attributeValue, final AtlasEntity entity) throws AtlasBaseException {
         return null;
     }
@@ -226,10 +291,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
                 vertex = discoveredEntities.getResolvedEntityVertex(objId);
 
                 context.addUpdated(entity, entityType, vertex);
-
-                String guid = AtlasGraphUtilsV1.getIdFromVertex(vertex);
-
-                RequestContextV1.get().recordEntityUpdate(new AtlasObjectId(entityType.getTypeName(), guid));
             } else {
                 //Create vertices which do not exist in the repository
                 vertex = graphMapper.createVertexTemplate(entity, entityType);
@@ -238,10 +299,6 @@ public class AtlasEntityStoreV1 implements AtlasEntityStore {
 
                 discoveredEntities.addResolvedId(objId, vertex);
                 discoveredEntities.removeUnResolvedId(objId);
-
-                String guid = AtlasGraphUtilsV1.getIdFromVertex(vertex);
-
-                RequestContextV1.get().recordEntityCreate(new AtlasObjectId(entityType.getTypeName(), guid));
             }
 
             if (LOG.isDebugEnabled()) {

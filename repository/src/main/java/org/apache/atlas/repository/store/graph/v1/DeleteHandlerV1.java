@@ -536,8 +536,7 @@ public abstract class DeleteHandlerV1 {
                 //Delete only the active edge references
                 AtlasAttributeDef attribute = getAttributeForEdge(edge.getLabel());
                 //TODO use delete edge instead??
-//                deleteEdgeBetweenVertices(edge.getOutVertex(), edge.getInVertex(), attribute.getName());
-                deleteEdge(edge, force);
+                deleteEdgeBetweenVertices(edge.getOutVertex(), edge.getInVertex(), attribute.getName());
             }
         }
         _deleteVertex(instanceVertex, force);

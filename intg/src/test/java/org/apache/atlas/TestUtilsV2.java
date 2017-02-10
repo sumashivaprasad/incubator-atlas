@@ -88,7 +88,13 @@ public final class TestUtilsV2 {
                         AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
                         new AtlasAttributeDef("employees", String.format("array<%s>", "Employee"), true,
                                 AtlasAttributeDef.Cardinality.SINGLE, 0, 1, false, false,
-                                new ArrayList<AtlasConstraintDef>()));
+                            new ArrayList<AtlasStructDef.AtlasConstraintDef>() {{
+                                add(new AtlasStructDef.AtlasConstraintDef(AtlasConstraintDef.CONSTRAINT_TYPE_OWNED_REF));
+                                add(new AtlasConstraintDef(
+                                    AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                                    put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "department");
+                                }}));
+                            }}));
 
         AtlasEntityDef personTypeDef = AtlasTypeUtil.createClassTypeDef("Person", "Person"+_description, ImmutableSet.<String>of(),
                 AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
@@ -112,7 +118,12 @@ public final class TestUtilsV2 {
                 new AtlasAttributeDef("manager", "Manager", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
-                        Collections.<AtlasConstraintDef>emptyList()),
+                    new ArrayList<AtlasConstraintDef>() {{
+                        add(new AtlasConstraintDef(
+                            AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                            put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "subordinates");
+                        }}));
+                    }}),
                 new AtlasAttributeDef("mentor", EMPLOYEE_TYPE, true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
@@ -130,7 +141,12 @@ public final class TestUtilsV2 {
         AtlasEntityDef managerTypeDef = AtlasTypeUtil.createClassTypeDef("Manager", "Manager"+_description, ImmutableSet.of("Employee"),
                 new AtlasAttributeDef("subordinates", String.format("array<%s>", "Employee"), false, AtlasAttributeDef.Cardinality.SET,
                         1, 10, false, false,
-                        Collections.<AtlasConstraintDef>emptyList()));
+                        new ArrayList<AtlasConstraintDef>() {{
+                            add(new AtlasConstraintDef(
+                                AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                                put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "manager");
+                            }}));
+                        }}));
 
         AtlasClassificationDef securityClearanceTypeDef =
                 AtlasTypeUtil.createTraitTypeDef("SecurityClearance", "SecurityClearance"+_description, ImmutableSet.<String>of(),
@@ -191,7 +207,12 @@ public final class TestUtilsV2 {
                 new AtlasAttributeDef("manager", "Manager", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
-                        Collections.<AtlasConstraintDef>emptyList()),
+                    new ArrayList<AtlasConstraintDef>() {{
+                        add(new AtlasConstraintDef(
+                            AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                            put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "subordinates");
+                        }}));
+                    }}),
                 new AtlasAttributeDef("mentor", EMPLOYEE_TYPE, true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
@@ -205,7 +226,12 @@ public final class TestUtilsV2 {
                 ImmutableSet.of("Employee"),
                 new AtlasAttributeDef("subordinates", String.format("array<%s>", "Employee"), false, AtlasAttributeDef.Cardinality.SET,
                         1, 10, false, false,
-                        Collections.<AtlasConstraintDef>emptyList()));
+                    new ArrayList<AtlasConstraintDef>() {{
+                        add(new AtlasConstraintDef(
+                            AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                            put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "manager");
+                        }}));
+                    }}));
 
         AtlasClassificationDef securityClearanceTypeDef =
                 AtlasTypeUtil.createTraitTypeDef("SecurityClearance", "SecurityClearance"+_description, ImmutableSet.<String>of(),
@@ -254,7 +280,12 @@ public final class TestUtilsV2 {
                 new AtlasAttributeDef("manager", "Manager", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
-                        Collections.<AtlasConstraintDef>emptyList()),
+                    new ArrayList<AtlasConstraintDef>() {{
+                        add(new AtlasConstraintDef(
+                            AtlasConstraintDef.CONSTRAINT_TYPE_INVERSE_REF, new HashMap<String, Object>() {{
+                            put(AtlasConstraintDef.CONSTRAINT_PARAM_ATTRIBUTE, "subordinates");
+                        }}));
+                    }}),
                 new AtlasAttributeDef("mentor", "Person", true,
                         AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
                         false, false,
@@ -280,6 +311,7 @@ public final class TestUtilsV2 {
     public static final String DEPARTMENT_TYPE = "Department";
     public static final String PERSON_TYPE = "Person";
     public static final String EMPLOYEE_TYPE = "Employee";
+    public static final String MANAGER_TYPE = "Manager";
 
     public static Map<String, AtlasEntity> createDeptEg1() {
         Map<String, AtlasEntity> deptEmpEntities = new HashMap<>();

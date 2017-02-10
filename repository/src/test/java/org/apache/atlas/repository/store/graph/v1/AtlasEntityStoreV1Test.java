@@ -69,8 +69,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
-import static org.apache.atlas.TestUtils.COLUMN_TYPE;
-import static org.apache.atlas.TestUtils.NAME;
 import static org.apache.atlas.TestUtils.TABLE_TYPE;
 import static org.apache.atlas.TestUtils.randomString;
 import static org.testng.Assert.assertEquals;

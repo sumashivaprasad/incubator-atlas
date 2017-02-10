@@ -6,13 +6,20 @@ import org.apache.atlas.AtlasException;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.instance.AtlasObjectId;
+import org.apache.atlas.repository.Constants;
+import org.apache.atlas.repository.graph.GraphHelper;
+import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.typesystem.ITypedStruct;
 import org.apache.atlas.typesystem.persistence.Id;
+import org.testng.Assert;
 
 import javax.inject.Inject;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
 import static org.apache.atlas.TestUtils.NAME;
@@ -86,5 +93,87 @@ public class SoftDeleteHandlerV1Test extends AtlasDeleteHandlerV1Test {
     protected void assertEntityDeleted(final String id) throws Exception {
         ITypedReferenceableInstance entity = metadataService.getEntityDefinition(id);
         assertEquals(entity.getId().getState(), Id.EntityState.DELETED);
+    }
+
+    @Override
+    protected void assertTestUpdateEntity_MultiplicityOneNonCompositeReference(final String janeGuid) throws Exception {
+        // Verify Jane's subordinates reference cardinality is still 2.
+        ITypedReferenceableInstance jane = metadataService.getEntityDefinition(janeGuid);
+        List<ITypedReferenceableInstance> subordinates = (List<ITypedReferenceableInstance>) jane.get("subordinates");
+        Assert.assertEquals(subordinates.size(), 2);
+    }
+
+    @Override
+    protected void assertJohnForTestDisconnectBidirectionalReferences(final ITypedReferenceableInstance john, final String janeGuid) throws Exception {
+        Id mgr = (Id) john.get("manager");
+        assertNotNull(mgr);
+        assertEquals(mgr._getId(), janeGuid);
+        assertEquals(mgr.getState(), Id.EntityState.DELETED);
+    }
+
+    @Override
+    protected void assertMaxForTestDisconnectBidirectionalReferences(final Map<String, String> nameGuidMap) throws Exception {
+
+        // Verify that the Department.employees reference to the deleted employee
+        // was disconnected.
+        ITypedReferenceableInstance hrDept = metadataService.getEntityDefinition(nameGuidMap.get("hr"));
+        List<ITypedReferenceableInstance> employees = (List<ITypedReferenceableInstance>) hrDept.get("employees");
+        Assert.assertEquals(employees.size(), 4);
+        String maxGuid = nameGuidMap.get("Max");
+        for (ITypedReferenceableInstance employee : employees) {
+            if (employee.getId()._getId().equals(maxGuid)) {
+                assertEquals(employee.getId().getState(), Id.EntityState.DELETED);
+            }
+        }
+
+        // Verify that the Manager.subordinates still references deleted employee
+        ITypedReferenceableInstance jane = metadataService.getEntityDefinition(nameGuidMap.get("Jane"));
+        List<ITypedReferenceableInstance> subordinates = (List<ITypedReferenceableInstance>) jane.get("subordinates");
+        assertEquals(subordinates.size(), 2);
+        for (ITypedReferenceableInstance subordinate : subordinates) {
+            if (subordinate.getId()._getId().equals(maxGuid)) {
+                assertEquals(subordinate.getId().getState(), Id.EntityState.DELETED);
+            }
+        }
+
+        // Verify that max's Person.mentor unidirectional reference to john was disconnected.
+        ITypedReferenceableInstance john = metadataService.getEntityDefinition(nameGuidMap.get("John"));
+        Id mentor = (Id) john.get("mentor");
+        assertEquals(mentor._getId(), maxGuid);
+        assertEquals(mentor.getState(), Id.EntityState.DELETED);
+
+    }
+
+    @Override
+    protected void assertTestDisconnectUnidirectionalArrayReferenceFromClassType(final List<ITypedReferenceableInstance> columns, final String columnGuid) {
+        Assert.assertEquals(columns.size(), 3);
+        for (ITypedReferenceableInstance column : columns) {
+            if (column.getId()._getId().equals(columnGuid)) {
+                assertEquals(column.getId().getState(), Id.EntityState.DELETED);
+            } else {
+                assertEquals(column.getId().getState(), Id.EntityState.ACTIVE);
+            }
+        }
+    }
+
+    @Override
+    protected void assertTestDisconnectUnidirectionalArrayReferenceFromStructAndTraitTypes(final String structContainerGuid) throws Exception {
+        // Verify that the unidirectional references from the struct and trait instances
+        // to the deleted entities were not disconnected.
+        ITypedReferenceableInstance structContainerConvertedEntity =
+            metadataService.getEntityDefinition(structContainerGuid);
+        ITypedStruct struct = (ITypedStruct) structContainerConvertedEntity.get("struct");
+        assertNotNull(struct.get("target"));
+        IStruct trait = structContainerConvertedEntity.getTrait("TestTrait");
+        assertNotNull(trait);
+        assertNotNull(trait.get("target"));
+
+    }
+
+    @Override
+    protected void assertVerticesDeleted(List<AtlasVertex> vertices) {
+        for (AtlasVertex vertex : vertices) {
+            assertEquals(GraphHelper.getSingleValuedProperty(vertex, Constants.STATE_PROPERTY_KEY, String.class), Id.EntityState.DELETED.name());
+        }
     }
 }

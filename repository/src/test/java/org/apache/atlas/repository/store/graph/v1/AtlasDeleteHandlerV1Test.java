@@ -27,6 +27,7 @@ import org.apache.atlas.TestUtils;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.atlas.model.instance.AtlasStruct;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
@@ -38,6 +39,7 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.graph.GraphHelper;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.AtlasEntityStore;
 import org.apache.atlas.services.MetadataService;
@@ -46,9 +48,15 @@ import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.typesystem.IReferenceableInstance;
+import org.apache.atlas.typesystem.IStruct;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
+import org.apache.atlas.typesystem.ITypedStruct;
+import org.apache.atlas.typesystem.Struct;
+import org.apache.atlas.typesystem.exception.EntityNotFoundException;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.typesystem.types.ClassType;
+import org.apache.atlas.typesystem.types.Multiplicity;
+import org.apache.atlas.typesystem.types.TraitType;
+import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.util.AtlasRepositoryConfiguration;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -60,13 +68,16 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
 import static org.apache.atlas.TestUtils.COLUMN_TYPE;
+import static org.apache.atlas.TestUtils.DEPARTMENT_TYPE;
 import static org.apache.atlas.TestUtils.NAME;
 import static org.apache.atlas.TestUtils.TABLE_TYPE;
 import static org.testng.Assert.assertEquals;
@@ -91,6 +102,8 @@ public abstract class AtlasDeleteHandlerV1Test {
     private AtlasEntityType compositeMapOwnerType;
 
     private AtlasEntityType compositeMapValueType;
+
+    private TypeSystem typeSystem = TypeSystem.getInstance();
 
 
     @BeforeClass
@@ -151,30 +164,33 @@ public abstract class AtlasDeleteHandlerV1Test {
 
     @Test
     public void testDeleteAndCreate() throws Exception {
-        final Map<String, AtlasEntity> dbEntity = TestUtilsV2.createDBEntity();
-        EntityMutationResponse response = entityStore.createOrUpdate(dbEntity);
+        init();
+        final Map<String, AtlasEntity> dbEntityMap = TestUtilsV2.createDBEntity();
+        EntityMutationResponse response = entityStore.createOrUpdate(dbEntityMap);
 
+        init();
         //delete entity should mark it as deleted
         EntityMutationResponse deleteResponse = entityStore.deleteById(response.getFirstEntityCreated().getGuid());
-        assertEquals(deleteResponse.getEntitiesByOperation(EntityMutations.EntityOperation.DELETE).get(0).getGuid(), response.getFirstEntityCreated().getGuid());
+        AtlasEntityHeader dbEntity = response.getFirstEntityCreated();
+        assertEquals(deleteResponse.getEntitiesByOperation(EntityMutations.EntityOperation.DELETE).get(0).getGuid(), dbEntity.getGuid());
 
-        //TODO - Enable after GET API is ready
-//        //get entity by unique attribute should throw EntityNotFoundException
-//        try {
-//            repositoryService.getEntityDefinition(TestUtils.DATABASE_TYPE, "name", entity.get("name"));
-//            fail("Expected EntityNotFoundException");
-//        } catch(EntityNotFoundException e) {
-//            //expected
-//        }
+        //get entity by unique attribute should throw EntityNotFoundException
+        try {
+            metadataService.getEntityDefinition(TestUtils.DATABASE_TYPE, "name", (String) response.getFirstEntityCreated().getAttribute("name"));
+            fail("Expected EntityNotFoundException");
+        } catch(EntityNotFoundException e) {
+            //expected
+        }
 
+        init();
         //Create the same entity again, should create new entity
-        EntityMutationResponse newCreationResponse = entityStore.createOrUpdate(dbEntity);
+        EntityMutationResponse newCreationResponse = entityStore.createOrUpdate(dbEntityMap);
         assertNotEquals(newCreationResponse.getFirstEntityCreated().getGuid(), response.getFirstEntityCreated().getGuid());
 
         //TODO - Enable after GET is ready
-//        //get by unique attribute should return the new entity
-//        instance = repositoryService.getEntityDefinition(TestUtils.DATABASE_TYPE, "name", entity.get("name"));
-//        assertEquals(instance.getId()._getId(), newId);
+        //get by unique attribute should return the new entity
+        ITypedReferenceableInstance instance = metadataService.getEntityDefinitionReference(TestUtils.DATABASE_TYPE, "name", (String) dbEntity.getAttribute("name"));
+        assertEquals(instance.getId()._getId(), newCreationResponse.getFirstEntityCreated().getGuid());
     }
 
     @Test
@@ -272,6 +288,9 @@ public abstract class AtlasDeleteHandlerV1Test {
         tableInstance = metadataService.getEntityDefinitionReference(TestUtils.TABLE_TYPE, NAME, (String) tableEntity.getAttribute(NAME));
         assertDeletedColumn(tableInstance);
 
+        assertTestDisconnectUnidirectionalArrayReferenceFromClassType(
+            (List<ITypedReferenceableInstance>) tableInstance.get("columns"), colId);
+
         //update by removing a column - col1
         tableEntity.setAttribute(COLUMNS_ATTR_NAME, Arrays.asList(column3Created.getAtlasObjectId()));
 
@@ -322,15 +341,19 @@ public abstract class AtlasDeleteHandlerV1Test {
     @Test
     public void testUpdateEntity_MultiplicityOneNonCompositeReference() throws Exception {
         Map<String, AtlasEntity> hrDept = TestUtilsV2.createDeptEg1();
+        init();
         final EntityMutationResponse hrDeptCreationResponse = entityStore.createOrUpdate(hrDept);
 
-        ITypedReferenceableInstance hrDeptInstance = metadataService.getEntityDefinition(hrDeptCreationResponse.getFirstCreatedEntityByTypeName(TestUtilsV2.DEPARTMENT_TYPE).getGuid());
-        Map<String, String> nameGuidMap = getEmployeeNameGuidMap(hrDeptInstance);
+        final AtlasEntityHeader deptCreated = hrDeptCreationResponse.getFirstCreatedEntityByTypeName(DEPARTMENT_TYPE);
+        final AtlasEntityHeader maxEmployeeCreated = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.EMPLOYEE_TYPE, NAME, "Max");
+        final AtlasEntityHeader johnEmployeeCreated = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.EMPLOYEE_TYPE, NAME, "John");
+        final AtlasEntityHeader janeEmployeeCreated = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.MANAGER_TYPE, NAME, "Jane");
+        final AtlasEntityHeader juliusEmployeeCreated = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.MANAGER_TYPE, NAME, "Julius");
 
-        ITypedReferenceableInstance john = metadataService.getEntityDefinition(nameGuidMap.get("John"));
-        Id johnGuid = john.getId();
+//        ITypedReferenceableInstance hrDeptInstance = metadataService.getEntityDefinition(hrDeptCreationResponse.getFirstCreatedEntityByTypeName(DEPARTMENT_TYPE).getGuid());
+//        Map<String, String> nameGuidMap = getEmployeeNameGuidMap(hrDeptInstance);
 
-        ITypedReferenceableInstance max = metadataService.getEntityDefinition(nameGuidMap.get("Max"));
+        ITypedReferenceableInstance max = metadataService.getEntityDefinition(maxEmployeeCreated.getGuid());
         String maxGuid = max.getId()._getId();
         AtlasVertex vertex = GraphHelper.getInstance().getVertexForGUID(maxGuid);
         Long creationTimestamp = GraphHelper.getSingleValuedProperty(vertex, Constants.TIMESTAMP_PROPERTY_KEY, Long.class);
@@ -339,61 +362,66 @@ public abstract class AtlasDeleteHandlerV1Test {
         Long modificationTimestampPreUpdate = GraphHelper.getSingleValuedProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, Long.class);
         Assert.assertNotNull(modificationTimestampPreUpdate);
 
-        ITypedReferenceableInstance jane = metadataService.getEntityDefinition(nameGuidMap.get("Jane"));
-        Id janeGuid = jane.getId();
+        AtlasEntity maxEmployee = getEmployeeByName(hrDept, "Max");
+        maxEmployee.setAttribute("mentor", johnEmployeeCreated.getAtlasObjectId());
+        maxEmployee.setAttribute("department", deptCreated.getAtlasObjectId());
+        maxEmployee.setAttribute("manager", janeEmployeeCreated.getAtlasObjectId());
 
-        // Update max's mentor reference to john.
-        ClassType personType = typeSystem.getDataType(ClassType.class, "Person");
-        ITypedReferenceableInstance maxEntity = personType.createInstance(max.getId());
-        maxEntity.set("mentor", johnGuid);
-        AtlasClient.EntityResult entityResult = updatePartial(maxEntity);
-        assertEquals(entityResult.getUpdateEntities().size(), 1);
-        assertTrue(entityResult.getUpdateEntities().contains(maxGuid));
+        Map<String, AtlasEntity> maxEmployeeUpdateMap = new HashMap<>();
+        maxEmployeeUpdateMap.put(maxEmployee.getGuid(), maxEmployee);
+
+        init();
+        EntityMutationResponse entityResult = entityStore.createOrUpdate(maxEmployeeUpdateMap);
+
+        assertEquals(entityResult.getUpdatedEntities().size(), 1);
+        assertTrue(extractGuids(entityResult.getUpdatedEntities()).contains(maxGuid));
 
         // Verify the update was applied correctly - john should now be max's mentor.
-        max = repositoryService.getEntityDefinition(maxGuid);
+        max = metadataService.getEntityDefinition(maxGuid);
         ITypedReferenceableInstance refTarget = (ITypedReferenceableInstance) max.get("mentor");
-        Assert.assertEquals(refTarget.getId()._getId(), johnGuid._getId());
+        Assert.assertEquals(refTarget.getId()._getId(), johnEmployeeCreated.getGuid());
 
         // Verify modification timestamp was updated.
         vertex = GraphHelper.getInstance().getVertexForGUID(maxGuid);
         Long modificationTimestampPostUpdate = GraphHelper.getSingleValuedProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, Long.class);
         Assert.assertNotNull(modificationTimestampPostUpdate);
-        Assert.assertTrue(creationTimestamp < modificationTimestampPostUpdate);
+//        Assert.assertTrue(creationTimestamp < modificationTimestampPostUpdate);
 
         // Update max's mentor reference to jane.
-        maxEntity.set("mentor", janeGuid);
-        entityResult = updatePartial(maxEntity);
-        assertEquals(entityResult.getUpdateEntities().size(), 1);
-        assertTrue(entityResult.getUpdateEntities().contains(maxGuid));
+        maxEmployee.setAttribute("mentor", janeEmployeeCreated.getAtlasObjectId());
+        init();
+        entityResult = entityStore.createOrUpdate(maxEmployeeUpdateMap);
+        assertEquals(entityResult.getUpdatedEntities().size(), 1);
+        assertTrue(extractGuids(entityResult.getUpdatedEntities()).contains(maxGuid));
 
         // Verify the update was applied correctly - jane should now be max's mentor.
-        max = repositoryService.getEntityDefinition(maxGuid);
+        max = metadataService.getEntityDefinition(maxGuid);
         refTarget = (ITypedReferenceableInstance) max.get("mentor");
-        Assert.assertEquals(refTarget.getId()._getId(), janeGuid._getId());
+        Assert.assertEquals(refTarget.getId()._getId(), janeEmployeeCreated.getGuid());
 
         // Verify modification timestamp was updated.
         vertex = GraphHelper.getInstance().getVertexForGUID(maxGuid);
         Long modificationTimestampPost2ndUpdate = GraphHelper.getSingleValuedProperty(vertex, Constants.MODIFICATION_TIMESTAMP_PROPERTY_KEY, Long.class);
         Assert.assertNotNull(modificationTimestampPost2ndUpdate);
-        Assert.assertTrue(modificationTimestampPostUpdate < modificationTimestampPost2ndUpdate);
+//        Assert.assertTrue(modificationTimestampPostUpdate < modificationTimestampPost2ndUpdate);
 
-        ITypedReferenceableInstance julius = repositoryService.getEntityDefinition(nameGuidMap.get("Julius"));
+        ITypedReferenceableInstance julius = metadataService.getEntityDefinition(juliusEmployeeCreated.getGuid());
         Id juliusGuid = julius.getId();
-        maxEntity = personType.createInstance(max.getId());
-        maxEntity.set("manager", juliusGuid);
-        entityResult = updatePartial(maxEntity);
+
+        init();
+        maxEmployee.setAttribute("manager", juliusEmployeeCreated.getAtlasObjectId());
+        entityResult = entityStore.createOrUpdate(maxEmployeeUpdateMap);
         //TODO ATLAS-499 should have updated julius' subordinates
-        assertEquals(entityResult.getUpdateEntities().size(), 2);
-        assertTrue(entityResult.getUpdateEntities().contains(maxGuid));
-        assertTrue(entityResult.getUpdateEntities().contains(janeGuid._getId()));
+        assertEquals(entityResult.getUpdatedEntities().size(), 2);
+        assertTrue(extractGuids(entityResult.getUpdatedEntities()).contains(maxGuid));
+        assertTrue(extractGuids(entityResult.getUpdatedEntities()).contains(janeEmployeeCreated.getGuid()));
 
         // Verify the update was applied correctly - julius should now be max's manager.
-        max = repositoryService.getEntityDefinition(maxGuid);
+        max = metadataService.getEntityDefinition(maxGuid);
         refTarget = (ITypedReferenceableInstance) max.get("manager");
         Assert.assertEquals(refTarget.getId()._getId(), juliusGuid._getId());
 
-        assertTestUpdateEntity_MultiplicityOneNonCompositeReference(janeGuid._getId());
+        assertTestUpdateEntity_MultiplicityOneNonCompositeReference(janeEmployeeCreated.getGuid());
     }
 
     private Map<String, String> getEmployeeNameGuidMap(final ITypedReferenceableInstance hrDept) throws AtlasException {
@@ -413,5 +441,297 @@ public abstract class AtlasDeleteHandlerV1Test {
         return nameGuidMap;
     }
 
+
+    private AtlasEntity getEmployeeByName(Map<String, AtlasEntity> hrDeptMap, String name) {
+        for (AtlasEntity entity : hrDeptMap.values() ) {
+            if ( name.equals(entity.getAttribute(NAME))) {
+                return entity;
+            }
+        }
+        return null;
+    }
+//
     protected abstract void assertTestUpdateEntity_MultiplicityOneNonCompositeReference(String janeGuid) throws Exception;
+
+    /**
+     * Verify deleting an entity which is contained by another
+     * entity through a bi-directional composite reference.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testDisconnectBidirectionalReferences() throws Exception {
+        Map<String, AtlasEntity> hrDept = TestUtilsV2.createDeptEg1();
+        init();
+        final EntityMutationResponse hrDeptCreationResponse = entityStore.createOrUpdate(hrDept);
+
+        final AtlasEntityHeader deptCreated = hrDeptCreationResponse.getFirstCreatedEntityByTypeName(DEPARTMENT_TYPE);
+        final AtlasEntityHeader maxEmployee = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.EMPLOYEE_TYPE, NAME, "Max");
+        final AtlasEntityHeader johnEmployee = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.EMPLOYEE_TYPE, NAME, "John");
+        final AtlasEntityHeader janeEmployee = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.MANAGER_TYPE, NAME, "Jane");
+        final AtlasEntityHeader juliusEmployee = hrDeptCreationResponse.getCreatedEntityByTypeNameAndAttribute(TestUtilsV2.MANAGER_TYPE, NAME, "Julius");
+
+        ITypedReferenceableInstance hrDeptInstance = metadataService.getEntityDefinition(deptCreated.getGuid());
+        Map<String, String> nameGuidMap = getEmployeeNameGuidMap(hrDeptInstance);
+
+        // Verify that Max is one of Jane's subordinates.
+        ITypedReferenceableInstance jane = metadataService.getEntityDefinition(janeEmployee.getGuid());
+        Object refValue = jane.get("subordinates");
+        Assert.assertTrue(refValue instanceof List);
+        List<Object> subordinates = (List<Object>)refValue;
+        Assert.assertEquals(subordinates.size(), 2);
+        List<String> subordinateIds = new ArrayList<>(2);
+        for (Object listValue : subordinates) {
+            Assert.assertTrue(listValue instanceof ITypedReferenceableInstance);
+            ITypedReferenceableInstance employee = (ITypedReferenceableInstance) listValue;
+            subordinateIds.add(employee.getId()._getId());
+        }
+        Assert.assertTrue(subordinateIds.contains(maxEmployee.getGuid()));
+
+        init();
+        EntityMutationResponse entityResult = entityStore.deleteById(maxEmployee.getGuid());
+        ITypedReferenceableInstance john = metadataService.getEntityDefinitionReference(TestUtilsV2.EMPLOYEE_TYPE, NAME, "John");
+
+        assertEquals(entityResult.getDeletedEntities().size(), 1);
+        assertEquals(entityResult.getDeletedEntities().get(0).getGuid(), maxEmployee.getGuid());
+        assertEquals(entityResult.getUpdatedEntities().size(), 3);
+
+        assertEquals(extractGuids(entityResult.getUpdatedEntities()), Arrays.asList(janeEmployee.getGuid(), deptCreated.getGuid(), johnEmployee.getGuid()));
+        assertEntityDeleted(maxEmployee.getGuid());
+
+        assertMaxForTestDisconnectBidirectionalReferences(nameGuidMap);
+
+        // Now delete jane - this should disconnect the manager reference from her
+        // subordinate.
+        init();
+        entityResult = entityStore.deleteById(janeEmployee.getGuid());
+        assertEquals(entityResult.getDeletedEntities().size(), 1);
+        assertEquals(entityResult.getDeletedEntities().get(0).getGuid(), janeEmployee.getGuid());
+        assertEquals(entityResult.getUpdatedEntities().size(), 2);
+        assertEquals(extractGuids(entityResult.getUpdatedEntities()), Arrays.asList(deptCreated.getGuid(), johnEmployee.getGuid()));
+
+        assertEntityDeleted(janeEmployee.getGuid());
+
+        john = metadataService.getEntityDefinitionReference(TestUtilsV2.EMPLOYEE_TYPE, NAME, "John");
+        assertJohnForTestDisconnectBidirectionalReferences(john, janeEmployee.getGuid());
+    }
+
+    protected List<String> extractGuids(final List<AtlasEntityHeader> updatedEntities) {
+        List<String> guids = new ArrayList<>();
+        for (AtlasEntityHeader header : updatedEntities ) {
+            guids.add(header.getGuid());
+        }
+        return guids;
+    }
+
+    protected abstract void assertJohnForTestDisconnectBidirectionalReferences(ITypedReferenceableInstance john,
+        String janeGuid) throws Exception;
+
+    protected abstract void assertMaxForTestDisconnectBidirectionalReferences(Map<String, String> nameGuidMap)
+        throws Exception;
+
+    protected abstract void assertTestDisconnectUnidirectionalArrayReferenceFromClassType(
+        List<ITypedReferenceableInstance> columns, String columnGuid);
+
+    /**
+     * Verify deleting entities that are the target of a unidirectional class array reference
+     * from a struct or trait instance.
+     */
+    @Test
+    public void testDisconnectUnidirectionalArrayReferenceFromStructAndTraitTypes() throws Exception {
+        // Define class types.
+        AtlasStructDef.AtlasAttributeDef[] structTargetAttributes = new AtlasStructDef.AtlasAttributeDef[]{
+            new AtlasStructDef.AtlasAttributeDef("attr1", "string",
+                true,
+                AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+                false, false,
+                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList())};
+
+        AtlasEntityDef structTargetDef =
+            new AtlasEntityDef("StructTarget", "StructTarget_description", "1.0",
+                Arrays.asList(structTargetAttributes), Collections.<String>emptySet());
+
+
+        AtlasStructDef.AtlasAttributeDef[] traitTargetAttributes = new AtlasStructDef.AtlasAttributeDef[]{
+            new AtlasStructDef.AtlasAttributeDef("attr1", "string",
+                true,
+                AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+                false, false,
+                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList())};
+
+        AtlasEntityDef traitTargetDef =
+            new AtlasEntityDef("TraitTarget", "TraitTarget_description", "1.0",
+                Arrays.asList(traitTargetAttributes), Collections.<String>emptySet());
+
+        AtlasStructDef.AtlasAttributeDef[] structContainerAttributes = new AtlasStructDef.AtlasAttributeDef[]{
+            new AtlasStructDef.AtlasAttributeDef("struct", "TestStruct",
+                true,
+                AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+                false, false,
+                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList())};
+
+        AtlasEntityDef structContainerDef =
+            new AtlasEntityDef("StructContainer", "StructContainer_description", "1.0",
+                Arrays.asList(structContainerAttributes), Collections.<String>emptySet());
+
+        // Define struct and trait types which have a unidirectional array reference
+        // to a class type.
+        AtlasStructDef.AtlasAttributeDef[] structDefAttributes = new AtlasStructDef.AtlasAttributeDef[] {
+            new AtlasStructDef.AtlasAttributeDef("target", "array<StructTarget>",
+            true,
+            AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+            false, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
+
+            new AtlasStructDef.AtlasAttributeDef("nestedStructs", "array<NestedStruct>",
+            true,
+            AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+            false, false,
+            Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()) };
+
+        AtlasStructDef structDef = new AtlasStructDef("TestStruct", "TestStruct_desc", "1.0", Arrays.asList(structDefAttributes));
+
+
+        // Define struct and trait types which have a unidirectional array reference
+        // to a class type.
+        AtlasStructDef.AtlasAttributeDef[] nestedStructDefAttributes = new AtlasStructDef.AtlasAttributeDef[] {
+            new AtlasStructDef.AtlasAttributeDef("attr1", "string",
+                true,
+                AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+                false, false,
+                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()),
+
+            new AtlasStructDef.AtlasAttributeDef("target", "array<TraitTarget>",
+                true,
+                AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+                false, false,
+                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList()) };
+
+        AtlasStructDef nestedStructDef = new AtlasStructDef("NestedStruct", "NestedStruct_desc", "1.0", Arrays.asList(nestedStructDefAttributes));
+
+        AtlasStructDef.AtlasAttributeDef[] traitDefAttributes = new AtlasStructDef.AtlasAttributeDef[] {
+            new AtlasStructDef.AtlasAttributeDef("target", "array<TraitTarget>",
+                true,
+                AtlasStructDef.AtlasAttributeDef.Cardinality.SINGLE, 0, 1,
+                false, false,
+                Collections.<AtlasStructDef.AtlasConstraintDef>emptyList())
+        };
+
+        AtlasClassificationDef traitDef = new AtlasClassificationDef("TestTrait", "TestTrait_desc", "1.0", Arrays.asList(traitDefAttributes));
+
+        AtlasTypesDef typesDef = AtlasTypeUtil.getTypesDef(ImmutableList.<AtlasEnumDef>of(),
+            ImmutableList.<AtlasStructDef>of(structDef, nestedStructDef),
+            ImmutableList.<AtlasClassificationDef>of(traitDef),
+            ImmutableList.<AtlasEntityDef>of(structTargetDef, traitTargetDef, structContainerDef));
+
+        typeDefStore.createTypesDef(typesDef);
+
+        // Create instances of class, struct, and trait types.
+        final AtlasEntity structTargetEntity = new AtlasEntity("StructTarget");
+        final AtlasEntity traitTargetEntity = new AtlasEntity("TraitTarget");
+        final AtlasEntity structContainerEntity = new AtlasEntity("StructContainer");
+        AtlasStruct structInstance = new AtlasStruct("TestStruct");
+        AtlasStruct nestedStructInstance = new AtlasStruct("NestedStruct");
+        Struct traitInstance = new Struct("TestTrait");
+        structContainerEntity.setAttribute("struct", structInstance);
+        structInstance.setAttribute("target", ImmutableList.of(structTargetEntity.getAtlasObjectId()));
+        structInstance.setAttribute("nestedStructs", ImmutableList.of(nestedStructInstance));
+
+        Map<String, AtlasEntity> structCreationMap = new HashMap<String, AtlasEntity>() {{
+            put(structTargetEntity.getGuid(), structTargetEntity);
+            put(traitTargetEntity.getGuid(), traitTargetEntity);
+            put(structContainerEntity.getGuid(), structContainerEntity);
+        }};
+
+        init();
+
+        EntityMutationResponse response = entityStore.createOrUpdate(structCreationMap);
+        Assert.assertEquals(response.getCreatedEntities().size(), 3);
+
+        final List<String> structTarget = metadataService.getEntityList("StructTarget");
+        Assert.assertEquals(structTarget.size(), 1);
+        final String structTargetGuid = structTarget.get(0);
+
+        final List<String> traitTarget = metadataService.getEntityList("TraitTarget");
+        Assert.assertEquals(traitTarget.size(), 1);
+        final String traitTargetGuid = traitTarget.get(0);
+
+        final List<String> structContainerTarget = metadataService.getEntityList("StructContainer");
+        Assert.assertEquals(structContainerTarget.size(), 1);
+        String structContainerGuid = structContainerTarget.get(0);
+
+        // Add TestTrait to StructContainer instance
+        traitInstance.set("target", ImmutableList.of(new Id(traitTargetGuid, 0, "TraitTarget")));
+        TraitType traitType = typeSystem.getDataType(TraitType.class, "TestTrait");
+        ITypedStruct convertedTrait = traitType.convert(traitInstance, Multiplicity.REQUIRED);
+        metadataService.addTrait(structContainerGuid, convertedTrait);
+
+        // Verify that the unidirectional references from the struct and trait instances
+        // are pointing at the target entities.
+        final ITypedReferenceableInstance structContainerConvertedEntity = metadataService.getEntityDefinition(structContainerGuid);
+        Object object = structContainerConvertedEntity.get("struct");
+        Assert.assertNotNull(object);
+        Assert.assertTrue(object instanceof ITypedStruct);
+        ITypedStruct struct = (ITypedStruct) object;
+        object = struct.get("target");
+        Assert.assertNotNull(object);
+        Assert.assertTrue(object instanceof List);
+        List<ITypedReferenceableInstance> refList = (List<ITypedReferenceableInstance>)object;
+        Assert.assertEquals(refList.size(), 1);
+        Assert.assertEquals(refList.get(0).getId()._getId(), structTargetGuid);
+
+        IStruct trait = structContainerConvertedEntity.getTrait("TestTrait");
+        Assert.assertNotNull(trait);
+        object = trait.get("target");
+        Assert.assertNotNull(object);
+        Assert.assertTrue(object instanceof List);
+        refList = (List<ITypedReferenceableInstance>)object;
+        Assert.assertEquals(refList.size(), 1);
+        Assert.assertEquals(refList.get(0).getId()._getId(), traitTargetGuid);
+
+        init();
+        // Delete the entities that are targets of the struct and trait instances.
+        EntityMutationResponse entityResult = entityStore.deleteByIds(new ArrayList<String>() {{
+            add(structTargetGuid);
+            add(traitTargetGuid);
+        }});
+        Assert.assertEquals(entityResult.getDeletedEntities().size(), 2);
+        Assert.assertTrue(extractGuids(entityResult.getDeletedEntities()).containsAll(Arrays.asList(structTargetGuid, traitTargetGuid)));
+        assertEntityDeleted(structTargetGuid);
+        assertEntityDeleted(traitTargetGuid);
+
+        assertTestDisconnectUnidirectionalArrayReferenceFromStructAndTraitTypes(structContainerGuid);
+
+        init();
+        // Delete the entity which contains nested structs and has the TestTrait trait.
+        entityResult = entityStore.deleteById(structContainerGuid);
+        Assert.assertEquals(entityResult.getDeletedEntities().size(), 1);
+        Assert.assertTrue(extractGuids(entityResult.getDeletedEntities()).contains(structContainerGuid));
+        assertEntityDeleted(structContainerGuid);
+
+        // Verify all TestStruct struct vertices were removed.
+        assertVerticesDeleted(getVertices(Constants.ENTITY_TYPE_PROPERTY_KEY, "TestStruct"));
+
+        // Verify all NestedStruct struct vertices were removed.
+        assertVerticesDeleted(getVertices(Constants.ENTITY_TYPE_PROPERTY_KEY, "NestedStruct"));
+
+        // Verify all TestTrait trait vertices were removed.
+        assertVerticesDeleted(getVertices(Constants.ENTITY_TYPE_PROPERTY_KEY, "TestTrait"));
+    }
+
+    protected abstract void assertTestDisconnectUnidirectionalArrayReferenceFromStructAndTraitTypes(
+        String structContainerGuid) throws Exception;
+
+    protected abstract void assertVerticesDeleted(List<AtlasVertex> vertices);
+
+    protected List<AtlasVertex> getVertices(String propertyName, Object value) {
+        AtlasGraph graph = TestUtils.getGraph();
+        Iterable<AtlasVertex> vertices = graph.getVertices(propertyName, value);
+        List<AtlasVertex> list = new ArrayList<>();
+        for (AtlasVertex vertex : vertices) {
+            list.add(vertex);
+        }
+        return list;
+    }
+
 }

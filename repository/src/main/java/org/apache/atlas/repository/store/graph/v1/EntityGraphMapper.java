@@ -132,8 +132,7 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
         return newEdge;
     }
 
-    public EntityMutationResponse
-    mapAttributes(EntityMutationContext ctx) throws AtlasBaseException {
+    public EntityMutationResponse mapAttributes(EntityMutationContext ctx) throws AtlasBaseException {
 
         this.context = ctx;
         structVertexMapper.init(this);
@@ -160,6 +159,10 @@ public class EntityGraphMapper implements InstanceGraphMapper<AtlasEdge> {
         RequestContextV1 req = RequestContextV1.get();
         for (AtlasObjectId id : req.getDeletedEntityIds()) {
             resp.addEntity(EntityMutations.EntityOperation.DELETE, AtlasEntityStoreV1.constructHeader(id));
+        }
+
+        for (AtlasObjectId id : req.getUpdatedEntityIds()) {
+            resp.addEntity(EntityMutations.EntityOperation.UPDATE, AtlasEntityStoreV1.constructHeader(id));
         }
 
         return resp;
