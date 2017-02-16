@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.apache.atlas.model.instance.EntityMutations.EntityOperation.CREATE;
+import static org.apache.atlas.model.instance.EntityMutations.EntityOperation.PARTIAL_UPDATE;
 import static org.apache.atlas.model.instance.EntityMutations.EntityOperation.UPDATE;
 import static org.apache.atlas.model.instance.EntityMutations.EntityOperation.DELETE;
 
@@ -83,6 +84,11 @@ public class EntityGraphMapper {
     }
 
     public AtlasVertex createVertex(AtlasEntity entity) {
+        final String guid = UUID.randomUUID().toString();
+        return createVertexWithGuid(entity, guid);
+    }
+
+    public AtlasVertex createVertexWithGuid(AtlasEntity entity, String guid) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("==> createVertex({})", entity.getTypeName());
         }
@@ -95,15 +101,13 @@ public class EntityGraphMapper {
             AtlasGraphUtilsV1.addProperty(ret, Constants.SUPER_TYPES_PROPERTY_KEY, superTypeName);
         }
 
-        final String guid = UUID.randomUUID().toString();
-
         AtlasGraphUtilsV1.setProperty(ret, Constants.GUID_PROPERTY_KEY, guid);
         AtlasGraphUtilsV1.setProperty(ret, Constants.VERSION_PROPERTY_KEY, getEntityVersion(entity));
 
         return ret;
     }
 
-    public EntityMutationResponse mapAttributes(EntityMutationContext context) throws AtlasBaseException {
+    public EntityMutationResponse mapAttributes(EntityMutationContext context, boolean isPartialUpdate) throws AtlasBaseException {
         EntityMutationResponse resp = new EntityMutationResponse();
 
         Collection<AtlasEntity> createdEntities = context.getCreatedEntities();
@@ -129,7 +133,12 @@ public class EntityGraphMapper {
 
                 mapAttributes(updatedEntity, vertex, UPDATE, context);
 
-                resp.addEntity(UPDATE, constructHeader(updatedEntity, entityType, vertex));
+                if (isPartialUpdate) {
+                    resp.addEntity(PARTIAL_UPDATE, constructHeader(updatedEntity, entityType, vertex));
+                } else {
+                    resp.addEntity(UPDATE, constructHeader(updatedEntity, entityType, vertex));
+                }
+
             }
         }
 
